@@ -1,0 +1,2 @@
+/* Compatibility shim: supports deployments that reference /styles.css */
+@import url("assets/styles.css");

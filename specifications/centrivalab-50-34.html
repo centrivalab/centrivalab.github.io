@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CentrivaLab 50/34 — Technical specification</title>
+  <link rel="icon" href="../favicon.ico" />
+  <meta name="description" content="Technical specification page for the CentrivaLab 50/34 configuration." />
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container topbar">
+    <a class="brand" href="../index.html">
+      <img class="brand-mark" src="../assets/logo.svg" alt="CentrivaLab logo" />
+      <span class="brand-name">CentrivaLab™</span>
+    </a>
+    <nav class="nav">
+      <a href="../technology.html">Technology</a>
+      <a href="../products.html">Products</a>
+      <a href="../specifications.html">Specifications</a>
+      <a href="../applications.html">Applications</a>
+      <a href="../publications.html">Publications</a>
+      <a href="../contact.html">Contact</a>
+    </nav>
+  </div>
+
+  <div class="container page-hero">
+    <div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="../specifications.html">Specifications</a> / CentrivaLab 50/34</div>
+    <h1>CentrivaLab 50/34</h1>
+    <p>Current public reference configuration for the improved O–CMF–50mL–34deg cartridge.</p>
+  </div>
+</header>
+
+<main>
+  <section class="container spec-grid">
+    <div class="card">
+      <span class="eyebrow">Configuration overview</span>
+      <h3>O–CMF–50mL–34deg</h3>
+      <p>
+        Single-use orthogonal centrifugal membrane filter cartridge for fixed-angle centrifuge rotors designed
+        around standard high-speed 50 mL round-bottom polycarbonate tubes.
+      </p>
+      <table class="spec-table">
+        <tbody>
+          <tr><td>Nominal feed volume</td><td>13.0 mL</td></tr>
+          <tr><td>Operating fill range</td><td>11–13 mL</td></tr>
+          <tr><td>Concentrate chamber volume</td><td>4.6 mL</td></tr>
+          <tr><td>Effective membrane area</td><td>1.45 cm²</td></tr>
+          <tr><td>Membrane offset, δ<sub>m</sub></td><td>0.0318 m</td></tr>
+          <tr><td>Free-surface intercept, δ<sub>s</sub><sup>*</sup></td><td>3.71 × 10<sup>−3</sup> m</td></tr>
+          <tr><td>Free-surface slope, α</td><td>1.60 × 10<sup>−3</sup> m mL<sup>−1</sup></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card spec-image-card">
+      <span class="eyebrow">Cross-section</span>
+      <h3>Cartridge geometry</h3>
+      <img src="../assets/ocmf-cross-section.png" alt="Cross-sectional view of the O–CMF–50mL–34deg cartridge showing r0, rm, rmax, concentrate chamber and permeate chamber." />
+      <p class="note">Cross-sectional reference showing the radial coordinates used in the centrifugal pressure model.</p>
+    </div>
+  </section>
+
+  <section class="container">
+    <h2 class="section-title">Design features</h2>
+    <div class="grid-3">
+      <article class="card">
+        <h4>Open concentrate chamber</h4>
+        <p>Internal supports were removed to create a fully open concentrate chamber.</p>
+      </article>
+      <article class="card">
+        <h4>Improved capacity</h4>
+        <p>The revised cartridge increases concentrate chamber volume to 4.6 mL.</p>
+      </article>
+      <article class="card">
+        <h4>Improved membrane area</h4>
+        <p>The effective membrane area is increased to 1.45 cm², with sealing provided by a compressed elastomeric O-ring.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="container">
+    <h2 class="section-title">JA-20 rotor reference</h2>
+    <p class="section-intro">
+      For the Beckman Coulter JA-20 fixed-angle rotor, the geometric reference values are
+      r<sub>max</sub> = 0.108 m and r<sub>m</sub> = 0.0762 m.
+    </p>
+    <table class="spec-table">
+      <thead>
+        <tr><th>Target pressure (bar)</th><th>13 mL</th><th>12 mL</th><th>11 mL</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>2</td><td>3390 rpm</td><td>3470 rpm</td><td>3560 rpm</td></tr>
+        <tr><td>5</td><td>5360 rpm</td><td>5490 rpm</td><td>5640 rpm</td></tr>
+        <tr><td>10</td><td>7580 rpm</td><td>7770 rpm</td><td>7990 rpm</td></tr>
+        <tr><td>15</td><td>9280 rpm</td><td>9510 rpm</td><td>9780 rpm</td></tr>
+        <tr><td>20</td><td>10,700 rpm</td><td>11,000 rpm</td><td>11,300 rpm</td></tr>
+        <tr><td>30</td><td>13,100 rpm</td><td>13,500 rpm</td><td>13,900 rpm</td></tr>
+        <tr><td>40</td><td>15,100 rpm</td><td>15,600 rpm</td><td>16,000 rpm</td></tr>
+        <tr><td>50</td><td>16,900 rpm</td><td>17,400 rpm</td><td>17,900 rpm</td></tr>
+        <tr><td>60</td><td>18,600 rpm</td><td>19,100 rpm</td><td>19,600 rpm</td></tr>
+      </tbody>
+    </table>
+    <p class="note">
+      Compact JA-20 free-surface correlation: r<sub>s</sub>(V) = 7.13 − 0.16 V, valid for V ∈ [11, 13] mL.
+    </p>
+  </section>
+
+  <section class="container callout">
+    <p><strong>Research use statement:</strong> CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>CentrivaLab™</h4>
+      <p>CentrivaLab is a commercial brand of Talentground Lda.</p>
+      <p>CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+    </div>
+    <div>
+      <h4>Pages</h4>
+      <p><a href="../technology.html">Technology</a><br><a href="../products.html">Products</a><br><a href="../specifications.html">Specifications</a><br><a href="../publications.html">Publications</a></p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p><a href="mailto:info@centrivalab.com">info@centrivalab.com</a><br><a href="mailto:commercial@centrivalab.com">commercial@centrivalab.com</a></p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
