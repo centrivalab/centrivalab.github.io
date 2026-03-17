@@ -7,15 +7,7 @@
   <link rel="icon" href="../favicon.ico" />
   <meta name="description" content="Technical specification for the CentrivaLab 94/25 O-CMF cartridge — intrinsic characteristics, centrifugal pressure model and operating conditions for the Sigma rotor 12159." />
   <link rel="stylesheet" href="../assets/styles.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"
-    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]})"></script>
   <style>
-    .eq-block { background: #f5f8fc; border-left: 4px solid var(--blue); border-radius: 0 10px 10px 0; padding: 14px 20px; margin: 18px 0; overflow-x: auto; }
-    .param-def { display: grid; grid-template-columns: 140px 1fr; gap: 6px 18px; margin: 14px 0; }
-    .param-def dt { font-family: 'KaTeX_Math', serif; color: var(--navy); font-style: italic; }
-    .param-def dd { margin: 0; color: var(--muted); }
     .fig-placeholder { background: #f0f5fb; border: 2px dashed var(--line); border-radius: 14px; padding: 32px; text-align: center; color: var(--muted); font-size: 15px; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
     .fig-placeholder svg { opacity: 0.35; }
     figcaption { font-size: 14px; color: var(--muted); margin-top: 10px; text-align: center; line-height: 1.5; }
@@ -93,8 +85,8 @@
         </p>
         <p>
           The radial coordinates used throughout this specification are the membrane radius
-          \(r_m\), the free-surface radius \(r_s(V)\), and the rotor-imposed maximum liquid radius
-          \(r_{\max}\). Their definitions and the cartridge geometry are shown in Figure 1.
+          r<sub>m</sub>, the free-surface radius r<sub>s</sub>(V), and the rotor-imposed maximum liquid radius
+          r<sub>max</sub>. Their definitions and the cartridge geometry are shown in Figure 1.
         </p>
         <div class="kv" style="margin-top:18px;">
           <div>Tube class</div><div>94 mL round-bottom</div>
@@ -117,62 +109,36 @@
   <!-- Intrinsic characteristics -->
   <section class="container">
     <h2 class="section-title">Intrinsic characteristics</h2>
-    <p class="section-intro">All offsets are defined relative to \(r_{\max}\).</p>
     <table>
       <thead>
-        <tr><th>Parameter</th><th>Symbol</th><th class="num">Value</th></tr>
+        <tr><th>Parameter</th><th class="num">Value</th></tr>
       </thead>
       <tbody>
-        <tr><td>Nominal feed volume</td><td>\(V_{\rm nom}\)</td><td class="num">22.5 mL</td></tr>
-        <tr><td>Operating fill range</td><td>\(V\)</td><td class="num">21.5–22.5 mL</td></tr>
-        <tr><td>Membrane offset</td><td>\(\delta_m\)</td><td class="num">0.0268 m</td></tr>
-        <tr><td>Free-surface intercept</td><td>\(\delta_s^{\ast}\)</td><td class="num">2.384 × 10⁻² m</td></tr>
-        <tr><td>Free-surface slope</td><td>\(\alpha\)</td><td class="num">1.315 × 10⁻³ m mL⁻¹</td></tr>
+        <tr><td>Nominal feed volume</td><td class="num">22.5 mL</td></tr>
+        <tr><td>Operating fill range</td><td class="num">21.5–22.5 mL</td></tr>
+        <tr><td>Membrane coupon diameter</td><td class="num">20 mm</td></tr>
+        <tr><td>Effective membrane area</td><td class="num">1.45 cm²</td></tr>
+        <tr><td>Membrane offset (δ<sub>m</sub>)</td><td class="num">0.0268 m</td></tr>
+        <tr><td>Free-surface intercept (δ<sub>s</sub>*)</td><td class="num">2.384 × 10⁻² m</td></tr>
+        <tr><td>Free-surface slope (α)</td><td class="num">1.315 × 10⁻³ m mL⁻¹</td></tr>
       </tbody>
     </table>
-  </section>
-
-  <!-- Pressure model -->
-  <section class="container">
-    <h2 class="section-title">Free-surface position and centrifugal pressure</h2>
-    <p>
-      All radial positions are expressed relative to the rotor-imposed maximum liquid radius
-      \(r_{\max}\). The membrane and free-surface offsets are defined as
-    </p>
-    <div class="eq-block">$$\delta_m = r_{\max} - r_m, \qquad \delta_s = r_{\max} - r_s .$$</div>
-    <p>
-      Based on direct geometric measurements, the free-surface position follows a linear
-      correlation with fill volume \(V\) (in mL):
-    </p>
-    <div class="eq-block">$$\delta_s(V) = \delta_s^{\ast} + \alpha V ,$$</div>
-    <p>giving the free-surface radius</p>
-    <div class="eq-block">$$r_s(V) = r_{\max} - \delta_s(V) .$$</div>
-    <p>
-      Under rigid-body rotation, the radial hydrostatic balance yields the transmembrane pressure:
-    </p>
-    <div class="eq-block">$$\Delta p = \frac{\rho\,\omega^2}{2}\!\left[r_m^2 - r_s(V)^2\right],$$</div>
-    <p>where \(\omega = 2\pi N/60\) and \(N\) is rotor speed in RPM. Expressed in bar:</p>
-    <div class="eq-block">$$\Delta p_{\rm bar}(V,N) = C_0\, N^2 \left[r_m^2 - r_s(V)^2\right],$$</div>
-    <p>with the constant</p>
-    <div class="eq-block">$$C_0 = \frac{\rho}{2\times10^5}\!\left(\frac{2\pi}{60}\right)^{\!2} \approx 5.48\times10^{-5}$$</div>
-    <p class="section-note">Valid for water at 20 °C.</p>
   </section>
 
   <!-- Sigma 12159 application -->
   <section class="container">
     <h2 class="section-title">Application to the Sigma rotor 12159</h2>
-    <p>For the Sigma fixed-angle rotor 12159, the geometric parameters are:</p>
-    <div class="eq-block">$$r_{\max} = 0.099\ \text{m}, \qquad r_m = 0.0722\ \text{m}.$$</div>
     <p>
-      The maximum achievable transmembrane pressure at 15&nbsp;500&nbsp;rpm is approximately
+      For the Sigma fixed-angle rotor 12159 (r<sub>max</sub> = 0.099 m, r<sub>m</sub> = 0.0722 m),
+      the maximum achievable transmembrane pressure at 15&nbsp;500&nbsp;rpm is approximately
       <strong>40 bar</strong> at nominal fill volume.
     </p>
-    <p style="margin-top:28px;">Required rotor speed (RPM) to reach a target \(\Delta p\) — water at 20&nbsp;°C.
+    <p style="margin-top:28px;">Required rotor speed (RPM) to reach a target transmembrane pressure — water at 20&nbsp;°C.
     Dashes indicate conditions exceeding the rotor speed limit.</p>
     <table style="margin-top:12px;">
       <thead>
         <tr>
-          <th>\(\Delta p\) (bar)</th>
+          <th>Δp (bar)</th>
           <th class="num">22.5 mL</th>
           <th class="num">22.0 mL</th>
           <th class="num">21.5 mL</th>
@@ -190,18 +156,6 @@
     </table>
   </section>
 
-  <!-- Empirical correlations -->
-  <section class="container">
-    <h2 class="section-title">Empirical correlations for the Sigma rotor 12159</h2>
-    <p>The free-surface radius for \(V \in [21.5,\,22.5]\) mL:</p>
-    <div class="eq-block">$$r_s(V) = 0.099 - \!\left(2.384\times10^{-2} + 1.315\times10^{-3}\,V\right) \quad [\text{m}]$$</div>
-    <p>Transmembrane pressure directly in bar, with \(N\) in RPM:</p>
-    <div class="eq-block">$$\Delta p_{\rm bar}(V,N) = 5.48\times10^{-5}\,N^2 \left[0.0722^2 - \left(0.07516 - 1.315\times10^{-3}\,V\right)^2\right]$$</div>
-    <p class="section-note">where \(0.07516 = r_{\max} - \delta_s^{\ast} = 0.099 - 0.02384\) m.</p>
-    <p style="margin-top:20px;">Inverse relation — rotor speed required for a target pressure:</p>
-    <div class="eq-block">$$N(V,\Delta p_{\rm bar}) = \sqrt{\frac{\Delta p_{\rm bar}}{5.48\times10^{-5}\left[0.0722^2 - \left(0.07516 - 1.315\times10^{-3}\,V\right)^2\right]}}$$</div>
-  </section>
-
   <!-- Rotor compatibility -->
   <section class="container">
     <h2 class="section-title">Compatible fixed-angle rotors</h2>
@@ -215,7 +169,7 @@
         <tr><td>Beckman Coulter</td><td>JA-20.50</td><td class="num">—</td><td>~25°</td><td>—</td></tr>
       </tbody>
     </table>
-    <p class="note" style="margin-top:10px;">Exact operating conditions depend on rotor geometry. Verify \(r_{\max}\) before use.</p>
+    <p class="note" style="margin-top:10px;">Exact operating conditions depend on rotor geometry. Verify r<sub>max</sub> before use.</p>
   </section>
 
   <!-- Materials -->
