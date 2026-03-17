@@ -31,6 +31,7 @@ img { max-width: 100%; display: block; }
 .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
 .site-header {
   color: white;
+  padding-top: 18px;
   background:
     linear-gradient(135deg, rgba(8,32,58,0.98) 0%, rgba(13,49,88,0.98) 100%),
     url('background-grid.svg') center/cover no-repeat;
@@ -40,11 +41,11 @@ img { max-width: 100%; display: block; }
   display: flex; justify-content: space-between; align-items: center; gap: 20px;
   padding: 22px 0 16px;
 }
-.brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: white; }
-.brand-mark { width: 52px; height: 52px; }
-.brand-name { font-size: 28px; font-weight: 700; letter-spacing: .2px; }
-.nav { display: flex; gap: 18px; flex-wrap: wrap; }
-.nav a { color: rgba(255,255,255,0.92); text-decoration: none; font-size: 15px; }
+.brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: white; flex-shrink: 0; }
+.brand-mark { width: 78px; height: 78px; min-width: 78px; object-fit: contain; background: transparent; border-radius: 0; box-shadow: none; }
+.brand-name { font-size: 28px; font-weight: 700; letter-spacing: 0.01em; }
+.nav { display: flex; gap: 22px; flex-wrap: wrap; justify-content: flex-end; }
+.nav a { color: rgba(255,255,255,0.92); text-decoration: none; font-size: 15px; margin-left: 0; }
 .nav a:hover { color: white; }
 .hero {
   padding: 34px 0 78px;
@@ -146,11 +147,11 @@ tr:last-child td { border-bottom: none; }
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 20px;
-  padding: 16px;
+  padding: 22px;
   backdrop-filter: blur(3px);
 }
 .hero-figure img,
-.diagram-card img { width: 100%; height: auto; border-radius: 14px; display:block; }
+.diagram-card img { width: 100%; height: auto; border-radius: 14px; display:block; background: rgba(255,255,255,0.94); padding: 12px; }
 .metric-grid {
   display:grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
@@ -219,92 +220,41 @@ tr:last-child td { border-bottom: none; }
 
 
 
-/* ===== Brand refinements ===== */
-.brand {
-  display: flex !important;
-  align-items: center !important;
-  gap: 14px !important;
-  text-decoration: none !important;
+@media (max-width: 980px) {
+  .brand-mark { height: 58px; width: 58px; min-width: 58px; }
+  .brand-name { font-size: 22px; }
+}
+
+
+
+
+/* ===== Mobile hamburger ===== */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  padding: 8px 11px;
+  font-size: 18px;
+  line-height: 1;
   flex-shrink: 0;
 }
-.brand-mark {
-  height: 84px !important;
-  width: auto !important;
-  display: block !important;
-  object-fit: contain !important;
-  max-width: none !important;
-}
-.brand-name {
-  font-size: 28px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em !important;
-}
-.site-header { padding-top: 18px !important; }
-.topbar {
-  align-items: center !important;
-  gap: 28px !important;
-}
-.nav {
-  flex-wrap: wrap !important;
-  justify-content: flex-end !important;
-  gap: 22px !important;
-}
-.nav a {
-  margin-left: 0 !important;
-  font-size: 15px !important;
-}
-.hero { align-items: center !important; }
-.hero-figure { padding: 22px !important; }
-.hero-figure img {
-  background: rgba(255,255,255,0.94);
-  padding: 12px;
-}
-@media (max-width: 980px) {
-  .brand-mark { height: 64px !important; }
-  .brand-name { font-size: 22px !important; }
-}
-
-
-
-/* ===== Final rotor SVG logo styling ===== */
-.brand {
-  display: flex !important;
-  align-items: center !important;
-  gap: 14px !important;
-  text-decoration: none !important;
-  flex-shrink: 0;
-}
-.brand-mark {
-  height: 78px !important;
-  width: 78px !important;
-  min-width: 78px !important;
-  display: block !important;
-  object-fit: contain !important;
-  background: transparent !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.brand-name {
-  font-size: 28px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em !important;
-}
-.topbar {
-  align-items: center !important;
-}
-@media (max-width: 980px) {
-  .brand-mark {
-    height: 58px !important;
-    width: 58px !important;
-    min-width: 58px !important;
+@media (max-width: 760px) {
+  .nav-toggle { display: block; }
+  .nav {
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 10px 0 18px;
   }
-  .brand-name {
-    font-size: 22px !important;
-  }
+  .nav.open { display: flex; }
+  .nav a { padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 16px; }
+  .nav a:last-child { border-bottom: none; }
+  .topbar { flex-wrap: wrap; }
 }
-
-
-
 
 /* Spec page additions */
 .spec-image-card img {
