@@ -1,42 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none">
   <rect width="1200" height="720" rx="28" fill="#F4F8FC"/>
   <rect x="42" y="42" width="1116" height="636" rx="26" fill="white" stroke="#D9E4EF" stroke-width="2"/>
+
+  <!-- Title -->
   <text x="86" y="112" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Orthogonal Centrifugal Membrane Filter (O-CMF)</text>
   <text x="86" y="152" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="20">A compact workflow for NF, RO and OSN membrane screening in standard laboratory centrifuges.</text>
 
-  <rect x="92" y="210" width="280" height="340" rx="24" fill="#F3F9FF" stroke="#D8EAF8" stroke-width="2"/>
-  <circle cx="232" cy="296" r="64" fill="#123B60"/>
-  <rect x="186" y="244" width="92" height="104" rx="22" fill="#34B4FF"/>
-  <rect x="196" y="256" width="72" height="16" rx="8" fill="#BCEBFF"/>
-  <text x="156" y="414" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">1. Load sample</text>
-  <text x="124" y="450" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">Feed solution and membrane coupon</text>
-  <text x="134" y="476" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">are assembled in the cartridge</text>
-  <text x="160" y="502" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">for screening.</text>
+  <!-- CARD 1: Load sample (x=86, center=226) -->
+  <rect x="86" y="200" width="280" height="360" rx="24" fill="#F3F9FF" stroke="#D8EAF8" stroke-width="2"/>
+  <circle cx="226" cy="296" r="68" fill="#123B60"/>
+  <rect x="181" y="243" width="90" height="106" rx="22" fill="#34B4FF"/>
+  <rect x="192" y="255" width="68" height="15" rx="7" fill="#BCEBFF"/>
+  <text x="226" y="412" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" text-anchor="middle">1. Load sample</text>
+  <text x="226" y="448" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">Feed solution and membrane coupon</text>
+  <text x="226" y="474" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">are assembled in the cartridge</text>
+  <text x="226" y="500" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">for screening.</text>
 
-  <path d="M404 380H536" stroke="#34B4FF" stroke-width="10" stroke-linecap="round"/>
-  <path d="M514 354L548 380L514 406" stroke="#34B4FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow 1→2 -->
+  <path d="M374 380H446" stroke="#34B4FF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M424 354L458 380L424 406" stroke="#34B4FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
-  <rect x="550" y="210" width="280" height="340" rx="24" fill="#F3F9FF" stroke="#D8EAF8" stroke-width="2"/>
-  <circle cx="690" cy="292" r="95" fill="#123B60"/>
-  <circle cx="690" cy="292" r="66" fill="#1A527F"/>
-  <rect x="667" y="226" width="46" height="132" rx="23" fill="#89E7FF"/>
-  <path d="M690 196V138" stroke="#34B4FF" stroke-width="10" stroke-linecap="round"/>
-  <path d="M664 164L690 132L716 164" stroke="#34B4FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="634" y="414" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">2. Spin</text>
-  <text x="602" y="450" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">Centrifugal acceleration generates</text>
-  <text x="604" y="476" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">the hydrostatic pressure needed</text>
-  <text x="626" y="502" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">for permeation.</text>
+  <!-- CARD 2: Spin (x=460, center=600) -->
+  <rect x="460" y="200" width="280" height="360" rx="24" fill="#F3F9FF" stroke="#D8EAF8" stroke-width="2"/>
+  <circle cx="600" cy="296" r="90" fill="#123B60"/>
+  <circle cx="600" cy="296" r="62" fill="#1A527F"/>
+  <rect x="578" y="234" width="44" height="124" rx="22" fill="#89E7FF"/>
+  <!-- Rotation arc top-right -->
+  <path d="M638 234 A54 54 0 0 1 654 296" stroke="#34B4FF" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <path d="M650 278L654 296L638 288" stroke="#34B4FF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Rotation arc bottom-left -->
+  <path d="M562 358 A54 54 0 0 1 546 296" stroke="#34B4FF" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <path d="M550 314L546 296L562 304" stroke="#34B4FF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="600" y="412" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" text-anchor="middle">2. Spin</text>
+  <text x="600" y="448" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">Centrifugal acceleration generates</text>
+  <text x="600" y="474" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">the hydrostatic pressure needed</text>
+  <text x="600" y="500" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">for permeation.</text>
 
-  <path d="M862 380H994" stroke="#34B4FF" stroke-width="10" stroke-linecap="round"/>
-  <path d="M972 354L1006 380L972 406" stroke="#34B4FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow 2→3 -->
+  <path d="M748 380H820" stroke="#34B4FF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M798 354L832 380L798 406" stroke="#34B4FF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
-  <rect x="908" y="210" width="208" height="340" rx="24" fill="#F3F9FF" stroke="#D8EAF8" stroke-width="2"/>
-  <rect x="981" y="248" width="60" height="96" rx="24" fill="#123B60"/>
-  <rect x="994" y="282" width="34" height="46" rx="14" fill="#34B4FF"/>
-  <path d="M1011 352V394" stroke="#34B4FF" stroke-width="8" stroke-linecap="round"/>
-  <circle cx="1011" cy="422" r="24" fill="#89E7FF"/>
-  <text x="950" y="476" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">3. Compare</text>
-  <text x="945" y="508" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">Flux, permeate volume</text>
-  <text x="937" y="532" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">and rejection across</text>
-  <text x="953" y="556" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18">membranes.</text>
+  <!-- CARD 3: Compare (x=834, center=974) — same width as others -->
+  <rect x="834" y="200" width="280" height="360" rx="24" fill="#F3F9FF" stroke="#D8EAF8" stroke-width="2"/>
+  <circle cx="974" cy="296" r="68" fill="#123B60"/>
+  <!-- Bar chart icon -->
+  <rect x="940" y="276" width="22" height="44" rx="5" fill="#34B4FF"/>
+  <rect x="968" y="254" width="22" height="66" rx="5" fill="#89E7FF"/>
+  <rect x="996" y="264" width="22" height="56" rx="5" fill="#34B4FF"/>
+  <!-- Baseline -->
+  <path d="M934 322H1022" stroke="#BCEBFF" stroke-width="3" stroke-linecap="round"/>
+  <text x="974" y="412" fill="#0B2239" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" text-anchor="middle">3. Compare</text>
+  <text x="974" y="448" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">Flux, permeate volume</text>
+  <text x="974" y="474" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">and rejection across</text>
+  <text x="974" y="500" fill="#5B748C" font-family="Arial, Helvetica, sans-serif" font-size="18" text-anchor="middle">membranes.</text>
 </svg>
