@@ -3,18 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CentrivaLab 94/25 — Technical specification</title>
+  <title>CentrivaLab 94/25 — Technical Specification</title>
   <link rel="icon" href="../favicon.ico" />
-  <meta name="description" content="Technical specification page for the CentrivaLab 94/25 configuration." />
+  <meta name="description" content="Technical specification for the CentrivaLab 94/25 O-CMF cartridge — intrinsic characteristics, centrifugal pressure model and operating conditions for the Sigma rotor 12159." />
   <link rel="stylesheet" href="../assets/styles.css" />
+  <style>
+    .fig-placeholder { background: #f0f5fb; border: 2px dashed var(--line); border-radius: 14px; padding: 32px; text-align: center; color: var(--muted); font-size: 15px; min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+    .fig-placeholder svg { opacity: 0.35; }
+    figcaption { font-size: 14px; color: var(--muted); margin-top: 10px; text-align: center; line-height: 1.5; }
+    table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    table th.num { text-align: right; }
+    .section-note { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  </style>
 </head>
 <body>
-
 
 <header class="site-header">
   <div class="container topbar">
     <a class="brand" href="../index.html">
-      <img class="brand-mark" src="../assets/logo.svg" alt="CentrivaLab logo"  />
+      <img class="brand-mark" src="../assets/logo.svg" alt="CentrivaLab logo" />
       <span class="brand-name">CentrivaLab™</span>
     </a>
     <button class="nav-toggle" aria-label="Toggle navigation" onclick="this.nextElementSibling.classList.toggle('open')"><svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true"><rect width="22" height="2" rx="1" fill="currentColor"/><rect y="7" width="22" height="2" rx="1" fill="currentColor"/><rect y="14" width="22" height="2" rx="1" fill="currentColor"/></svg></button>
@@ -28,54 +35,166 @@
       <a href="../contact.html">Contact</a>
     </nav>
   </div>
-
   <div class="container page-hero">
     <div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="../specifications.html">Specifications</a> / CentrivaLab 94/25</div>
     <h1>CentrivaLab 94/25</h1>
-    <p>Prepared second public configuration.</p>
+    <p>Orthogonal Centrifugal Membrane Filter cartridge for fixed-angle rotors accommodating 94&nbsp;mL round-bottom tubes at ~25°.</p>
   </div>
 </header>
 
 <main>
-  <section class="container split">
-    <div class="card">
-      <span class="eyebrow">Configuration overview</span>
-      <h3>CentrivaLab 94/25</h3>
-      <p>Prepared second family for larger working volumes and fixed-angle rotor classes around 25°. This page follows the same structure as the 50/34 page and can be updated later with the final values.</p>
-      <div class="kv">
-        <div>Tube / workflow</div><div>94 mL workflow placeholder</div>
-        <div>Rotor class</div><div>Fixed-angle (~25°)</div>
-        <div>Technology</div><div>Orthogonal Centrifugal Membrane Filter (O-CMF)</div>
-        <div>Primary use</div><div>NF, RO and OSN membrane screening</div>
+
+  <!-- Key parameters strip -->
+  <section class="container" style="margin-bottom:48px;margin-top:0;">
+    <div class="spec-strip">
+      <div class="spec-pill">
+        <strong>Nominal feed volume</strong>
+        <span>22.5 mL</span>
+      </div>
+      <div class="spec-pill">
+        <strong>Operating fill range</strong>
+        <span>21.5–22.5 mL</span>
+      </div>
+      <div class="spec-pill">
+        <strong>Max pressure (Sigma 12159)</strong>
+        <span>~40 bar</span>
+      </div>
+      <div class="spec-pill">
+        <strong>Rotor speed limit</strong>
+        <span>15 500 rpm</span>
       </div>
     </div>
-    <div class="card">
-      <span class="eyebrow">Materials guidance</span>
-      <h3>Chemical compatibility options</h3>
-      <ul class="list-tight">
-        <li>Acrylic resin for standard laboratory use</li>
-        <li>PEEK / PAEK for solvent-oriented workflows</li>
-        <li>PPS for solvent-oriented workflows</li>
-      </ul>
-      <p>PEEK, PAEK and PPS are recommended for OSN applications.</p>
+  </section>
+
+  <!-- Cartridge description + cross-section -->
+  <section class="container">
+    <h2 class="section-title">Cartridge description</h2>
+    <div class="spec-grid">
+      <div>
+        <p>
+          The CentrivaLab 94/25 is an orthogonal centrifugal membrane filter (O-CMF) cartridge that
+          converts rotor speed directly into transmembrane pressure without external pumps. The membrane
+          is oriented orthogonally to the centrifugal acceleration field so that pressure acts normal to
+          the membrane surface, thereby minimising concentration polarisation.
+        </p>
+        <p>
+          The CentrivaLab 94/25 is intended for use in fixed-angle centrifuge rotors accommodating
+          standard round-bottom centrifuge tubes of 94&nbsp;mL, with a rotor angle of approximately 25°.
+          The reference rotor is the <strong>Sigma fixed-angle rotor 12159</strong>
+          (6 × 94&nbsp;mL, 25°, maximum speed 15&nbsp;500&nbsp;rpm).
+        </p>
+        <p>
+          The radial coordinates used throughout this specification are the membrane radius
+          r<sub>m</sub>, the free-surface radius r<sub>s</sub>(V), and the rotor-imposed maximum liquid radius
+          r<sub>max</sub>. Their definitions and the cartridge geometry are shown in Figure 1.
+        </p>
+        <div class="kv" style="margin-top:18px;">
+          <div>Tube class</div><div>94 mL round-bottom</div>
+          <div>Rotor angle</div><div>~25°</div>
+          <div>Technology</div><div>Orthogonal Centrifugal Membrane Filter (O-CMF)</div>
+          <div>Primary use</div><div>NF, RO and OSN membrane screening</div>
+          <div>Reference rotor</div><div>Sigma 12159</div>
+        </div>
+      </div>
+      <figure style="margin:0;">
+        <div class="fig-placeholder">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+          <span>Cross-section figure<br><em>O-CMF-94-25-CrossSection</em><br>Add image file to assets/</span>
+        </div>
+        <figcaption>Figure 1. Cross-sectional view of the CentrivaLab 94/25 cartridge and definition of the radial coordinates used in the centrifugal pressure model.</figcaption>
+      </figure>
     </div>
   </section>
 
+  <!-- Intrinsic characteristics -->
   <section class="container">
-    <h2 class="section-title">Recommended fixed-angle rotors</h2>
+    <h2 class="section-title">Intrinsic characteristics</h2>
     <table>
+      <thead>
+        <tr><th>Parameter</th><th class="num">Value</th></tr>
+      </thead>
       <tbody>
-        <tr><td>Beckman Coulter</td><td>JA-20</td></tr>
-        <tr><td>Beckman Coulter</td><td>JA-20.50</td></tr>
-        <tr><td>Sigma</td><td>Fixed-angle rotors of similar geometry</td></tr>
+        <tr><td>Nominal feed volume</td><td class="num">22.5 mL</td></tr>
+        <tr><td>Operating fill range</td><td class="num">21.5–22.5 mL</td></tr>
+        <tr><td>Membrane coupon diameter</td><td class="num">20 mm</td></tr>
+        <tr><td>Effective membrane area</td><td class="num">1.45 cm²</td></tr>
+        <tr><td>Membrane offset (δ<sub>m</sub>)</td><td class="num">0.0268 m</td></tr>
+        <tr><td>Free-surface intercept (δ<sub>s</sub>*)</td><td class="num">2.384 × 10⁻² m</td></tr>
+        <tr><td>Free-surface slope (α)</td><td class="num">1.315 × 10⁻³ m mL⁻¹</td></tr>
       </tbody>
     </table>
-    <p class="note">Exact operating conditions depend on rotor geometry and centrifuge model.</p>
   </section>
 
-  <section class="container callout">
-    <p><strong>Research use statement:</strong> CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+  <!-- Sigma 12159 application -->
+  <section class="container">
+    <h2 class="section-title">Application to the Sigma rotor 12159</h2>
+    <p>
+      For the Sigma fixed-angle rotor 12159 (r<sub>max</sub> = 0.099 m, r<sub>m</sub> = 0.0722 m),
+      the maximum achievable transmembrane pressure at 15&nbsp;500&nbsp;rpm is approximately
+      <strong>40 bar</strong> at nominal fill volume.
+    </p>
+    <p style="margin-top:28px;">Required rotor speed (RPM) to reach a target transmembrane pressure — water at 20&nbsp;°C.
+    Dashes indicate conditions exceeding the rotor speed limit.</p>
+    <table style="margin-top:12px;">
+      <thead>
+        <tr>
+          <th>Δp (bar)</th>
+          <th class="num">22.5 mL</th>
+          <th class="num">22.0 mL</th>
+          <th class="num">21.5 mL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>2</td> <td class="num">3 411</td><td class="num">3 445</td><td class="num">3 480</td></tr>
+        <tr><td>5</td> <td class="num">5 394</td><td class="num">5 447</td><td class="num">5 502</td></tr>
+        <tr><td>10</td><td class="num">7 628</td><td class="num">7 703</td><td class="num">7 780</td></tr>
+        <tr><td>15</td><td class="num">9 342</td><td class="num">9 434</td><td class="num">9 529</td></tr>
+        <tr><td>20</td><td class="num">10 788</td><td class="num">10 893</td><td class="num">11 003</td></tr>
+        <tr><td>30</td><td class="num">13 212</td><td class="num">13 341</td><td class="num">13 476</td></tr>
+        <tr><td>40</td><td class="num">15 256</td><td class="num">15 405</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
   </section>
+
+  <!-- Rotor compatibility -->
+  <section class="container">
+    <h2 class="section-title">Compatible fixed-angle rotors</h2>
+    <table>
+      <thead>
+        <tr><th>Manufacturer</th><th>Model</th><th>Tubes</th><th>Angle</th><th>Max speed</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Sigma</td><td>12159</td><td>6 × 94 mL</td><td>25°</td><td>15 500 rpm</td></tr>
+        <tr><td>Beckman Coulter</td><td>JA-20</td><td class="num">—</td><td>~25°</td><td>—</td></tr>
+        <tr><td>Beckman Coulter</td><td>JA-20.50</td><td class="num">—</td><td>~25°</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:10px;">Exact operating conditions depend on rotor geometry. Verify r<sub>max</sub> before use.</p>
+  </section>
+
+  <!-- Materials -->
+  <section class="container">
+    <h2 class="section-title">Materials &amp; chemical compatibility</h2>
+    <div class="grid-2">
+      <div class="card">
+        <span class="eyebrow">Standard</span>
+        <h3>Acrylic resin</h3>
+        <p>Suitable for aqueous feeds in standard NF and RO screening workflows.</p>
+      </div>
+      <div class="card">
+        <span class="eyebrow">Solvent-resistant</span>
+        <h3>PEEK / PAEK / PPS</h3>
+        <p>Recommended for OSN applications and solvent-oriented workflows requiring broad chemical compatibility.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legal -->
+  <section class="container callout">
+    <p><strong>Research use statement:</strong> CentrivaLab is a commercial brand of TalentGround Lda, Lisbon, Portugal.
+    CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+  </section>
+
 </main>
 
 <footer class="footer">
