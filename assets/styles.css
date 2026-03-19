@@ -61,6 +61,8 @@ img { max-width: 100%; display: block; }
 .btn:hover { transform: translateY(-1px); }
 .btn-primary { background: white; color: var(--navy); }
 .btn-secondary { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.35); }
+.btn-card { background: var(--navy); color: white; font-size: 14px; padding: 10px 16px; border-radius: 10px; }
+.btn-card:hover { background: var(--navy-2); transform: translateY(-1px); }
 .hero-panel {
   background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
   border-radius: 18px; padding: 22px; backdrop-filter: blur(3px);
@@ -80,6 +82,11 @@ section { margin-bottom: 64px; }
 .card {
   background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: var(--shadow);
 }
+.pub-card { display: flex; flex-direction: column; gap: 0; }
+.pub-card h3 { font-size: 20px; line-height: 1.4; margin: 8px 0 10px; flex: 1; }
+.pub-authors { font-size: 14px; color: var(--muted); margin: 0 0 20px; line-height: 1.5; }
+.pub-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+.pub-doi { font-size: 12px; color: var(--muted); font-family: monospace; }
 .card h3 { margin: 0 0 10px; color: var(--navy); font-size: 24px; }
 .card h4 { margin: 0 0 8px; color: var(--navy); font-size: 18px; }
 .eyebrow {
