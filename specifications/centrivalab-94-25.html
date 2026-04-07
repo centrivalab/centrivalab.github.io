@@ -97,7 +97,7 @@
         </div>
       </div>
       <figure style="margin:0;">
-        <img src="../assets/ocmf-cross-section-94-25.png" alt="Cross-sectional view of the CentrivaLab 94/25 cartridge showing rs, rm, rmax, Concentrate Chamber and Permeate Chamber." style="width:100%; border-radius:12px; display:block;" />
+        <img src="../assets/centrivalab-94-25.png" alt="CentrivaLab 94/25 cross-section showing internal cartridge geometry and radial coordinate definitions" style="width:100%; border-radius:10px; display:block;" />
         <figcaption>Figure 1. Cross-sectional view of the CentrivaLab 94/25 cartridge and definition of the radial coordinates used in the centrifugal pressure model.</figcaption>
       </figure>
     </div>
@@ -122,52 +122,125 @@
     </table>
   </section>
 
-  <!-- Sigma 12159 application -->
+  <!-- Pressure model -->
   <section class="container">
-    <h2 class="section-title">Application to the Sigma rotor 12159</h2>
+    <h2 class="section-title">Centrifugal pressure model</h2>
     <p>
-      For the Sigma fixed-angle rotor 12159 (r<sub>max</sub> = 0.099 m, r<sub>m</sub> = 0.0722 m),
-      the maximum achievable transmembrane pressure at 15&nbsp;500&nbsp;rpm is approximately
-      <strong>40 bar</strong> at nominal fill volume.
+      Transmembrane pressure is given by the O-CMF centrifugal model:
+      Δ<em>p</em> = ½ ρ ω² (<em>r</em><sub>m</sub>² − <em>r</em><sub>s</sub>²),
+      where <em>r</em><sub>m</sub> = <em>r</em><sub>max</sub> − δ<sub>m</sub> and
+      <em>r</em><sub>s</sub> = <em>r</em><sub>max</sub> − (δ<sub>s</sub>* + α<em>V</em>).
+      All values are at nominal fill volume (22.5&nbsp;mL), water at 20&nbsp;°C.
+      Dashes indicate conditions exceeding the rotor speed limit.
     </p>
-    <p style="margin-top:28px;">Required rotor speed (RPM) to reach a target transmembrane pressure — water at 20&nbsp;°C.
-    Dashes indicate conditions exceeding the rotor speed limit.</p>
-    <table style="margin-top:12px;">
+
+    <table style="margin-top:18px;">
       <thead>
         <tr>
-          <th>Δp (bar)</th>
-          <th class="num">22.5 mL</th>
-          <th class="num">22.0 mL</th>
-          <th class="num">21.5 mL</th>
+          <th>Δ<em>p</em> (bar)</th>
+          <th class="num">Sigma 12159 ★<br><span style="font-weight:400;font-size:13px;">6×94 mL · 25° · 15 500 rpm</span></th>
+          <th class="num">Thermo F15-6×100y<br><span style="font-weight:400;font-size:13px;">6×100 mL · 25° · 15 000 rpm</span></th>
+          <th class="num">Sigma 12155<br><span style="font-weight:400;font-size:13px;">4×94 mL · 26° · 20 000 rpm</span></th>
+          <th class="num">Beckman FX6100 / JA-10.100<br><span style="font-weight:400;font-size:13px;">6×100 mL · 25° · 10 200 rpm</span></th>
+          <th class="num">Beckman VF 6.94<br><span style="font-weight:400;font-size:13px;">6×94 mL · 25° · 10 000 rpm</span></th>
         </tr>
       </thead>
       <tbody>
-        <tr><td>2</td> <td class="num">3 411</td><td class="num">3 445</td><td class="num">3 480</td></tr>
-        <tr><td>5</td> <td class="num">5 394</td><td class="num">5 447</td><td class="num">5 502</td></tr>
-        <tr><td>10</td><td class="num">7 628</td><td class="num">7 703</td><td class="num">7 780</td></tr>
-        <tr><td>15</td><td class="num">9 342</td><td class="num">9 434</td><td class="num">9 529</td></tr>
-        <tr><td>20</td><td class="num">10 788</td><td class="num">10 893</td><td class="num">11 003</td></tr>
-        <tr><td>30</td><td class="num">13 212</td><td class="num">13 341</td><td class="num">13 476</td></tr>
-        <tr><td>40</td><td class="num">15 256</td><td class="num">15 405</td><td class="num">—</td></tr>
+        <tr><td>2</td>  <td class="num">3 414</td>  <td class="num">3 443</td>  <td class="num">3 672</td>  <td class="num">3 443</td>  <td class="num">3 227</td></tr>
+        <tr><td>5</td>  <td class="num">5 398</td>  <td class="num">5 444</td>  <td class="num">5 807</td>  <td class="num">5 444</td>  <td class="num">5 103</td></tr>
+        <tr><td>10</td> <td class="num">7 634</td>  <td class="num">7 699</td>  <td class="num">8 212</td>  <td class="num">7 699</td>  <td class="num">7 217</td></tr>
+        <tr><td>15</td> <td class="num">9 349</td>  <td class="num">9 430</td>  <td class="num">10 057</td> <td class="num">9 430</td>  <td class="num">8 839</td></tr>
+        <tr><td>20</td> <td class="num">10 796</td> <td class="num">10 889</td> <td class="num">11 613</td> <td class="num">—</td>       <td class="num">—</td></tr>
+        <tr><td>30</td> <td class="num">13 222</td> <td class="num">13 336</td> <td class="num">14 223</td> <td class="num">—</td>       <td class="num">—</td></tr>
+        <tr><td>40</td> <td class="num">15 267</td> <td class="num">—</td>      <td class="num">16 424</td> <td class="num">—</td>       <td class="num">—</td></tr>
+        <tr><td>50</td> <td class="num">—</td>       <td class="num">—</td>      <td class="num">18 362</td> <td class="num">—</td>       <td class="num">—</td></tr>
+        <tr>
+          <td><strong>Max Δ<em>p</em></strong></td>
+          <td class="num"><strong>41.2 bar</strong></td>
+          <td class="num"><strong>38.0 bar</strong></td>
+          <td class="num"><strong>59.3 bar</strong></td>
+          <td class="num"><strong>17.6 bar</strong></td>
+          <td class="num"><strong>19.2 bar</strong></td>
+        </tr>
       </tbody>
     </table>
+    <p class="section-note" style="margin-top:10px;">★ Reference rotor. r<sub>m</sub> and r<sub>s</sub> are the radial positions of the membrane and liquid free surface, respectively. Model assumes pure water at 20&nbsp;°C; correct for solvent density as needed.</p>
   </section>
 
   <!-- Rotor compatibility -->
   <section class="container">
     <h2 class="section-title">Compatible fixed-angle rotors</h2>
-    <table>
+    <p class="section-intro">All confirmed fixed-angle rotors at ~25° accommodating 94–100&nbsp;mL round-bottom (Oak Ridge) tubes. r<sub>max</sub> values derived from published RCF/RPM data.</p>
+    <table style="margin-top:14px;">
       <thead>
-        <tr><th>Manufacturer</th><th>Model</th><th>Tubes</th><th>Angle</th><th>Max speed</th><th>Notes</th></tr>
+        <tr>
+          <th>Manufacturer</th>
+          <th>Rotor model</th>
+          <th>Tubes</th>
+          <th>Angle</th>
+          <th>Max speed</th>
+          <th class="num">r<sub>max</sub> (mm)</th>
+          <th>Compatible centrifuges</th>
+        </tr>
       </thead>
       <tbody>
-        <tr><td>Sigma</td><td>12159</td><td>6 × 94 mL</td><td>25°</td><td>15 500 rpm</td><td>Reference rotor</td></tr>
-        <tr><td>Sigma</td><td>12155</td><td>4 × 94 mL</td><td>26°</td><td>20 000 rpm</td><td>4-place</td></tr>
-        <tr><td>Thermo / Heraeus</td><td>HFA 15.9</td><td>6 × 94 mL</td><td>26°</td><td>10 500–12 000 rpm</td><td>Max ~25 bar</td></tr>
-        <tr><td>Thermo / Heraeus</td><td>F15-6×100</td><td>6 × 100 mL</td><td>25°</td><td>15 000 rpm</td><td>Megafuge 16/X1/X3</td></tr>
+        <tr>
+          <td>Sigma</td>
+          <td><strong>12159</strong> ★</td>
+          <td>6 × 94 mL</td>
+          <td>25°</td>
+          <td>15 500 rpm</td>
+          <td class="num">98</td>
+          <td>Sigma 3-18KS, 3-30KS / 3-30KHS</td>
+        </tr>
+        <tr>
+          <td>Thermo Scientific</td>
+          <td>FiberLite F15-6×100y</td>
+          <td>6 × 100 mL</td>
+          <td>25°</td>
+          <td>15 000 rpm</td>
+          <td class="num">98</td>
+          <td>Sorvall ST 16R, Multifuge X3R, Legend XTR, Megafuge 16R, Eppendorf 5810R&nbsp;/ 5804R</td>
+        </tr>
+        <tr>
+          <td>Sigma</td>
+          <td>12155</td>
+          <td>4 × 94 mL</td>
+          <td>26°</td>
+          <td>20 000 rpm</td>
+          <td class="num">91</td>
+          <td>Sigma 3-18KS, 3-30KS / 3-30KHS</td>
+        </tr>
+        <tr>
+          <td>Beckman Coulter</td>
+          <td>FX6100</td>
+          <td>6 × 100 mL</td>
+          <td>25°</td>
+          <td>10 200 rpm</td>
+          <td class="num">98</td>
+          <td>Allegra X-12R, X-14R, X-15R</td>
+        </tr>
+        <tr>
+          <td>Beckman Coulter</td>
+          <td>JA-10.100</td>
+          <td>6 × 100 mL</td>
+          <td>25°</td>
+          <td>10 200 rpm</td>
+          <td class="num">98</td>
+          <td>Avanti J-15R</td>
+        </tr>
+        <tr>
+          <td>Beckman Coulter</td>
+          <td>VF 6.94</td>
+          <td>6 × 94 mL</td>
+          <td>25°</td>
+          <td>10 000 rpm</td>
+          <td class="num">106</td>
+          <td>Allegra V-15R</td>
+        </tr>
       </tbody>
     </table>
-    <p class="note" style="margin-top:10px;">Exact operating conditions depend on rotor geometry. Verify r<sub>max</sub> before use.</p>
+    <p class="section-note" style="margin-top:10px;">★ Reference rotor used for the pressure model in this specification. Exact operating conditions depend on rotor geometry; verify r<sub>max</sub> before use with other rotors.</p>
   </section>
 
   <!-- Materials -->
