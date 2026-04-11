@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CP Simulator — CentrivaLab</title>
+  <link rel="icon" href="favicon.ico" />
+  <meta name="description" content="Experiment planning tool: predict concentration polarisation across the full pressure range for your membrane and solute." />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .sim-layout {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .sim-panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .sim-panel h3 {
+      margin: 0 0 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .field-group { margin-bottom: 13px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .field-group select,
+    .field-group input[type="number"] {
+      width: 100%;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text);
+      background: #f9fbfd;
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      transition: border-color .2s;
+      box-sizing: border-box;
+    }
+    .field-group select:focus,
+    .field-group input[type="number"]:focus { border-color: var(--blue); background: white; }
+    .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e7c96' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 11px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 10px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      transition: border-color .3s, background .3s;
+    }
+    .kpi-card .kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+    .kpi-card .kpi-value { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.1; transition: color .3s; }
+    .kpi-card .kpi-unit  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .chart-panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px 20px 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .chart-panel h3 { margin: 0 0 2px; font-size: 11px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .07em; }
+    .chart-panel .chart-sub { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+    canvas { display: block; width: 100% !important; }
+
+    .warning-box {
+      background: #fff8e6; border: 1px solid #f6c85f; border-left: 5px solid #f0a500;
+      border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00;
+      margin-bottom: 14px; display: none;
+    }
+    .info-box {
+      background: #f0f4ff; border: 1px solid #b0c4e8; border-left: 5px solid #3a6bc4;
+      border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #1a2d5a;
+      margin-bottom: 14px; display: none;
+    }
+    .preprint-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 4px; }
+    .preprint-note a { color: var(--muted); }
+
+    @media (max-width: 1000px) {
+      .sim-layout { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container topbar">
+    <a class="brand" href="index.html">
+      <img class="brand-mark" src="assets/logo.svg" alt="CentrivaLab logo" />
+      <span class="brand-name">CentrivaLab™</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" onclick="this.nextElementSibling.classList.toggle('open')">
+      <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+        <rect width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="7" width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="14" width="22" height="2" rx="1" fill="currentColor"/>
+      </svg>
+    </button>
+    <nav class="nav">
+      <a href="technology.html">Technology</a>
+      <a href="products.html">Products</a>
+      <a href="specifications.html">Specifications</a>
+      <a href="applications.html">Applications</a>
+      <a href="publications.html">Publications</a>
+      <a href="simulator.html" style="color:white;font-weight:700;">CP Simulator</a>
+      <a href="support.html">Support</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+  <div class="container page-hero">
+    <div class="breadcrumbs"><a href="index.html">Home</a> › CP Simulator</div>
+    <h1>Concentration Polarisation Simulator</h1>
+    <p>
+      Experiment planning tool for O-CMF screening. Enter your membrane (L<sub>p</sub>, B) and
+      feed solution to predict the CP factor across the full pressure range — and identify
+      the operating window where rejection measurements are reliable (Γ &lt; 20%).
+    </p>
+  </div>
+</header>
+
+<main>
+  <div class="container" style="margin-top:36px; margin-bottom:56px;">
+    <div class="sim-layout">
+
+      <!-- ── LEFT: Inputs ── -->
+      <div>
+
+        <div class="sim-panel">
+          <h3>Cartridge &amp; Rotor</h3>
+          <div class="field-group">
+            <label for="sel-cartridge">Cartridge</label>
+            <select id="sel-cartridge" onchange="onCartridgeChange()">
+              <option value="50-34">CentrivaLab 50/34</option>
+              <option value="94-25">CentrivaLab 94/25</option>
+            </select>
+            <div class="field-hint" id="vol-hint">Nominal feed volume: 13 mL</div>
+          </div>
+          <div class="field-group" id="group-rotor" style="display:none;">
+            <label for="sel-rotor">Rotor</label>
+            <select id="sel-rotor" onchange="onCartridgeChange()">
+              <option value="sigma12159" data-rmax="0.098" data-maxrpm="15500">Sigma 12159 — 6×94 mL, 25°, r_max 98 mm, 15 500 rpm</option>
+              <option value="fiberlite"  data-rmax="0.098" data-maxrpm="15000">Thermo FiberLite F15-6×100y — 6×100 mL, 25°, r_max 98 mm, 15 000 rpm</option>
+              <option value="sigma12155" data-rmax="0.091" data-maxrpm="20000">Sigma 12155 — 4×94 mL, 26°, r_max 91 mm, 20 000 rpm</option>
+              <option value="fx6100"     data-rmax="0.098" data-maxrpm="10200">Beckman FX6100/JA-10.100 — 6×100 mL, 25°, r_max 98 mm, 10 200 rpm</option>
+              <option value="vf694"      data-rmax="0.106" data-maxrpm="10000">Beckman VF 6.94 — 6×94 mL, 25°, r_max 106 mm, 10 000 rpm</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Feed Solution</h3>
+          <div class="field-group">
+            <label for="sel-solute">Solute</label>
+            <select id="sel-solute" onchange="update()">
+              <option value="NaCl">NaCl</option>
+              <option value="MgSO4">MgSO₄</option>
+              <option value="Lactose">Lactose</option>
+            </select>
+            <div class="field-hint">Physical properties at 20 °C auto-filled from Table 1 (Geraldes et al. 2026)</div>
+          </div>
+          <div class="field-group">
+            <label for="inp-C0">Feed concentration C<sub>A0</sub> (g L⁻¹)</label>
+            <input type="number" id="inp-C0" value="5" min="0.1" max="60" step="0.5" oninput="update()" />
+            <div class="field-hint">Valid below 60 g/L (MgSO₄, lactose) or 20 g/L (NaCl)</div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Membrane</h3>
+          <div class="field-group">
+            <label for="sel-class">Membrane class</label>
+            <select id="sel-class" onchange="onClassChange()">
+              <option value="custom">— Custom —</option>
+              <option value="SWRO">SWRO — Seawater RO</option>
+              <option value="BWRO">BWRO — Brackish Water RO</option>
+              <option value="LPRO">LPRO — Low-Pressure RO</option>
+              <option value="NF">NF — Nanofiltration</option>
+              <option value="LooseNF">Loose NF / OSN</option>
+            </select>
+            <div class="field-hint">Select a class to auto-fill typical L<sub>p</sub> and B values.</div>
+          </div>
+          <div class="field-group">
+            <label for="inp-Lp">Hydraulic permeability L<sub>p</sub> (L m⁻² h⁻¹ bar⁻¹)</label>
+            <input type="number" id="inp-Lp" value="5" min="0.1" max="200" step="0.5" oninput="onLpBChange()" />
+            <div class="field-hint">Typical — SWRO: 1 · BWRO: 3.5 · LPRO: 7 · NF: 12 · Loose NF: 40</div>
+          </div>
+          <div class="field-group">
+            <label for="inp-B">Solute permeability B (L m⁻² h⁻¹)</label>
+            <input type="number" id="inp-B" value="0.1" min="0.001" max="100" step="0.01" oninput="onLpBChange()" />
+            <div class="field-hint">B = J<sub>v</sub>(1−R<sub>int</sub>)/R<sub>int</sub> at zero CP. Typical — RO: 0.01–0.2 · NF: 0.1–5</div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Operating Point</h3>
+          <div class="field-group">
+            <label for="inp-dP">Transmembrane pressure ΔP (bar)</label>
+            <input type="number" id="inp-dP" value="10" min="0.5" max="80" step="0.5" oninput="update()" />
+            <div class="field-hint" id="op-rpm-hint">Corresponding RPM: —</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── RIGHT: Results ── -->
+      <div>
+
+        <div id="swro-box" class="warning-box">
+          <strong>Pressure range note.</strong>
+          SWRO testing typically requires 40–80 bar. The CentrivaLab 94/25 reaches
+          ~40 bar at maximum rotor speed — this is at the low end for seawater-class membranes.
+          Consider using the CentrivaLab 50/34 with a high-speed rotor for SWRO.
+        </div>
+        <div id="warning-box" class="warning-box">
+          <strong>Out-of-calibration range.</strong> <span id="warning-text"></span>
+          Results are extrapolations — interpret with caution.
+        </div>
+        <div id="info-box" class="info-box"><span id="info-text"></span></div>
+
+        <!-- KPIs at operating point -->
+        <div class="kpi-grid">
+          <div class="kpi-card" id="kpi-gamma-card">
+            <div class="kpi-label">Γ at ΔP</div>
+            <div class="kpi-value" id="kpi-gamma">—</div>
+            <div class="kpi-unit">CP factor</div>
+          </div>
+          <div class="kpi-card" id="kpi-Robs-card">
+            <div class="kpi-label">R<sub>obs</sub></div>
+            <div class="kpi-value" id="kpi-Robs">—</div>
+            <div class="kpi-unit">observed</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">R<sub>int</sub></div>
+            <div class="kpi-value" id="kpi-Rint">—</div>
+            <div class="kpi-unit">intrinsic</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">J<sub>v</sub></div>
+            <div class="kpi-value" id="kpi-Jv">—</div>
+            <div class="kpi-unit">L m⁻² h⁻¹</div>
+          </div>
+        </div>
+
+        <!-- Chart 1: Γ vs ΔP -->
+        <div class="chart-panel">
+          <h3>CP factor Γ vs ΔP</h3>
+          <p class="chart-sub">x-axis: permeate flux J<sub>v</sub>. Reference curves for the 4 membrane classes (coloured) and your membrane (thick navy). Green band: reliable window (Γ &lt; 20%).</p>
+          <canvas id="chart-gamma" height="230"></canvas>
+        </div>
+
+        <!-- Chart 2: Solute passage vs Jv (log scale) -->
+        <div class="chart-panel">
+          <h3>Solute passage (1−R) vs J<sub>v</sub></h3>
+          <p class="chart-sub">y-axis: solute passage (1−R) on log scale — directly reflects permeate purity. Solid: R<sub>obs</sub> (measured). Navy dashed: R<sub>int</sub> (true intrinsic, your membrane).</p>
+          <canvas id="chart-rej" height="230"></canvas>
+        </div>
+
+        <p class="preprint-note">
+          Model: Geraldes V., Fan H., Yang M., Rodrigues M., Elimelech M. —
+          "Predicting concentration polarization in Ortho-Centrifugal Membrane Filters for NF/RO membrane screening."
+          Preprint under review, <em>Journal of Membrane Science</em> (2026).
+          Thermo-physical properties at 20 °C from Table 1 of the same work.
+          Correlation k<sub>c</sub>/U* = 0.28 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>,
+          validated for Sc ∈ [700, 2200] and 𝒢 ∈ [7×10⁻⁹, 5×10⁻⁶].
+          Mean relative deviation ~7%, maximum ~22% vs DNS data.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>CentrivaLab™</h4>
+      <p>CentrivaLab is a commercial brand of Talentground Lda.</p>
+      <p>CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+    </div>
+    <div>
+      <h4>Pages</h4>
+      <p>
+        <a href="technology.html">Technology</a><br>
+        <a href="products.html">Products</a><br>
+        <a href="specifications.html">Specifications</a><br>
+        <a href="applications.html">Applications</a><br>
+        <a href="publications.html">Publications</a><br>
+        <a href="simulator.html">CP Simulator</a><br>
+        <a href="support.html">Support</a><br>
+        <a href="contact.html">Contact</a>
+      </p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p><a href="mailto:info@centrivalab.com">info@centrivalab.com</a><br>
+         <a href="mailto:commercial@centrivalab.com">commercial@centrivalab.com</a></p>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+//  O-CMF CP Simulator — Experiment Planning Mode
+//  Model: Geraldes et al. (2026)
+//  Thermo-physical properties at 20 °C, Table 1
+// ============================================================
+
+const RHO        = 1000;       // kg/m³
+const DELTA_M    = 0.0268;     // m  (r_max − r_m, intrinsic to cartridge)
+const DELTA_S_ST = 2.384e-2;   // m
+const ALPHA      = 1.315e-3;   // m/mL
+const K2         = 0.28;       // correlation constant (Eq. 26)
+const NU_W       = 1.004e-6;   // m²/s  kinematic viscosity of water at 20 °C
+
+// Nominal feed volumes [mL]
+const VOL_NOM = { "50-34": 13.0, "94-25": 22.5 };
+
+// Membrane class presets: { Lp [LMH/bar], B [LMH], Jv_max [LMH] }
+const MEM_CLASSES = {
+  SWRO:    { Lp: 1.0,  B: 0.05, Jv_max: 50  },
+  BWRO:    { Lp: 3.5,  B: 0.3,  Jv_max: 35  },
+  LPRO:    { Lp: 7.0,  B: 1.0,  Jv_max: 50  },
+  NF:      { Lp: 12.0, B: 3.0,  Jv_max: 100 },
+  LooseNF: { Lp: 40.0, B: 15.0, Jv_max: 120 }
+};
+
+// Reference lines for multi-curve charts (4 membrane classes)
+const CLASS_LINES = [
+  { key: "SWRO",    label: "SWRO",     color: "#d44040" },
+  { key: "BWRO",    label: "BWRO",     color: "#e08c20" },
+  { key: "NF",      label: "NF",       color: "#2d9e6a" },
+  { key: "LooseNF", label: "Loose NF", color: "#3a7fc1" }
+];
+const CURRENT_COLOR = "#1a3a6b";
+
+// 50/34 rotor: Beckman JA-20, r_max = r_m + delta_m = 76.2 + 26.8 = 103.0 mm
+const RMAX_50_34  = 0.1030;
+const MAXRPM_50_34 = 18500;
+
+// Solute properties at 20 °C  (Table 1, Geraldes et al. 2026)
+// D_A(C) = D0 + a1·C + a2·C² + a3·C³ + a4·C⁴   [m²/s, C in kg/m³]
+// ν(C)   = NU_W + knu·C                           [m²/s]
+// π(C)   = k1·C + k2·C²                           [Pa,   C in kg/m³]
+// β      = concentration contraction coeff         [m³/kg]
+const SOLUTES = {
+  NaCl: {
+    beta: 6.713e-4,
+    D0: 1.41e-9, a1: -2.661e-11, a2: 1.3507e-12, a3: -1.8741e-14, a4: 0,
+    knu: 1.61e-9,
+    k1: 77811, k2: 0
+  },
+  MgSO4: {
+    beta: 9.855e-4,
+    D0: 0.608e-9, a1: -2.0425e-11, a2: 1.3394e-12, a3: -4.1465e-14, a4: 4.4485e-16,
+    knu: 5.08e-9,
+    k1: 22910, k2: -13.85
+  },
+  Lactose: {
+    beta: 3.75e-4,
+    D0: 0.496e-9, a1: -0.1395e-11, a2: 0.02148e-12, a3: 0, a4: 0,
+    knu: 2.8e-9,
+    k1: 7314.5, k2: 8.253
+  }
+};
+
+function getDA(sol, C) {
+  const s = SOLUTES[sol];
+  return s.D0 + s.a1*C + s.a2*C*C + s.a3*C*C*C + s.a4*C*C*C*C;
+}
+function getNu(sol, C) { return NU_W + SOLUTES[sol].knu * C; }
+function getPi(sol, C) { const s = SOLUTES[sol]; return s.k1*C + s.k2*C*C; }
+
+// ── Geometry helpers ──
+function getRmax() {
+  if (document.getElementById("sel-cartridge").value === "50-34") return RMAX_50_34;
+  const rot = document.getElementById("sel-rotor");
+  return parseFloat(rot.options[rot.selectedIndex].dataset.rmax);
+}
+function getMaxRpm() {
+  if (document.getElementById("sel-cartridge").value === "50-34") return MAXRPM_50_34;
+  const rot = document.getElementById("sel-rotor");
+  return parseInt(rot.options[rot.selectedIndex].dataset.maxrpm);
+}
+function getGeom() {
+  const cart = document.getElementById("sel-cartridge").value;
+  const V    = VOL_NOM[cart];
+  const rmax = getRmax();
+  const r_m  = rmax - DELTA_M;
+  const r_s  = rmax - (DELTA_S_ST + ALPHA * V);
+  return { r_m, r_s };
+}
+// Full rotor limit — used for the chart x-axis range
+function getRotorDP() {
+  const { r_m, r_s } = getGeom();
+  const omega = getMaxRpm() * 2 * Math.PI / 60;
+  return 0.5 * RHO * omega * omega * (r_m*r_m - r_s*r_s) / 1e5; // bar
+}
+// Clamped by class Jv_max — used to restrict the operating-point input
+function getMaxDP() {
+  const dP_rotor = getRotorDP();
+  const cls = document.getElementById("sel-class").value;
+  if (cls !== "custom") {
+    const Lp = parseFloat(document.getElementById("inp-Lp").value);
+    const sol = document.getElementById("sel-solute").value;
+    const C0  = parseFloat(document.getElementById("inp-C0").value);
+    const Jv_max = MEM_CLASSES[cls].Jv_max;
+    const pi0    = getPi(sol, C0) / 1e5;
+    const dP_Jvmax = Lp > 0 ? (Jv_max / Lp + pi0) : dP_rotor;
+    return Math.min(dP_rotor, dP_Jvmax);
+  }
+  return dP_rotor;
+}
+// Practical Jv_max [LMH] for a custom membrane, based on Lp
+function getJvMaxFromLp(Lp) {
+  if (Lp <= 1.5) return 50;   // SWRO range (leading element up to ~50 LMH)
+  if (Lp <= 5)   return 35;   // BWRO range
+  if (Lp <= 9)   return 50;   // LPRO range
+  if (Lp <= 25)  return 100;  // NF range
+  return 120;                  // Loose NF / OSN
+}
+
+function dpToRpm(dP_bar, r_m, r_s) {
+  const dP_Pa = dP_bar * 1e5;
+  const denom = RHO * (r_m*r_m - r_s*r_s);
+  if (denom <= 0) return 0;
+  return Math.sqrt(2 * dP_Pa / denom) * 60 / (2 * Math.PI);
+}
+
+// ── Iterative CP solver at a single ΔP ──
+// Returns null when no permeation (π_wall ≥ ΔP)
+function solveCP(dP_bar, sol, C0, Lp_SI, B_SI) {
+  const { r_m, r_s } = getGeom();
+  const rpm   = dpToRpm(dP_bar, r_m, r_s);
+  const omega = rpm * 2 * Math.PI / 60;
+  const a_m   = omega * omega * r_m;
+
+  let C_Am = C0;
+  const TOL = 1e-7, MAX_ITER = 80, RELAX = 0.35;
+  let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0, G = 0, Ustar = 0;
+
+  for (let iter = 0; iter < MAX_ITER; iter++) {
+    const DA   = Math.max(getDA(sol, C_Am), 1e-12);
+    const nu   = getNu(sol, C_Am);
+    const pi_w = getPi(sol, C_Am);
+
+    Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
+    if (Jv <= 0) return null;
+
+    RA    = Jv / (Jv + B_SI);
+    Ustar = Math.pow(a_m * DA, 1/3);
+    Sc    = nu / DA;
+    G     = RA * SOLUTES[sol].beta * C_Am * (Jv / Ustar);
+    if (G <= 0) return null;
+
+    kc    = K2 * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25);
+    const phi = Jv / kc;
+    Gamma = RA * (Math.exp(Math.min(phi, 20)) - 1);
+
+    const C_new = C0 * (1 + Gamma);
+    const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
+    C_Am        = C_Am + RELAX * (C_new - C_Am);
+    if (err < TOL) break;
+  }
+
+  const R_obs  = Math.max(0, 1 - (1 + Gamma) * (1 - RA));
+  const Jv_lmh = Jv * 3.6e6;
+  return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc, G };
+}
+
+// ── Membrane class selector ──
+function onClassChange() {
+  const cls = document.getElementById("sel-class").value;
+  if (cls !== "custom" && MEM_CLASSES[cls]) {
+    document.getElementById("inp-Lp").value = MEM_CLASSES[cls].Lp;
+    document.getElementById("inp-B").value  = MEM_CLASSES[cls].B;
+  }
+  update();
+}
+
+// When L_p or B is edited manually, reset class to custom
+function onLpBChange() {
+  document.getElementById("sel-class").value = "custom";
+  update();
+}
+
+// ── Main update ──
+function update() {
+  const sol   = document.getElementById("sel-solute").value;
+  const C0    = parseFloat(document.getElementById("inp-C0").value);   // g/L = kg/m³
+  const Lp    = parseFloat(document.getElementById("inp-Lp").value);   // L/(m²·h·bar)
+  const B     = parseFloat(document.getElementById("inp-B").value);    // L/(m²·h)
+  const dP_op = parseFloat(document.getElementById("inp-dP").value);   // bar
+
+  const Lp_SI = Lp * 1e-3 / 3600 / 1e5;  // m/(s·Pa)
+  const B_SI  = B  * 1e-3 / 3600;         // m/s
+
+  const dP_max = Math.min(getRotorDP(), 80);  // full rotor range for chart
+  const dP_min = 0.5;
+  const N      = 100;
+
+  const dPs = [];
+  for (let i = 0; i <= N; i++) dPs.push(dP_min + (dP_max - dP_min) * i / N);
+
+  // Helper: compute Γ, R_int, R_obs arrays for a membrane (lp, b in SI)
+  function computeCurve(lp, b, jvMax) {
+    const gammas = [], Rints = [], Robss = [], Jvs = [];
+    let oor = false;
+    for (const dP of dPs) {
+      const res = solveCP(dP, sol, C0, lp, b);
+      // Clip beyond practical Jv_max
+      if (!res || (jvMax !== undefined && res.Jv_lmh > jvMax)) {
+        gammas.push(null); Rints.push(null); Robss.push(null); Jvs.push(null); continue;
+      }
+      gammas.push(res.Gamma);
+      Rints.push( res.RA);
+      Robss.push( res.R_obs);
+      Jvs.push(   res.Jv_lmh);
+      if (res.Sc < 700 || res.Sc > 2200 || res.G < 7e-9 || res.G > 5e-6) oor = true;
+    }
+    return { gammas, Rints, Robss, Jvs, oor };
+  }
+
+  // 4 class reference curves — each clipped to its own practical Jv_max
+  const classCurves = CLASS_LINES.map(cl => {
+    const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const b  = MEM_CLASSES[cl.key].B  * 1e-3 / 3600;
+    return { label: cl.label, color: cl.color, lineWidth: 1.5,
+             ...computeCurve(lp, b, MEM_CLASSES[cl.key].Jv_max) };
+  });
+
+  // Current membrane curve — clipped to class Jv_max or Lp-derived limit
+  const selClass   = document.getElementById("sel-class").value;
+  const currJvMax  = selClass !== "custom" ? MEM_CLASSES[selClass].Jv_max : getJvMaxFromLp(Lp);
+  const currData   = computeCurve(Lp_SI, B_SI, currJvMax);
+  const gammas   = currData.gammas;
+  const outOfRange = currData.oor;
+  const currentCurve = {
+    label: "Current", color: CURRENT_COLOR, lineWidth: 2.5,
+    ...currData, isCurrent: true, jvMax: currJvMax
+  };
+
+  // Operating point (use getMaxDP() to clamp — respects class Jv_max)
+  const dP_opMax = Math.min(getMaxDP(), 80);
+  const dP_clamped = Math.max(dP_min, Math.min(dP_op, dP_opMax));
+  const op = solveCP(dP_clamped, sol, C0, Lp_SI, B_SI);
+
+  // RPM hint
+  const hintEl = document.getElementById("op-rpm-hint");
+  if (op) {
+    hintEl.textContent = "Corresponding RPM: " + Math.round(op.rpm).toLocaleString() + " rpm";
+  } else {
+    hintEl.textContent = "No permeation at this ΔP — osmotic pressure exceeds driving force";
+  }
+
+  // KPIs
+  if (op) {
+    document.getElementById("kpi-gamma").textContent = op.Gamma.toFixed(3);
+    document.getElementById("kpi-Robs").textContent  = (op.R_obs * 100).toFixed(1) + "%";
+    document.getElementById("kpi-Rint").textContent  = (op.RA   * 100).toFixed(1) + "%";
+    document.getElementById("kpi-Jv").textContent    = op.Jv_lmh.toFixed(1);
+    const safe = op.Gamma < 0.2;
+    const gc = document.getElementById("kpi-gamma-card");
+    gc.style.borderColor = safe ? "#34c759" : "#e04040";
+    gc.style.background  = safe ? "linear-gradient(135deg,#edfff3,#f7fff9)" : "linear-gradient(135deg,#fff3f3,#fff9f9)";
+    document.getElementById("kpi-gamma").style.color = safe ? "#1a7c3a" : "#c02020";
+  } else {
+    ["kpi-gamma","kpi-Robs","kpi-Rint","kpi-Jv"].forEach(id => {
+      document.getElementById(id).textContent = "—";
+    });
+    const gc = document.getElementById("kpi-gamma-card");
+    gc.style.borderColor = ""; gc.style.background = "";
+    document.getElementById("kpi-gamma").style.color = "";
+  }
+
+  // Alerts
+  const isSWRO94 = document.getElementById("sel-class").value === "SWRO" &&
+                   document.getElementById("sel-cartridge").value === "94-25";
+  document.getElementById("swro-box").style.display = isSWRO94 ? "block" : "none";
+
+  document.getElementById("warning-box").style.display = outOfRange ? "block" : "none";
+  if (outOfRange) document.getElementById("warning-text").textContent =
+    " Some points fall outside the validated range (Sc ∈ [700–2200], 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶]).";
+
+  const nNull = gammas.filter(g => g === null).length;
+  const infoBox = document.getElementById("info-box");
+  if (nNull === gammas.length) {
+    infoBox.style.display = "block";
+    document.getElementById("info-text").textContent =
+      "No permeation in the operating range: osmotic pressure exceeds ΔP throughout. Reduce C₀ or increase Lp.";
+  } else if (nNull > 0) {
+    infoBox.style.display = "block";
+    document.getElementById("info-text").textContent =
+      "Permeation starts only above a minimum ΔP (osmotic pressure threshold). Curve shown for the permeating region.";
+  } else {
+    infoBox.style.display = "none";
+  }
+
+  const allCurves = [...classCurves, currentCurve];
+  drawGamma(dPs, allCurves, dP_clamped, op);
+  drawRej(dPs, allCurves, dP_clamped, op);
+}
+
+// ── Canvas utilities ──
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y,   x+w, y+r,   r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x,   y+h, x,   y+h-r, r);
+  ctx.lineTo(x, y+r);   ctx.arcTo(x,   y,   x+r, y,     r);
+  ctx.closePath();
+}
+
+function drawChartLegend(ctx, pad, W, items) {
+  // items: [{label, color, lw, dashed?}]
+  const itemH = 16, swW = 22, textOff = 28, boxW = 114;
+  const boxH = items.length * itemH + 6;
+  const bx = pad.l + (W - pad.l - pad.r) - boxW - 4;
+  const by = pad.t + 4;
+
+  ctx.fillStyle = "rgba(255,255,255,0.90)";
+  ctx.strokeStyle = "#cdd6e0"; ctx.lineWidth = 0.8;
+  roundRect(ctx, bx, by, boxW, boxH, 5);
+  ctx.fill(); ctx.stroke();
+
+  items.forEach((item, i) => {
+    const y = by + 4 + i * itemH + itemH * 0.5 + 1;
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth   = item.lw || 1.5;
+    ctx.setLineDash(item.dashed ? [5,3] : []);
+    ctx.beginPath(); ctx.moveTo(bx+5, y); ctx.lineTo(bx+5+swW, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#2c3e50"; ctx.font = "10px Arial,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(item.label, bx + textOff, y + 3.5);
+  });
+}
+
+// Nice round Jv tick values suited to each membrane class range
+function niceJvTicks(xMax) {
+  const step = xMax <= 50 ? 5 : xMax <= 100 ? 10 : 20;
+  const ticks = [];
+  for (let t = 0; t <= xMax + 0.01; t += step) ticks.push(t);
+  return ticks;
+}
+
+function initCanvas(id, H) {
+  const el  = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const W   = el.parentElement.offsetWidth || 600;
+  el.width  = W * dpr; el.height = H * dpr;
+  el.style.width = W + "px"; el.style.height = H + "px";
+  const ctx = el.getContext("2d");
+  ctx.scale(dpr, dpr);
+  return { ctx, W, H };
+}
+
+function makeScalers(xMin, xMax, yMin, yMax, pad, W, H) {
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  return {
+    tx: x => pad.l + (x - xMin) / (xMax - xMin) * cw,
+    ty: y => pad.t + (1 - (y - yMin) / (yMax - yMin)) * ch,
+    cw, ch
+  };
+}
+
+function drawGrid(ctx, tx, ty, xMin, xMax, yMin, yMax, pad, nX, nY, W, H, xLabel, yLabel, yFmt, xTicks) {
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  // Horizontal grid lines (y)
+  for (let i = 0; i <= nY; i++) {
+    const y = yMin + (yMax - yMin) * i / nY;
+    ctx.beginPath(); ctx.moveTo(pad.l, ty(y)); ctx.lineTo(pad.l + cw, ty(y)); ctx.stroke();
+  }
+  // Vertical grid lines (x) — only when xTicks provided
+  if (xTicks) {
+    xTicks.forEach(x => {
+      ctx.beginPath(); ctx.moveTo(tx(x), pad.t); ctx.lineTo(tx(x), pad.t + ch); ctx.stroke();
+    });
+  }
+  // Y labels
+  ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "right";
+  for (let i = 0; i <= nY; i++) {
+    const y = yMin + (yMax - yMin) * i / nY;
+    ctx.fillText(yFmt(y), pad.l - 5, ty(y) + 4);
+  }
+  // X labels
+  ctx.textAlign = "center";
+  const xLabels = xTicks || Array.from({length: nX+1}, (_, i) => xMin + (xMax-xMin)*i/nX);
+  xLabels.forEach(x => ctx.fillText(x.toFixed(0), tx(x), H - pad.b + 14));
+  // Axis labels
+  ctx.fillText(xLabel, pad.l + cw/2, H - 2);
+  ctx.save(); ctx.translate(11, pad.t + ch/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0); ctx.restore();
+}
+
+function drawGamma(dPs, curves, dP_op, op) {
+  const H = 230;
+  const { ctx, W } = initCanvas("chart-gamma", H);
+  const pad = { l:54, r:22, t:16, b:38 };
+  ctx.clearRect(0, 0, W, H);
+
+  const curr = curves.find(c => c.isCurrent);
+  const currGValid = curr ? curr.gammas.filter(g => g !== null) : [];
+  const currJValid = curr ? curr.Jvs.filter(j => j !== null) : [];
+  if (!currGValid.length || !currJValid.length) return;
+
+  // x-axis: Jv [LMH], range = practical jvMax for this membrane class
+  const xMin = 0, xMax = curr.jvMax || Math.max(...currJValid);
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const tx = x => pad.l + (xMax > 0 ? x / xMax : 0) * cw;
+
+  // y-axis: Γ, range scaled to current membrane (cap 2.0)
+  const yMin = 0, yMax = Math.min(Math.max(...currGValid) * 1.3, 2.0);
+  const ty = y => pad.t + (1 - (y - yMin) / (yMax - yMin)) * ch;
+
+  const nDec = yMax < 0.5 ? 3 : yMax < 1 ? 2 : 1;
+  const xTicks = niceJvTicks(xMax);
+  drawGrid(ctx, tx, ty, xMin, xMax, yMin, yMax, pad, 5, 4, W, H,
+    "Jv (L\u00A0m\u207B\u00B2\u00A0h\u207B\u00B9)", "Γ", y => y.toFixed(nDec), xTicks);
+
+  // Green safe zone (Γ < 0.20)
+  if (0.2 <= yMax) {
+    ctx.fillStyle = "rgba(52,199,89,0.10)";
+    ctx.fillRect(pad.l, ty(0.2), cw, ch - (ty(0.2) - pad.t));
+    ctx.strokeStyle = "#34c759"; ctx.lineWidth = 1.2; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(pad.l, ty(0.2)); ctx.lineTo(pad.l+cw, ty(0.2)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#1a7c3a"; ctx.font = "10px Arial"; ctx.textAlign = "right";
+    ctx.fillText("Γ = 0.20", pad.l + cw - 4, ty(0.2) - 4);
+  }
+
+  // Draw curves (class lines first, current on top)
+  curves.forEach(c => {
+    if (!c.Jvs) return;
+    ctx.strokeStyle = c.color; ctx.lineWidth = c.lineWidth || 1.5;
+    ctx.lineJoin = "round"; ctx.setLineDash([]);
+    ctx.beginPath();
+    let pen = false;
+    for (let i = 0; i < c.Jvs.length; i++) {
+      if (c.Jvs[i] === null || c.gammas[i] === null) { pen = false; continue; }
+      if (c.Jvs[i] > xMax * 1.01) { pen = false; continue; }  // clip right
+      const y = Math.min(c.gammas[i], yMax * 1.02);
+      pen ? ctx.lineTo(tx(c.Jvs[i]), ty(y)) : ctx.moveTo(tx(c.Jvs[i]), ty(y));
+      pen = true;
+    }
+    ctx.stroke();
+  });
+
+  // Operating point dot (x = Jv_op)
+  if (op && op.Jv_lmh <= xMax * 1.01) {
+    const gv = Math.min(op.Gamma, yMax);
+    const px = tx(op.Jv_lmh);
+    ctx.beginPath(); ctx.arc(px, ty(gv), 6, 0, 2*Math.PI);
+    ctx.fillStyle   = op.Gamma < 0.2 ? "#34c759" : "#e04040";
+    ctx.strokeStyle = CURRENT_COLOR; ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#08203a"; ctx.font = "bold 11px Arial"; ctx.textAlign = "left";
+    ctx.fillText("Γ = " + op.Gamma.toFixed(3), px + 9, ty(gv) - 5);
+  }
+
+  drawChartLegend(ctx, pad, W, curves.map(c => ({ label: c.label, color: c.color, lw: c.lineWidth || 1.5 })));
+}
+
+function drawRej(dPs, curves, dP_op, op) {
+  const H = 230;
+  const { ctx, W } = initCanvas("chart-rej", H);
+  const pad = { l:60, r:22, t:16, b:38 };
+  ctx.clearRect(0, 0, W, H);
+
+  const curr = curves.find(c => c.isCurrent);
+  if (!curr || !curr.Jvs.some(j => j !== null)) return;
+
+  // x-axis: Jv [LMH] — same practical range as Γ chart
+  const xMax = curr.jvMax || Math.max(...curr.Jvs.filter(j => j !== null)), xMin = 0;
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const tx = x => pad.l + (xMax > 0 ? x / xMax : 0) * cw;
+  const xTicks = niceJvTicks(xMax);
+
+  // y-axis: log₁₀(1−R), auto-range from current R_int min
+  const currRintValid = curr.Rints.filter(r => r !== null);
+  if (!currRintValid.length) return;
+  const minPass = Math.min(...currRintValid.map(r => 1 - r));
+  const yMin_log = Math.max(Math.floor(Math.log10(minPass) - 0.5), -4);
+  const yMax_log = 0;
+  const logRange = yMax_log - yMin_log;
+  const ty = v => {
+    if (v <= 0) return pad.t + ch + 10;  // below chart
+    const l = Math.log10(v);
+    return pad.t + (1 - (l - yMin_log) / logRange) * ch;
+  };
+
+  // ── Draw log y-axis grid ──
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  ctx.fillStyle   = "#5e7c96"; ctx.font = "11px Arial,sans-serif";
+  for (let l = yMin_log; l <= yMax_log; l++) {
+    const yp = ty(Math.pow(10, l));
+    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+    ctx.textAlign = "right";
+    const lbl = l === 0 ? "1" : l === -1 ? "0.1" : l === -2 ? "0.01"
+              : "10\u207B" + ["\u00B9","\u00B2","\u00B3","\u2074"][Math.abs(l)-1];
+    ctx.fillText(lbl, pad.l - 5, yp + 4);
+    // Minor ticks (2–9 within each decade)
+    if (l < yMax_log) {
+      ctx.strokeStyle = "#f0f3f8";
+      for (let m = 2; m <= 9; m++) {
+        const ym = ty(m * Math.pow(10, l));
+        ctx.beginPath(); ctx.moveTo(pad.l, ym); ctx.lineTo(pad.l + cw, ym); ctx.stroke();
+      }
+      ctx.strokeStyle = "#e8edf5";
+    }
+  }
+  // Vertical grid lines at nice Jv ticks
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  xTicks.forEach(x => {
+    ctx.beginPath(); ctx.moveTo(tx(x), pad.t); ctx.lineTo(tx(x), pad.t + ch); ctx.stroke();
+  });
+  // x tick labels
+  ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "center";
+  xTicks.forEach(x => ctx.fillText(x.toFixed(0), tx(x), H - pad.b + 14));
+  // Axis labels
+  ctx.fillText("Jv (L\u00A0m\u207B\u00B2\u00A0h\u207B\u00B9)", pad.l + cw / 2, H - 2);
+  ctx.save(); ctx.translate(11, pad.t + ch / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText("1 \u2212 R", 0, 0); ctx.restore();
+
+  // ── Draw curves: (Jv, 1−R) ──
+  function plotLine(Jvs, Rdata, color, lw, dashed) {
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = "round";
+    ctx.setLineDash(dashed ? [6,4] : []);
+    ctx.beginPath();
+    let pen = false;
+    for (let i = 0; i < Jvs.length; i++) {
+      if (Jvs[i] === null || Rdata[i] === null) { pen = false; continue; }
+      if (Jvs[i] > xMax * 1.01) { pen = false; continue; }
+      const val = 1 - Rdata[i];
+      if (val <= 0) { pen = false; continue; }
+      const yp = ty(val);
+      if (yp < pad.t - 2) { pen = false; continue; }   // clip top
+      if (yp > pad.t + ch + 2) { pen = false; continue; } // clip bottom
+      pen ? ctx.lineTo(tx(Jvs[i]), yp) : ctx.moveTo(tx(Jvs[i]), yp);
+      pen = true;
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // R_obs for all curves (solid)
+  curves.forEach(c => plotLine(c.Jvs, c.Robss, c.color, c.lineWidth || 1.5, false));
+  // R_int for current only (dashed)
+  plotLine(curr.Jvs, curr.Rints, CURRENT_COLOR, 1.8, true);
+
+  // Operating point dots (x = Jv_op, y = 1−R)
+  if (op && op.Jv_lmh <= xMax * 1.01) {
+    [[op.RA, op.Jv_lmh], [op.R_obs, op.Jv_lmh]].forEach(([r, jv]) => {
+      const val = 1 - r;
+      if (val <= 0) return;
+      const yp = ty(val);
+      if (yp < pad.t || yp > pad.t + ch) return;
+      ctx.beginPath(); ctx.arc(tx(jv), yp, 5, 0, 2*Math.PI);
+      ctx.fillStyle = CURRENT_COLOR; ctx.strokeStyle = "white"; ctx.lineWidth = 1.5;
+      ctx.fill(); ctx.stroke();
+    });
+  }
+
+  // Legend
+  const legendItems = [
+    ...curves.filter(c => !c.isCurrent).map(c => ({ label: c.label, color: c.color, lw: 1.5 })),
+    { label: "R_obs",  color: CURRENT_COLOR, lw: 2.5 },
+    { label: "R_int",  color: CURRENT_COLOR, lw: 1.8, dashed: true }
+  ];
+  drawChartLegend(ctx, pad, W, legendItems);
+}
+
+// ── Init ──
+function onCartridgeChange() {
+  const cart = document.getElementById("sel-cartridge").value;
+  document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
+  const maxDP = getMaxDP();
+  const inp = document.getElementById("inp-dP");
+  inp.max = maxDP.toFixed(0);
+  if (parseFloat(inp.value) > maxDP) inp.value = Math.round(maxDP * 0.55);
+  update();
+}
+
+window.addEventListener("DOMContentLoaded", onCartridgeChange);
+window.addEventListener("resize", update);
+</script>
+
+</body>
+</html>
