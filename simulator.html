@@ -929,7 +929,7 @@ function onCartridgeChange() {
   const cart = document.getElementById("sel-cartridge").value;
   document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
   const rotorDP = getRotorDP();
-  const maxIdx  = DP_VALS.filter(v => v <= rotorDP).length - 1;
+  const maxIdx  = DP_VALS.filter(v => v <= rotorDP * 1.05).length - 1;
   const slider  = document.getElementById("inp-dP");
   slider.max = maxIdx;
   if (parseInt(slider.value) > maxIdx) {
