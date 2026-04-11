@@ -127,6 +127,14 @@
     .ctrl-row .ctrl-rpm {
       font-size: 11px; color: var(--muted); min-width: 100px;
     }
+    .dp-scale {
+      position: relative; height: 12px; margin: -6px 0 4px;
+      /* align with the range track — offset for label+gap on left */
+    }
+    .dp-scale span {
+      position: absolute; font-size: 9px; color: var(--muted);
+      transform: translateX(-50%); line-height: 1;
+    }
 
     @media (max-width: 1000px) {
       .sim-layout { grid-template-columns: 1fr; }
@@ -245,11 +253,25 @@
         <!-- Chart 1: Γ vs Jv -->
         <div class="chart-panel">
           <h3>CP factor Γ vs J<sub>v</sub></h3>
+          <datalist id="dp-ticks">
+            <option value="0"></option><option value="1"></option><option value="2"></option>
+            <option value="3"></option><option value="4"></option><option value="5"></option>
+            <option value="6"></option><option value="7"></option><option value="8"></option>
+            <option value="9"></option><option value="10"></option>
+          </datalist>
           <div class="ctrl-row" style="margin-top:4px;">
             <span class="ctrl-lbl">ΔP</span>
-            <input type="range" id="inp-dP" min="0" max="12" step="1" value="4" oninput="onDpSlider()" />
+            <input type="range" id="inp-dP" min="0" max="10" step="1" value="5" oninput="onDpSlider()" list="dp-ticks" />
             <span class="ctrl-val"><span id="lbl-dP">10</span> bar</span>
             <span class="ctrl-rpm" id="op-rpm-hint"></span>
+          </div>
+          <!-- Log-scale tick labels: positions match DP_VALS indices i/10*100% -->
+          <div class="dp-scale" style="padding-left:38px; padding-right:180px;">
+            <span style="left:0%">1</span>
+            <span style="left:20%">3</span>
+            <span style="left:50%">10</span>
+            <span style="left:80%">30</span>
+            <span style="left:100%">60</span>
           </div>
           <p class="chart-sub">Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
           <canvas id="chart-gamma" height="230"></canvas>
@@ -898,14 +920,7 @@ function drawRej(dPs, curves, dP_op, ops) {
 function onCartridgeChange() {
   const cart = document.getElementById("sel-cartridge").value;
   document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
-  const maxDP = Math.min(getRotorDP(), 60);
-  const slider = document.getElementById("inp-dP");
-  const maxIdx = DP_VALS.filter(v => v <= maxDP).length - 1;
-  slider.max = maxIdx;
-  if (parseInt(slider.value) > maxIdx) {
-    slider.value = maxIdx;
-    document.getElementById("lbl-dP").textContent = DP_VALS[maxIdx];
-  }
+  document.getElementById("inp-dP").max = DP_VALS.length - 1;
   update();
 }
 
