@@ -341,9 +341,16 @@ function closestLogIdx(arr, target) {
 function fmtVal(v) { return v < 1 ? v.toString() : v % 1 === 0 ? v.toString() : v.toFixed(1); }
 
 const RHO        = 1000;       // kg/m³
-const DELTA_M    = 0.0268;     // m  (r_max − r_m, intrinsic to cartridge)
+
+// 94/25 cartridge geometry  (validated, Sep&Purif Tech 2025)
+const DELTA_M    = 0.0268;     // m  (r_max − r_m)
 const DELTA_S_ST = 2.384e-2;   // m
 const ALPHA      = 1.315e-3;   // m/mL
+
+// 50/34 cartridge geometry  (validated vs spec table, r_s(V)=(7.13−0.16V)/100 m)
+const DELTA_M_5034  = 0.0318;  // m  (r_max − r_m = 0.108 − 0.0762)
+const DELTA_S_5034  = 0.0367;  // m
+const ALPHA_5034    = 1.60e-3; // m/mL
 const K2         = 0.28;       // correlation constant (Eq. 26)
 const NU_W       = 1.004e-6;   // m²/s  kinematic viscosity of water at 20 °C
 
@@ -369,8 +376,8 @@ const CLASS_LINES = [
 ];
 const RINT_COLOR = "#1a3a6b";
 
-// 50/34 rotor: Beckman JA-20, r_max = r_m + delta_m = 76.2 + 26.8 = 103.0 mm
-const RMAX_50_34  = 0.1030;
+// 50/34 rotor: Beckman JA-20, r_max = 108.0 mm (r_m=76.2 mm, δ_m=31.8 mm)
+const RMAX_50_34  = 0.1080;
 const MAXRPM_50_34 = 20000;
 
 // Solute properties at 20 °C  (Table 1, Geraldes et al. 2026)
@@ -424,8 +431,14 @@ function getGeom() {
   const cart = document.getElementById("sel-cartridge").value;
   const V    = VOL_NOM[cart];
   const rmax = getRmax();
-  const r_m  = rmax - DELTA_M;
-  const r_s  = rmax - (DELTA_S_ST + ALPHA * V);
+  let r_m, r_s;
+  if (cart === "50-34") {
+    r_m = rmax - DELTA_M_5034;
+    r_s = rmax - (DELTA_S_5034 + ALPHA_5034 * V);
+  } else {
+    r_m = rmax - DELTA_M;
+    r_s = rmax - (DELTA_S_ST + ALPHA * V);
+  }
   return { r_m, r_s };
 }
 // Full rotor limit — used for the chart x-axis range
