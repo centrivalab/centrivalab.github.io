@@ -588,8 +588,11 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
 
 // ── Slider handlers ──
 function onDpSlider() {
-  const v = DP_VALS[parseInt(document.getElementById("inp-dP").value)];
+  const sliderEl = document.getElementById("inp-dP");
+  const maxIdx = parseInt(sliderEl.max);
+  const v = DP_VALS[parseInt(sliderEl.value)];
   document.getElementById("lbl-dP").textContent = v;
+  updateDpScale(maxIdx);  // Refresh scale labels alignment
   update();
 }
 function onC0Slider() {
@@ -610,32 +613,42 @@ function onRpmSlider() {
 
 // ── ΔP scale labels (dynamic, log-spaced) ──
 function updateDpScale(maxIdx) {
-  const picks = [0,
-    Math.round(maxIdx * 0.25),
-    Math.round(maxIdx * 0.50),
-    Math.round(maxIdx * 0.75),
-    maxIdx];
-  const unique = [...new Set(picks)];
+  // Defer to next frame to ensure layout is computed
+  requestAnimationFrame(() => {
+    const picks = [0,
+      Math.round(maxIdx * 0.25),
+      Math.round(maxIdx * 0.50),
+      Math.round(maxIdx * 0.75),
+      maxIdx];
+    const unique = [...new Set(picks)];
 
-  // Get the ctrl-row container (parent of range input and scale)
-  const rangeInput = document.getElementById("inp-dP");
-  const ctrlRow = rangeInput.parentElement;  // the .ctrl-row
+    const rangeInput = document.getElementById("inp-dP");
+    const ctrlRow = rangeInput.parentElement;
+    const ctrlLbl = ctrlRow.querySelector(".ctrl-lbl");
 
-  // Find position of range input within its parent
-  // Account for .ctrl-lbl width (28px min) + gap (10px)
-  const ctrlLbl = ctrlRow.querySelector(".ctrl-lbl");
-  const lblWidth = ctrlLbl ? ctrlLbl.offsetWidth : 28;
-  const gap = 10;
+    // Get actual dimensions after layout
+    const lblWidth = ctrlLbl?.offsetWidth || 28;
+    const gap = 10;
+    const rangeWidth = rangeInput.offsetWidth;
 
-  const rangeStartInRow = lblWidth + gap;
-  const rangeWidth = rangeInput.offsetWidth;
+    // Fallback if elements not ready: use percentage-based positioning
+    if (rangeWidth <= 0) {
+      // Fallback: use percentage positioning relative to parent width
+      document.getElementById("dp-scale").innerHTML = unique.map(i => {
+        const pct = maxIdx > 0 ? (i / maxIdx) * 100 : 0;
+        return `<span style="--left-px:${pct}%">${DP_VALS[i]}</span>`;
+      }).join("");
+      return;
+    }
 
-  document.getElementById("dp-scale").innerHTML = unique.map(i => {
-    // Calculate position: label should be at same X as the range input value would be
-    const ratio = maxIdx > 0 ? i / maxIdx : 0;
-    const leftPx = rangeStartInRow + ratio * rangeWidth;
-    return `<span style="--left-px:${leftPx}px">${DP_VALS[i]}</span>`;
-  }).join("");
+    const rangeStartInRow = lblWidth + gap;
+
+    document.getElementById("dp-scale").innerHTML = unique.map(i => {
+      const ratio = maxIdx > 0 ? i / maxIdx : 0;
+      const leftPx = rangeStartInRow + ratio * rangeWidth;
+      return `<span style="--left-px:${leftPx}px">${DP_VALS[i]}</span>`;
+    }).join("");
+  });
 }
 
 // ── Solute selector: auto-fill B slider ──
@@ -1092,7 +1105,12 @@ function onCartridgeChange() {
 }
 
 window.addEventListener("DOMContentLoaded", onCartridgeChange);
-window.addEventListener("resize", update);
+window.addEventListener("resize", () => {
+  const sliderEl = document.getElementById("inp-dP");
+  const maxIdx = parseInt(sliderEl.max);
+  updateDpScale(maxIdx);
+  update();
+});
 </script>
 
 </body>
