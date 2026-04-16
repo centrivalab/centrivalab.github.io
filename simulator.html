@@ -128,12 +128,13 @@
       font-size: 11px; color: var(--muted); min-width: 100px;
     }
     .dp-scale {
-      position: relative; height: 12px; margin: -6px 0 4px;
-      /* align with the range track — offset for label+gap on left */
+      position: relative; height: 14px; margin: -6px 0 4px;
+      display: flex; justify-content: space-between;
+      padding: 0 8px;
+      font-size: 9px; color: var(--muted);
     }
     .dp-scale span {
-      position: absolute; font-size: 9px; color: var(--muted);
-      transform: translateX(-50%); line-height: 1;
+      flex: 0 0 auto; text-align: center; line-height: 1.2;
     }
 
     @media (max-width: 1000px) {
@@ -284,7 +285,7 @@
             <span class="ctrl-rpm" id="op-rpm-hint"></span>
           </div>
           <!-- Log-scale tick labels: updated dynamically by updateDpScale() -->
-          <div id="dp-scale" class="dp-scale" style="padding-left:38px;"></div>
+          <div id="dp-scale" class="dp-scale"></div>
           <p class="chart-sub">Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
           <canvas id="chart-gamma" height="230"></canvas>
         </div>
@@ -615,8 +616,7 @@ function updateDpScale(maxIdx) {
     maxIdx];
   const unique = [...new Set(picks)];
   document.getElementById("dp-scale").innerHTML = unique.map(i => {
-    const pct = maxIdx > 0 ? (i / maxIdx * 100).toFixed(1) : 0;
-    return `<span style="left:${pct}%">${DP_VALS[i]}</span>`;
+    return `<span>${DP_VALS[i]}</span>`;
   }).join("");
 }
 
