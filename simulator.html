@@ -129,12 +129,12 @@
     }
     .dp-scale {
       position: relative; height: 14px; margin: -6px 0 4px;
-      display: flex; justify-content: space-between;
-      padding: 0 8px;
       font-size: 9px; color: var(--muted);
     }
     .dp-scale span {
-      flex: 0 0 auto; text-align: center; line-height: 1.2;
+      position: absolute; top: 0; text-align: center; line-height: 1.2;
+      transform: translateX(-50%); white-space: nowrap;
+      width: 30px; left: var(--pos);
     }
 
     @media (max-width: 1000px) {
@@ -616,7 +616,8 @@ function updateDpScale(maxIdx) {
     maxIdx];
   const unique = [...new Set(picks)];
   document.getElementById("dp-scale").innerHTML = unique.map(i => {
-    return `<span>${DP_VALS[i]}</span>`;
+    const pct = (i / maxIdx) * 100;  // position as percentage of slider range
+    return `<span style="--pos:${pct}%">${DP_VALS[i]}</span>`;
   }).join("");
 }
 
