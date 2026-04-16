@@ -694,11 +694,13 @@ function onSoluteChange() {
 
 // ── Main update ──
 function update() {
+  console.log("update() called");
   // Validate rotor geometry before proceeding
   const geom_check = getGeom();
+  console.log("geom_check:", geom_check);
   if (geom_check.r_m <= geom_check.r_s) {
     console.error("Invalid geometry: r_m must be > r_s");
-    document.getElementById("warning-box").style.display = "block";
+    document.getElementById("warning-box").classList.add("show");
     document.getElementById("warning-text").textContent = " Invalid cartridge/rotor configuration.";
     return;
   }
@@ -739,12 +741,15 @@ function update() {
   // 5 class reference curves — all use the same B
   const classCurves = CLASS_LINES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const computed = computeCurve(lp, B_SI, MEM_CLASSES[cl.key].Jv_max);
     return {
       label: cl.label, color: cl.color, lineWidth: 1.5,
       jvMax: MEM_CLASSES[cl.key].Jv_max,
-      ...computeCurve(lp, B_SI, MEM_CLASSES[cl.key].Jv_max)
+      ...computed
     };
   });
+  console.log("classCurves created:", classCurves.length, "curves");
+  console.log("Sample classCurve:", classCurves[0]);
 
   const outOfRange = classCurves.some(c => c.oor);
 
@@ -763,11 +768,13 @@ function update() {
   const rpm_sterlitech = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
   const lp_ref_sterlitech = MEM_CLASSES.NF.Lp * 1e-3 / 3600 / 1e5;
   const stSolver = (dP, sol, C0, lp, b) => solveCPSterlitech(dP, sol, C0, lp, b, rpm_sterlitech);
+  const sterlitechCurveData = computeCurve(lp_ref_sterlitech, B_SI, 150, stSolver);
   const sterlitechCurve = {
     label: "Sterlitech", color: "#e74c3c", lineWidth: 2.5,  // red for Sterlitech
     jvMax: 150,
-    ...computeCurve(lp_ref_sterlitech, B_SI, 150, stSolver)
+    ...sterlitechCurveData
   };
+  console.log("sterlitechCurve created:", sterlitechCurve);
 
   // Sterlitech operating points (5 classes, each with its own Lp, on the single Sterlitech curve)
   const st_ops = CLASS_LINES.map(cl => {
@@ -782,6 +789,8 @@ function update() {
   // Merge curves and operating points for drawing (keep original function signatures)
   const allCurves = [...classCurves, sterlitechCurve];
   const allOps = [...ops, ...st_ops];
+  console.log("allCurves created:", allCurves.length, "curves");
+  console.log("allOps created:", allOps.length, "ops");
 
   // RPM hint (depends only on ΔP and geometry, not on membrane class)
   const { r_m, r_s } = geom_check;  // Reuse cached geometry check
@@ -909,8 +918,11 @@ function drawGamma(dPs, curves, dP_op, ops) {
   ctx.clearRect(0, 0, W, H);
 
   const xMax = Math.max(...curves.map(c => c.jvMax || 0));
-  const allGValid = curves.flatMap(c => c.gammas.filter(g => g !== null && g > 0));
-  if (!xMax || !allGValid.length) return;
+  const allGValid = curves.flatMap(c => (c.gammas || []).filter(g => g !== null && g > 0));
+  if (!xMax || !allGValid.length) {
+    console.log("drawGamma: early return - xMax:", xMax, "allGValid.length:", allGValid.length, "curves count:", curves.length);
+    return;
+  }
 
   const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
   const tx = x => pad.l + x / xMax * cw;
@@ -1004,15 +1016,21 @@ function drawRej(dPs, curves, dP_op, ops) {
   ctx.clearRect(0, 0, W, H);
 
   const xMax = Math.max(...curves.map(c => c.jvMax || 0));
-  if (!xMax) return;
+  if (!xMax) {
+    console.log("drawRej: early return - xMax:", xMax);
+    return;
+  }
   const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
   const tx = x => pad.l + x / xMax * cw;
   const xTicks = niceJvTicks(xMax);
 
   // y-axis: log₁₀(1−R), auto-range from min R_int across all curves
   // (R_int is identical for all since B is shared, but we take the min to be safe)
-  const allRintValid = curves.flatMap(c => c.Rints.filter(r => r !== null));
-  if (!allRintValid.length) return;
+  const allRintValid = curves.flatMap(c => (c.Rints || []).filter(r => r !== null));
+  if (!allRintValid.length) {
+    console.log("drawRej: early return - no valid R_int values");
+    return;
+  }
   const minPass = Math.min(...allRintValid.map(r => 1 - r));
   const yMin_log = Math.max(Math.floor(Math.log10(minPass) - 0.5), -4);
   const yMax_log = 0;
