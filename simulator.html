@@ -617,20 +617,23 @@ function updateDpScale(maxIdx) {
     maxIdx];
   const unique = [...new Set(picks)];
 
-  // Get range input element and calculate its visual bounds
+  // Get the ctrl-row container (parent of range input and scale)
   const rangeInput = document.getElementById("inp-dP");
-  const rangeRect = rangeInput.getBoundingClientRect();
-  const scaleRect = document.getElementById("dp-scale").getBoundingClientRect();
+  const ctrlRow = rangeInput.parentElement;  // the .ctrl-row
 
-  // Calculate range input width and position relative to scale container
-  const rangeWidth = rangeRect.width;
-  const rangeStartX = rangeRect.left - scaleRect.left;
-  const rangeEndX = rangeStartX + rangeWidth;
+  // Find position of range input within its parent
+  // Account for .ctrl-lbl width (28px min) + gap (10px)
+  const ctrlLbl = ctrlRow.querySelector(".ctrl-lbl");
+  const lblWidth = ctrlLbl ? ctrlLbl.offsetWidth : 28;
+  const gap = 10;
+
+  const rangeStartInRow = lblWidth + gap;
+  const rangeWidth = rangeInput.offsetWidth;
 
   document.getElementById("dp-scale").innerHTML = unique.map(i => {
-    // Interpolate position within the range input's bounds
+    // Calculate position: label should be at same X as the range input value would be
     const ratio = maxIdx > 0 ? i / maxIdx : 0;
-    const leftPx = rangeStartX + ratio * rangeWidth;
+    const leftPx = rangeStartInRow + ratio * rangeWidth;
     return `<span style="--left-px:${leftPx}px">${DP_VALS[i]}</span>`;
   }).join("");
 }
