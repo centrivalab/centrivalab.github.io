@@ -120,6 +120,10 @@
     .ctrl-row input[type="range"] {
       flex: 1; accent-color: var(--blue, #2d6bc4); cursor: pointer;
     }
+    .ctrl-row input[type="range"]:focus-visible {
+      outline: 2px solid var(--blue, #2d6bc4);
+      outline-offset: 2px;
+    }
     .ctrl-row .ctrl-val {
       font-size: 13px; font-weight: 700; color: var(--navy);
       min-width: 72px; text-align: right;
@@ -225,7 +229,7 @@
             <label>Feed concentration C<sub>A0</sub></label>
             <div class="ctrl-row">
               <span class="ctrl-lbl">C₀</span>
-              <input type="range" id="inp-C0" min="0" max="9" step="1" value="6" oninput="onC0Slider()" />
+              <input type="range" id="inp-C0" min="0" max="9" step="1" value="6" oninput="onC0Slider()" aria-label="Feed concentration C₀, logarithmic scale 0.05–50 g/L" />
               <span class="ctrl-val"><span id="lbl-C0">5</span> g L⁻¹</span>
             </div>
             <div class="field-hint">Log scale 0.05–50 g/L</div>
@@ -234,7 +238,7 @@
             <label>Solute permeability B</label>
             <div class="ctrl-row">
               <span class="ctrl-lbl">B</span>
-              <input type="range" id="inp-B" min="0" max="12" step="1" value="8" oninput="onBSlider()" />
+              <input type="range" id="inp-B" min="0" max="12" step="1" value="8" oninput="onBSlider()" aria-label="Solute permeability B, logarithmic scale 0.01–50 LMH" />
               <span class="ctrl-val"><span id="lbl-B">2</span> LMH</span>
             </div>
             <div class="field-hint">Log scale 0.01–50 LMH. Auto-filled for selected solute.</div>
@@ -247,7 +251,7 @@
             <label>Stirrer Speed</label>
             <div class="ctrl-row">
               <span class="ctrl-lbl">RPM</span>
-              <input type="range" id="inp-rpm" min="0" max="5" step="1" value="2" oninput="onRpmSlider()" />
+              <input type="range" id="inp-rpm" min="0" max="5" step="1" value="2" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 50–1200 rpm, Sterlitech HP4750" />
               <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
             </div>
             <div class="field-hint">Range 50–1200 rpm. ΔP same as O-CMF.</div>
@@ -281,21 +285,21 @@
           </datalist>
           <div class="ctrl-row" style="margin-top:4px;">
             <span class="ctrl-lbl">ΔP</span>
-            <input type="range" id="inp-dP" min="0" max="10" step="1" value="5" oninput="onDpSlider()" list="dp-ticks" />
+            <input type="range" id="inp-dP" min="0" max="10" step="1" value="5" oninput="onDpSlider()" list="dp-ticks" aria-label="Pressure differential ΔP, logarithmic scale 0.01–10 bar" />
             <span class="ctrl-val"><span id="lbl-dP">10</span> bar</span>
             <span class="ctrl-rpm" id="op-rpm-hint"></span>
           </div>
           <!-- Log-scale tick labels: updated dynamically by updateDpScale() -->
           <div id="dp-scale" class="dp-scale"></div>
           <p class="chart-sub">Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
-          <canvas id="chart-gamma" height="230"></canvas>
+          <canvas id="chart-gamma" role="img" aria-label="Chart: Concentration polarization factor Γ versus volumetric flux Jv. Five membrane classes (SWRO, BWRO, LPRO, NF, Loose NF) and Sterlitech operating curves. Green band indicates reliable window (Γ less than 0.20)." height="230"></canvas>
         </div>
 
         <!-- Chart 2: Solute passage vs Jv (log scale) -->
         <div class="chart-panel">
           <h3>Solute passage (1−R) vs J<sub>v</sub></h3>
           <p class="chart-sub">Solid line: R<sub>int</sub>(J<sub>v</sub>) = J<sub>v</sub>/(J<sub>v</sub>+B). At the operating ΔP, each class operates at a different J<sub>v</sub>: open circle = R<sub>int</sub>, filled = R<sub>obs</sub>. The gap between them shows the CP correction — larger for classes that require lower RPM.</p>
-          <canvas id="chart-rej" height="230"></canvas>
+          <canvas id="chart-rej" role="img" aria-label="Chart: Solute passage (1−R) versus volumetric flux Jv on logarithmic scale. Shows intrinsic rejection R_int and observed rejection R_obs for each membrane class." height="230"></canvas>
         </div>
 
         <p class="preprint-note">
@@ -412,6 +416,28 @@ const STERLITECH = {
   color: "#404040"         // dark grey
 };
 
+// Solver configuration constants
+const SOLVER_CONFIG = {
+  TOLERANCE: 1e-7,
+  MAX_ITERATIONS: 80,
+  RELAXATION: 0.35,
+  PHI_MAX: 20  // Limit for exp() in Γ calculation
+};
+
+// Chart configuration constants
+const CHART_CONFIG = {
+  DP_MIN: 0.5,           // Minimum pressure for chart (bar)
+  DP_POINTS: 100,        // Number of points per curve
+  SAFE_GAMMA: 0.20,      // Threshold for safe zone
+  SAFE_COLOR: "rgba(52,199,89,0.10)"
+};
+
+// Canvas line patterns
+const LINE_PATTERNS = {
+  SAFE_ZONE: [4, 3],
+  DASHED: [6, 4]
+};
+
 // Solute properties at 20 °C  (Table 1, Geraldes et al. 2026)
 // D_A(C) = D0 + a1·C + a2·C² + a3·C³ + a4·C⁴   [m²/s, C in kg/m³]
 // ν(C)   = NU_W + knu·C                           [m²/s]
@@ -518,7 +544,7 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI) {
   const a_m   = omega * omega * r_m;
 
   let C_Am = C0;
-  const TOL = 1e-7, MAX_ITER = 80, RELAX = 0.35;
+  const { TOLERANCE: TOL, MAX_ITERATIONS: MAX_ITER, RELAXATION: RELAX, PHI_MAX } = SOLVER_CONFIG;
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0, G = 0, Ustar = 0;
 
   for (let iter = 0; iter < MAX_ITER; iter++) {
@@ -537,7 +563,7 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI) {
 
     kc    = K2 * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25);
     const phi = Jv / kc;
-    Gamma = RA * (Math.exp(Math.min(phi, 20)) - 1);
+    Gamma = RA * (Math.exp(Math.min(phi, PHI_MAX)) - 1);
 
     const C_new = C0 * (1 + Gamma);
     const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
@@ -554,7 +580,7 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI) {
 // Uses Colton-Smith correlation for mass transfer coefficient
 function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
   let C_Am = C0;
-  const TOL = 1e-7, MAX_ITER = 80, RELAX = 0.35;
+  const { TOLERANCE: TOL, MAX_ITERATIONS: MAX_ITER, RELAXATION: RELAX, PHI_MAX } = SOLVER_CONFIG;
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0;
 
   // For Sterlitech: Jv depends only on applied ΔP (no centrifugal effects)
@@ -573,7 +599,7 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
     kc = getSterlitechKc(rpm, sol, C_Am);
 
     const phi = Jv / kc;
-    Gamma = RA * (Math.exp(Math.min(phi, 20)) - 1);
+    Gamma = RA * (Math.exp(Math.min(phi, PHI_MAX)) - 1);
 
     const C_new = C0 * (1 + Gamma);
     const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
@@ -662,6 +688,15 @@ function onSoluteChange() {
 
 // ── Main update ──
 function update() {
+  // Validate rotor geometry before proceeding
+  const geom_check = getGeom();
+  if (geom_check.r_m <= geom_check.r_s) {
+    console.error("Invalid geometry: r_m must be > r_s");
+    document.getElementById("warning-box").style.display = "block";
+    document.getElementById("warning-text").textContent = " Invalid cartridge/rotor configuration.";
+    return;
+  }
+
   const sol   = document.getElementById("sel-solute").value;
   const C0    = C0_VALS[parseInt(document.getElementById("inp-C0").value)];  // g/L = kg/m³
   const B     = B_VALS[parseInt(document.getElementById("inp-B").value)];    // LMH
@@ -669,9 +704,8 @@ function update() {
 
   const B_SI  = B * 1e-3 / 3600;   // m/s
 
+  const { DP_MIN: dP_min, DP_POINTS: N } = CHART_CONFIG;
   const dP_max = Math.min(getRotorDP(), 80);
-  const dP_min = 0.5;
-  const N      = 100;
 
   const dPs = [];
   for (let i = 0; i <= N; i++) dPs.push(dP_min + (dP_max - dP_min) * i / N);
@@ -713,8 +747,9 @@ function update() {
   const ops = CLASS_LINES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const res = solveCP(dP_clamped, sol, C0, lp, B_SI);
-    return res ? { ...res, color: cl.color, label: cl.label,
-                   jvMax: MEM_CLASSES[cl.key].Jv_max } : null;
+    if (!res) return null;  // Explicit validation
+    return { ...res, color: cl.color, label: cl.label,
+             jvMax: MEM_CLASSES[cl.key].Jv_max };
   });
 
   // Sterlitech curve (single intrinsic curve — all classes converge on Sterlitech)
@@ -733,8 +768,9 @@ function update() {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const lp_dom = MEM_CLASSES[cl.key].Lp;  // LMH/bar for display
     const res = solveCPSterlitech(dP_clamped, sol, C0, lp, B_SI, rpm_sterlitech);
-    return res ? { ...res, color: cl.color, label: cl.label + ` (${lp_dom} LMH/bar)`,
-                   jvMax: MEM_CLASSES[cl.key].Jv_max } : null;
+    if (!res) return null;  // Explicit validation
+    return { ...res, color: cl.color, label: cl.label + ` (${lp_dom} LMH/bar)`,
+             jvMax: MEM_CLASSES[cl.key].Jv_max };
   });
 
   // Merge curves and operating points for drawing (keep original function signatures)
@@ -913,15 +949,15 @@ function drawGamma(dPs, curves, dP_op, ops) {
   ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "center";
   ctx.fillText("\u0393", 0, 0); ctx.restore();
 
-  // Green safe zone (Γ < 0.20) — lower portion of log chart
-  const y_safe = ty(0.20);
-  ctx.fillStyle = "rgba(52,199,89,0.10)";
+  // Green safe zone (Γ < SAFE_GAMMA) — lower portion of log chart
+  const y_safe = ty(CHART_CONFIG.SAFE_GAMMA);
+  ctx.fillStyle = CHART_CONFIG.SAFE_COLOR;
   ctx.fillRect(pad.l, y_safe, cw, pad.t + ch - y_safe);
-  ctx.strokeStyle = "#34c759"; ctx.lineWidth = 1.2; ctx.setLineDash([4,3]);
+  ctx.strokeStyle = "#34c759"; ctx.lineWidth = 1.2; ctx.setLineDash(LINE_PATTERNS.SAFE_ZONE);
   ctx.beginPath(); ctx.moveTo(pad.l, y_safe); ctx.lineTo(pad.l + cw, y_safe); ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle = "#1a7c3a"; ctx.font = "10px Arial"; ctx.textAlign = "right";
-  ctx.fillText("Γ = 0.20", pad.l + cw - 4, y_safe - 4);
+  ctx.fillText(`Γ = ${CHART_CONFIG.SAFE_GAMMA}`, pad.l + cw - 4, y_safe - 4);
 
   // Draw all 5 class curves
   curves.forEach(c => {
