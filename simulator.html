@@ -130,11 +130,12 @@
     .dp-scale {
       position: relative; height: 14px; margin: -6px 0 4px;
       font-size: 9px; color: var(--muted);
+      overflow: visible;
     }
     .dp-scale span {
       position: absolute; top: 0; text-align: center; line-height: 1.2;
       transform: translateX(-50%); white-space: nowrap;
-      width: 30px; left: var(--pos);
+      width: auto; left: var(--left-px);
     }
 
     @media (max-width: 1000px) {
@@ -615,9 +616,22 @@ function updateDpScale(maxIdx) {
     Math.round(maxIdx * 0.75),
     maxIdx];
   const unique = [...new Set(picks)];
+
+  // Get range input element and calculate its visual bounds
+  const rangeInput = document.getElementById("inp-dP");
+  const rangeRect = rangeInput.getBoundingClientRect();
+  const scaleRect = document.getElementById("dp-scale").getBoundingClientRect();
+
+  // Calculate range input width and position relative to scale container
+  const rangeWidth = rangeRect.width;
+  const rangeStartX = rangeRect.left - scaleRect.left;
+  const rangeEndX = rangeStartX + rangeWidth;
+
   document.getElementById("dp-scale").innerHTML = unique.map(i => {
-    const pct = (i / maxIdx) * 100;  // position as percentage of slider range
-    return `<span style="--pos:${pct}%">${DP_VALS[i]}</span>`;
+    // Interpolate position within the range input's bounds
+    const ratio = maxIdx > 0 ? i / maxIdx : 0;
+    const leftPx = rangeStartX + ratio * rangeWidth;
+    return `<span style="--left-px:${leftPx}px">${DP_VALS[i]}</span>`;
   }).join("");
 }
 
