@@ -239,6 +239,24 @@
           </div>
         </div>
 
+        <div class="sim-panel">
+          <h3>Stirred Cell (Sterlitech HP4750)</h3>
+          <div class="field-group">
+            <label>Stirrer Speed</label>
+            <div class="ctrl-row">
+              <span class="ctrl-lbl">RPM</span>
+              <input type="range" id="inp-rpm" min="0" max="5" step="1" value="2" oninput="onRpmSlider()" />
+              <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
+            </div>
+            <div class="field-hint">Range 50–1200 rpm. ΔP same as O-CMF.</div>
+          </div>
+          <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
+            <strong>References:</strong><br/>
+            • Colton-Smith (1968): Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
+            • Karabelas et al.: Stirrer diameter 21 mm, geometry &amp; assumptions
+          </div>
+        </div>
+
       </div>
 
       <!-- ── RIGHT: Results ── -->
@@ -380,6 +398,18 @@ const RINT_COLOR = "#1a3a6b";
 const RMAX_50_34  = 0.1080;
 const MAXRPM_50_34 = 20000;
 
+// Sterlitech HP4750 discrete RPM values
+const RPM_VALS = [50, 100, 200, 500, 800, 1200];
+
+// Sterlitech HP4750 properties — Colton-Smith correlation
+const STERLITECH = {
+  stirrer_radius: 0.0105,  // m (diameter 21 mm)
+  Sh_const: 0.285,
+  Sh_Re_exp: 0.567,
+  Sh_Sc_exp: 0.33,
+  color: "#404040"         // dark grey
+};
+
 // Solute properties at 20 °C  (Table 1, Geraldes et al. 2026)
 // D_A(C) = D0 + a1·C + a2·C² + a3·C³ + a4·C⁴   [m²/s, C in kg/m³]
 // ν(C)   = NU_W + knu·C                           [m²/s]
@@ -415,6 +445,29 @@ function getDA(sol, C) {
 }
 function getNu(sol, C) { return NU_W + SOLUTES[sol].knu * C; }
 function getPi(sol, C) { const s = SOLUTES[sol]; return s.k1*C + s.k2*C*C; }
+
+// Sterlitech mass transfer coefficient via Colton-Smith correlation
+// Sh = 0.285 × Re^0.567 × Sc^0.33, where Re = ω·r²/ν, Sc = ν/D_A
+// k_c = Sh × D_A / r_stirrer [m/s]
+function getSterlitechKc(rpm, sol, C_Am) {
+  const omega = rpm * 2 * Math.PI / 60;  // rad/s
+  const DA = Math.max(getDA(sol, C_Am), 1e-12);
+  const nu = getNu(sol, C_Am);
+
+  // Re = ω·r²/ν
+  const Re = omega * STERLITECH.stirrer_radius * STERLITECH.stirrer_radius / nu;
+
+  // Sc = ν/D_A
+  const Sc = nu / DA;
+
+  // Sh = 0.285 × Re^0.567 × Sc^0.33
+  const Sh = STERLITECH.Sh_const *
+             Math.pow(Re, STERLITECH.Sh_Re_exp) *
+             Math.pow(Sc, STERLITECH.Sh_Sc_exp);
+
+  // k_c = Sh × D_A / r_stirrer [m/s]
+  return Sh * DA / STERLITECH.stirrer_radius;
+}
 
 // ── Geometry helpers ──
 function getRmax() {
@@ -495,6 +548,42 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI) {
   return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc, G };
 }
 
+// ── Iterative CP solver for Sterlitech at single ΔP and RPM ──
+// Uses Colton-Smith correlation for mass transfer coefficient
+function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
+  let C_Am = C0;
+  const TOL = 1e-7, MAX_ITER = 80, RELAX = 0.35;
+  let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0;
+
+  // For Sterlitech: Jv depends only on applied ΔP (no centrifugal effects)
+  for (let iter = 0; iter < MAX_ITER; iter++) {
+    const DA   = Math.max(getDA(sol, C_Am), 1e-12);
+    const nu   = getNu(sol, C_Am);
+    const pi_w = getPi(sol, C_Am);
+
+    Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
+    if (Jv <= 0) return null;
+
+    RA = Jv / (Jv + B_SI);
+    Sc = nu / DA;
+
+    // k_c via Colton-Smith (Sterlitech-specific)
+    kc = getSterlitechKc(rpm, sol, C_Am);
+
+    const phi = Jv / kc;
+    Gamma = RA * (Math.exp(Math.min(phi, 20)) - 1);
+
+    const C_new = C0 * (1 + Gamma);
+    const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
+    C_Am        = C_Am + RELAX * (C_new - C_Am);
+    if (err < TOL) break;
+  }
+
+  const R_obs  = Math.max(0, 1 - (1 + Gamma) * (1 - RA));
+  const Jv_lmh = Jv * 3.6e6;
+  return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc };
+}
+
 // ── Slider handlers ──
 function onDpSlider() {
   const v = DP_VALS[parseInt(document.getElementById("inp-dP").value)];
@@ -509,6 +598,11 @@ function onC0Slider() {
 function onBSlider() {
   const v = B_VALS[parseInt(document.getElementById("inp-B").value)];
   document.getElementById("lbl-B").textContent = fmtVal(v);
+  update();
+}
+function onRpmSlider() {
+  const v = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
+  document.getElementById("lbl-rpm").textContent = v;
   update();
 }
 
@@ -552,11 +646,12 @@ function update() {
   for (let i = 0; i <= N; i++) dPs.push(dP_min + (dP_max - dP_min) * i / N);
 
   // Helper: compute Γ, R_int, R_obs arrays for a membrane (lp, B_SI in SI)
-  function computeCurve(lp, b, jvMax) {
+  // Optional solverFn for custom solvers (default: solveCP for O-CMF)
+  function computeCurve(lp, b, jvMax, solverFn = solveCP) {
     const gammas = [], Rints = [], Robss = [], Jvs = [];
     let oor = false;
     for (const dP of dPs) {
-      const res = solveCP(dP, sol, C0, lp, b);
+      const res = solverFn(dP, sol, C0, lp, b);
       if (!res || (jvMax !== undefined && res.Jv_lmh > jvMax)) {
         gammas.push(null); Rints.push(null); Robss.push(null); Jvs.push(null); continue;
       }
@@ -564,7 +659,8 @@ function update() {
       Rints.push(res.RA);
       Robss.push(res.R_obs);
       Jvs.push(res.Jv_lmh);
-      if (res.Sc < 700 || res.Sc > 2200 || res.G < 7e-9 || res.G > 5e-6) oor = true;
+      // Check out-of-range only if G is present (O-CMF has it, Sterlitech doesn't)
+      if (res.G && (res.Sc < 700 || res.Sc > 2200 || res.G < 7e-9 || res.G > 5e-6)) oor = true;
     }
     return { gammas, Rints, Robss, Jvs, oor };
   }
@@ -590,6 +686,30 @@ function update() {
                    jvMax: MEM_CLASSES[cl.key].Jv_max } : null;
   });
 
+  // Sterlitech curve (single intrinsic curve — all classes converge on Sterlitech)
+  // Use NF membrane as reference (but the curve shape is the same for all classes)
+  const rpm_sterlitech = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
+  const lp_ref_sterlitech = MEM_CLASSES.NF.Lp * 1e-3 / 3600 / 1e5;
+  const stSolver = (dP, sol, C0, lp, b) => solveCPSterlitech(dP, sol, C0, lp, b, rpm_sterlitech);
+  const sterlitechCurve = {
+    label: "Sterlitech", color: "#e74c3c", lineWidth: 2.5,  // red for Sterlitech
+    jvMax: 150,
+    ...computeCurve(lp_ref_sterlitech, B_SI, 150, stSolver)
+  };
+
+  // Sterlitech operating points (5 classes, each with its own Lp, on the single Sterlitech curve)
+  const st_ops = CLASS_LINES.map(cl => {
+    const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const lp_dom = MEM_CLASSES[cl.key].Lp;  // LMH/bar for display
+    const res = solveCPSterlitech(dP_clamped, sol, C0, lp, B_SI, rpm_sterlitech);
+    return res ? { ...res, color: cl.color, label: cl.label + ` (${lp_dom} LMH/bar)`,
+                   jvMax: MEM_CLASSES[cl.key].Jv_max } : null;
+  });
+
+  // Merge curves and operating points for drawing (keep original function signatures)
+  const allCurves = [...classCurves, sterlitechCurve];
+  const allOps = [...ops, ...st_ops];
+
   // RPM hint (depends only on ΔP and geometry, not on membrane class)
   const { r_m, r_s } = getGeom();
   const rpm_op = dpToRpm(dP_clamped, r_m, r_s);
@@ -611,8 +731,8 @@ function update() {
     infoBox.style.display = "none";
   }
 
-  drawGamma(dPs, classCurves, dP_clamped, ops);
-  drawRej(dPs, classCurves, dP_clamped, ops);
+  drawGamma(dPs, allCurves, dP_clamped, allOps);
+  drawRej(dPs, allCurves, dP_clamped, allOps);
 }
 
 // ── Canvas utilities ──
