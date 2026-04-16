@@ -95,15 +95,21 @@
     .chart-panel .chart-sub { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
     canvas { display: block; width: 100% !important; }
 
+    .warning-box, .info-box {
+      max-height: 0; overflow: hidden; opacity: 0;
+      transition: max-height 0.3s, opacity 0.3s;
+      margin-bottom: 0;
+    }
+    .warning-box.show, .info-box.show {
+      max-height: 100px; opacity: 1; margin-bottom: 14px;
+    }
     .warning-box {
       background: #fff8e6; border: 1px solid #f6c85f; border-left: 5px solid #f0a500;
       border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00;
-      margin-bottom: 14px; display: none;
     }
     .info-box {
       background: #f0f4ff; border: 1px solid #b0c4e8; border-left: 5px solid #3a6bc4;
       border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #1a2d5a;
-      margin-bottom: 14px; display: none;
     }
     .preprint-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 4px; }
     .preprint-note a { color: var(--muted); }
@@ -392,11 +398,11 @@ const MEM_CLASSES = {
 
 // Five reference membrane class curves
 const CLASS_LINES = [
-  { key: "SWRO",    label: "SWRO",     color: "#d44040" },
-  { key: "BWRO",    label: "BWRO",     color: "#e08c20" },
-  { key: "LPRO",    label: "LPRO",     color: "#7c5cbf" },
-  { key: "NF",      label: "NF",       color: "#2d9e6a" },
-  { key: "LooseNF", label: "Loose NF", color: "#3a7fc1" }
+  { key: "SWRO",    label: "SWRO",     color: "#d44040", title: "Seawater RO — highest selectivity" },
+  { key: "BWRO",    label: "BWRO",     color: "#e08c20", title: "Brackish water RO" },
+  { key: "LPRO",    label: "LPRO",     color: "#7c5cbf", title: "Low-pressure RO" },
+  { key: "NF",      label: "NF",       color: "#2d9e6a", title: "Nanofiltration" },
+  { key: "LooseNF", label: "Loose NF", color: "#3a7fc1", title: "Loose NF — divalent salts" }
 ];
 const RINT_COLOR = "#1a3a6b";
 
@@ -778,24 +784,24 @@ function update() {
   const allOps = [...ops, ...st_ops];
 
   // RPM hint (depends only on ΔP and geometry, not on membrane class)
-  const { r_m, r_s } = getGeom();
+  const { r_m, r_s } = geom_check;  // Reuse cached geometry check
   const rpm_op = dpToRpm(dP_clamped, r_m, r_s);
+  const isClamped = dP_clamped !== dP_op;
   document.getElementById("op-rpm-hint").textContent =
-    "Corresponding RPM: " + Math.round(rpm_op).toLocaleString() + " rpm";
+    `Corresponding RPM: ${Math.round(rpm_op).toLocaleString()} rpm${isClamped ? " (clamped)" : ""}`;
 
   // Alerts
-  document.getElementById("warning-box").style.display = outOfRange ? "block" : "none";
+  const warningBox = document.getElementById("warning-box");
+  warningBox.classList.toggle("show", outOfRange);
   if (outOfRange) document.getElementById("warning-text").textContent =
     " Some points fall outside the validated range (Sc ∈ [700–2200], 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶]).";
 
   const hasData = classCurves.some(c => c.gammas.some(g => g !== null));
   const infoBox = document.getElementById("info-box");
+  infoBox.classList.toggle("show", !hasData);
   if (!hasData) {
-    infoBox.style.display = "block";
     document.getElementById("info-text").textContent =
-      "No permeation in the operating range: osmotic pressure exceeds ΔP throughout. Reduce C₀.";
-  } else {
-    infoBox.style.display = "none";
+      "No permeation: osmotic pressure exceeds ΔP throughout. Try reducing C₀ or increasing ΔP.";
   }
 
   drawGamma(dPs, allCurves, dP_clamped, allOps);
