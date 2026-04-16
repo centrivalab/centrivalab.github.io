@@ -694,10 +694,8 @@ function onSoluteChange() {
 
 // ── Main update ──
 function update() {
-  console.log("update() called");
   // Validate rotor geometry before proceeding
   const geom_check = getGeom();
-  console.log("geom_check:", geom_check);
   if (geom_check.r_m <= geom_check.r_s) {
     console.error("Invalid geometry: r_m must be > r_s");
     document.getElementById("warning-box").classList.add("show");
@@ -745,11 +743,10 @@ function update() {
     return {
       label: cl.label, color: cl.color, lineWidth: 1.5,
       jvMax: MEM_CLASSES[cl.key].Jv_max,
+      lp_display: MEM_CLASSES[cl.key].Lp,
       ...computed
     };
   });
-  console.log("classCurves created:", classCurves.length, "curves");
-  console.log("Sample classCurve:", classCurves[0]);
 
   const outOfRange = classCurves.some(c => c.oor);
 
@@ -772,9 +769,9 @@ function update() {
   const sterlitechCurve = {
     label: "Sterlitech", color: "#e74c3c", lineWidth: 2.5,  // red for Sterlitech
     jvMax: 150,
+    lp_display: MEM_CLASSES.NF.Lp,
     ...sterlitechCurveData
   };
-  console.log("sterlitechCurve created:", sterlitechCurve);
 
   // Sterlitech operating points (5 classes, each with its own Lp, on the single Sterlitech curve)
   const st_ops = CLASS_LINES.map(cl => {
@@ -789,8 +786,6 @@ function update() {
   // Merge curves and operating points for drawing (keep original function signatures)
   const allCurves = [...classCurves, sterlitechCurve];
   const allOps = [...ops, ...st_ops];
-  console.log("allCurves created:", allCurves.length, "curves");
-  console.log("allOps created:", allOps.length, "ops");
 
   // RPM hint (depends only on ΔP and geometry, not on membrane class)
   const { r_m, r_s } = geom_check;  // Reuse cached geometry check
@@ -919,10 +914,7 @@ function drawGamma(dPs, curves, dP_op, ops) {
 
   const xMax = Math.max(...curves.map(c => c.jvMax || 0));
   const allGValid = curves.flatMap(c => (c.gammas || []).filter(g => g !== null && g > 0));
-  if (!xMax || !allGValid.length) {
-    console.log("drawGamma: early return - xMax:", xMax, "allGValid.length:", allGValid.length, "curves count:", curves.length);
-    return;
-  }
+  if (!xMax || !allGValid.length) return;
 
   const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
   const tx = x => pad.l + x / xMax * cw;
@@ -1006,7 +998,11 @@ function drawGamma(dPs, curves, dP_op, ops) {
     ctx.fill(); ctx.stroke();
   });
 
-  drawChartLegend(ctx, pad, W, curves.map(c => ({ label: c.label, color: c.color, lw: c.lineWidth || 1.5 })));
+  drawChartLegend(ctx, pad, W, curves.map(c => ({
+    label: c.label + (c.lp_display ? ` (${c.lp_display} LMH/bar)` : ''),
+    color: c.color,
+    lw: c.lineWidth || 1.5
+  })));
 }
 
 function drawRej(dPs, curves, dP_op, ops) {
@@ -1016,10 +1012,7 @@ function drawRej(dPs, curves, dP_op, ops) {
   ctx.clearRect(0, 0, W, H);
 
   const xMax = Math.max(...curves.map(c => c.jvMax || 0));
-  if (!xMax) {
-    console.log("drawRej: early return - xMax:", xMax);
-    return;
-  }
+  if (!xMax) return;
   const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
   const tx = x => pad.l + x / xMax * cw;
   const xTicks = niceJvTicks(xMax);
@@ -1027,10 +1020,7 @@ function drawRej(dPs, curves, dP_op, ops) {
   // y-axis: log₁₀(1−R), auto-range from min R_int across all curves
   // (R_int is identical for all since B is shared, but we take the min to be safe)
   const allRintValid = curves.flatMap(c => (c.Rints || []).filter(r => r !== null));
-  if (!allRintValid.length) {
-    console.log("drawRej: early return - no valid R_int values");
-    return;
-  }
+  if (!allRintValid.length) return;
   const minPass = Math.min(...allRintValid.map(r => 1 - r));
   const yMin_log = Math.max(Math.floor(Math.log10(minPass) - 0.5), -4);
   const yMax_log = 0;
@@ -1143,7 +1133,11 @@ function drawRej(dPs, curves, dP_op, ops) {
   // Legend
   const legendItems = [
     { label: "R\u1D05\u207F\u1D1C (intrinsic)", color: RINT_COLOR, lw: 2.0 },
-    ...CLASS_LINES.map(cl => ({ label: cl.label, color: cl.color, lw: 1.5 }))
+    ...CLASS_LINES.map(cl => ({
+      label: cl.label + ` (${MEM_CLASSES[cl.key].Lp} LMH/bar)`,
+      color: cl.color,
+      lw: 1.5
+    }))
   ];
   drawChartLegend(ctx, pad, W, legendItems);
 }
