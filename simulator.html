@@ -767,7 +767,7 @@ function update() {
   const stSolver = (dP, sol, C0, lp, b) => solveCPSterlitech(dP, sol, C0, lp, b, rpm_sterlitech);
   const sterlitechCurveData = computeCurve(lp_ref_sterlitech, B_SI, 150, stSolver);
   const sterlitechCurve = {
-    label: "Sterlitech", color: "#e74c3c", lineWidth: 2.5,  // red for Sterlitech
+    label: "Sterlitech", color: "#ff0000", lineWidth: 2.5,  // pure red for Sterlitech
     jvMax: 150,
     ...sterlitechCurveData
   };
