@@ -257,15 +257,15 @@
             <label>Stirrer Speed</label>
             <div class="ctrl-row">
               <span class="ctrl-lbl">RPM</span>
-              <input type="range" id="inp-rpm" min="0" max="5" step="1" value="2" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 50–1200 rpm, Sterlitech HP4750" />
+              <input type="range" id="inp-rpm" min="0" max="5" step="1" value="1" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 100–1000 rpm, Sterlitech HP4750" />
               <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
             </div>
-            <div class="field-hint">Range 50–1200 rpm. ΔP same as O-CMF.</div>
+            <div class="field-hint">Range 100–1000 rpm (typical working range). ΔP same as O-CMF.</div>
           </div>
           <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
             <strong>References:</strong><br/>
-            • Colton-Smith (1968): Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
-            • Karabelas et al.: Stirrer diameter 21 mm, geometry &amp; assumptions
+            • <a href="https://doi.org/10.1002/aic.690180512" target="_blank" rel="noopener">Colton &amp; Smith (1972)</a>: Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
+            • <a href="https://doi.org/10.1016/j.memsci.2012.01.029" target="_blank" rel="noopener">Koutsou &amp; Karabelas (2012)</a>: Stirrer diameter 21 mm, geometry &amp; assumptions
           </div>
         </div>
 
@@ -310,7 +310,7 @@
 
         <p class="preprint-note">
           Model: Geraldes V., Fan H., Yang M., Rodrigues M., Elimelech M. —
-          "Predicting concentration polarization in Ortho-Centrifugal Membrane Filters for NF/RO membrane screening."
+          "<a href="https://doi.org/10.2139/ssrn.6528979" target="_blank" rel="noopener">Predicting concentration polarization in Ortho-Centrifugal Membrane Filters for NF/RO membrane screening</a>."
           Preprint under review, <em>Journal of Membrane Science</em> (2026).
           Thermo-physical properties at 20 °C from Table 1 of the same work.
           Correlation k<sub>c</sub>/U* = 0.28 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>,
@@ -410,8 +410,8 @@ const RINT_COLOR = "#1a3a6b";
 const RMAX_50_34  = 0.1080;
 const MAXRPM_50_34 = 20000;
 
-// Sterlitech HP4750 discrete RPM values
-const RPM_VALS = [50, 100, 200, 500, 800, 1200];
+// Sterlitech HP4750 discrete RPM values (typical working range)
+const RPM_VALS = [100, 200, 400, 600, 800, 1000];
 
 // Sterlitech HP4750 properties — Colton-Smith correlation
 const STERLITECH = {
