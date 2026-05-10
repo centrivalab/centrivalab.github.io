@@ -44,6 +44,14 @@
         Orthogonal centrifugal membrane filter cartridge for fixed-angle centrifuge rotors designed
         around standard high-speed 50 mL round-bottom polycarbonate tubes.
       </p>
+
+      <div class="callout" style="margin:18px 0;">
+        <p style="margin:0 0 10px 0;"><strong>Centrifugal pressure model.</strong> The transmembrane pressure generated at rotor angular velocity ω is</p>
+        <p style="margin:0 0 10px 0; text-align:center; font-size:17px;">Δ<em>p</em> = ½ ρ ω² ( <em>r</em><sub>m</sub>² &minus; <em>r</em><sub>s</sub>² )</p>
+        <p style="margin:0 0 8px 0;">where the radial positions of the membrane (<em>r</em><sub>m</sub>) and of the liquid free surface (<em>r</em><sub>s</sub>) are referred to the rotor outer radius <em>r</em><sub>max</sub> via two cartridge-geometry constants and the fill volume <em>V</em>:</p>
+        <p style="margin:0; text-align:center; font-size:15px;"><em>r</em><sub>m</sub> = <em>r</em><sub>max</sub> &minus; δ<sub>m</sub> &nbsp;&nbsp;&nbsp; <em>r</em><sub>s</sub> = <em>r</em><sub>max</sub> &minus; ( δ<sub>s</sub><sup>*</sup> + α<em>V</em> )</p>
+      </div>
+
       <table class="spec-table">
         <tbody>
           <tr><td>Nominal feed volume</td><td>13.0 mL</td></tr>
@@ -51,9 +59,9 @@
           <tr><td>Membrane chamber volume</td><td>4.6 mL</td></tr>
           <tr><td>Membrane coupon diameter</td><td>20 mm</td></tr>
           <tr><td>Effective membrane area</td><td>1.45 cm²</td></tr>
-          <tr><td>Membrane offset, δ<sub>m</sub></td><td>0.0318 m</td></tr>
-          <tr><td>Free-surface intercept, δ<sub>s</sub><sup>*</sup></td><td>3.71 × 10<sup>−3</sup> m</td></tr>
-          <tr><td>Free-surface slope, α</td><td>1.60 × 10<sup>−3</sup> m mL<sup>−1</sup></td></tr>
+          <tr><td>Membrane offset, δ<sub>m</sub> &nbsp;<span style="color:var(--muted);font-weight:400;">(distance r<sub>max</sub> − r<sub>m</sub>)</span></td><td>0.0318 m</td></tr>
+          <tr><td>Free-surface intercept, δ<sub>s</sub><sup>*</sup> &nbsp;<span style="color:var(--muted);font-weight:400;">(distance r<sub>max</sub> − r<sub>s</sub> at V = 0)</span></td><td>0.0367 m</td></tr>
+          <tr><td>Free-surface slope, α &nbsp;<span style="color:var(--muted);font-weight:400;">(rate at which r<sub>s</sub> moves toward the axis as V increases)</span></td><td>0.00160 m mL<sup>−1</sup></td></tr>
         </tbody>
       </table>
     </div>
@@ -85,29 +93,46 @@
   </section>
 
   <section class="container">
-    <h2 class="section-title">JA-20 rotor reference</h2>
-    <p class="section-intro">
-      For the Beckman Coulter JA-20 fixed-angle rotor, the geometric reference values are
-      r<sub>max</sub> = 0.108 m and r<sub>m</sub> = 0.0762 m.
+    <h2 class="section-title">Operating conditions per rotor</h2>
+    <p>
+      Applying the centrifugal pressure model (see <em>Configuration overview</em> above) at
+      nominal fill volume (13&nbsp;mL of water at 20&nbsp;°C), the rotor speed required to reach
+      each target transmembrane pressure is given below. Dashes indicate conditions exceeding
+      the rotor speed limit.
     </p>
-    <table class="spec-table">
+
+    <table style="margin-top:18px;">
       <thead>
-        <tr><th>Target pressure (bar)</th><th>13 mL</th><th>12 mL</th><th>11 mL</th></tr>
+        <tr>
+          <th>Δ<em>p</em> (bar)</th>
+          <th class="num">Beckman JA-20<br><span style="font-weight:400;font-size:13px;">8×50 mL · 34° · 20 000 rpm</span></th>
+          <th class="num">Thermo Sorvall SS-34<br><span style="font-weight:400;font-size:13px;">8×50 mL · 34° · 20 500 rpm</span></th>
+          <th class="num">Thermo Fiberlite F21-8×50y<br><span style="font-weight:400;font-size:13px;">8×50 mL · 34° · 20 000 rpm</span></th>
+          <th class="num">Heraeus HFA 15.50<br><span style="font-weight:400;font-size:13px;">8×50 mL · 34° · 23 300 rpm</span></th>
+        </tr>
       </thead>
       <tbody>
-        <tr><td>2</td><td>3390 rpm</td><td>3470 rpm</td><td>3560 rpm</td></tr>
-        <tr><td>5</td><td>5360 rpm</td><td>5490 rpm</td><td>5640 rpm</td></tr>
-        <tr><td>10</td><td>7580 rpm</td><td>7770 rpm</td><td>7990 rpm</td></tr>
-        <tr><td>15</td><td>9280 rpm</td><td>9510 rpm</td><td>9780 rpm</td></tr>
-        <tr><td>20</td><td>10,700 rpm</td><td>11,000 rpm</td><td>11,300 rpm</td></tr>
-        <tr><td>30</td><td>13,100 rpm</td><td>13,500 rpm</td><td>13,900 rpm</td></tr>
-        <tr><td>40</td><td>15,100 rpm</td><td>15,600 rpm</td><td>16,000 rpm</td></tr>
-        <tr><td>50</td><td>16,900 rpm</td><td>17,400 rpm</td><td>17,900 rpm</td></tr>
-        <tr><td>60</td><td>18,600 rpm</td><td>19,100 rpm</td><td>19,600 rpm</td></tr>
+        <tr><td>2</td>  <td class="num">3 347</td>  <td class="num">3 373</td>  <td class="num">3 373</td>  <td class="num">4 301</td></tr>
+        <tr><td>5</td>  <td class="num">5 293</td>  <td class="num">5 335</td>  <td class="num">5 335</td>  <td class="num">6 801</td></tr>
+        <tr><td>10</td> <td class="num">7 485</td>  <td class="num">7 544</td>  <td class="num">7 544</td>  <td class="num">9 619</td></tr>
+        <tr><td>15</td> <td class="num">9 167</td>  <td class="num">9 239</td>  <td class="num">9 239</td>  <td class="num">11 781</td></tr>
+        <tr><td>20</td> <td class="num">10 587</td> <td class="num">10 668</td> <td class="num">10 668</td> <td class="num">13 600</td></tr>
+        <tr><td>30</td> <td class="num">12 965</td> <td class="num">13 067</td> <td class="num">13 067</td> <td class="num">16 658</td></tr>
+        <tr><td>40</td> <td class="num">14 971</td> <td class="num">15 087</td> <td class="num">15 087</td> <td class="num">19 234</td></tr>
+        <tr><td>50</td> <td class="num">16 740</td> <td class="num">16 870</td> <td class="num">16 870</td> <td class="num">21 506</td></tr>
+        <tr><td>60</td> <td class="num">18 333</td> <td class="num">18 478</td> <td class="num">18 478</td> <td class="num">—</td></tr>
+        <tr>
+          <td><strong>Max Δ<em>p</em></strong></td>
+          <td class="num"><strong>71.4 bar</strong></td>
+          <td class="num"><strong>73.8 bar</strong></td>
+          <td class="num"><strong>70.3 bar</strong></td>
+          <td class="num"><strong>58.7 bar</strong></td>
+        </tr>
       </tbody>
     </table>
-    <p class="note">
-      Compact JA-20 free-surface correlation: r<sub>s</sub>(V) = 7.13 − 0.16 V, valid for V ∈ [11, 13] mL.
+    <p class="note" style="margin-top:14px;">
+      Compact JA-20 free-surface correlation (SI units, with <em>r</em><sub>s</sub> in metres and <em>V</em> in millilitres):
+      <em>r</em><sub>s</sub>(<em>V</em>) = 0.0713 − 0.00160·<em>V</em>, &nbsp;valid for <em>V</em> ∈ [11, 13]&nbsp;mL.
     </p>
   </section>
 
