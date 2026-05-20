@@ -252,20 +252,59 @@
         </div>
 
         <div class="sim-panel">
-          <h3>Stirred Cell (Sterlitech HP4750)</h3>
+          <h3>Comparison technology</h3>
           <div class="field-group">
-            <label>Stirrer Speed</label>
-            <div class="ctrl-row">
-              <span class="ctrl-lbl">RPM</span>
-              <input type="range" id="inp-rpm" min="0" max="5" step="1" value="1" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 100–1000 rpm, Sterlitech HP4750" />
-              <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
-            </div>
-            <div class="field-hint">Range 100–1000 rpm (typical working range). ΔP same as O-CMF.</div>
+            <label for="sel-compare">Compare O-CMF against</label>
+            <select id="sel-compare" onchange="onCompareChange()">
+              <option value="stirred">Stirred cell (Sterlitech HP4750)</option>
+              <option value="spiral">Spiral-wound module (Schock &amp; Miquel)</option>
+            </select>
           </div>
-          <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
-            <strong>References:</strong><br/>
-            • <a href="https://doi.org/10.1002/aic.690180512" target="_blank" rel="noopener">Colton &amp; Smith (1972)</a>: Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
-            • <a href="https://doi.org/10.1016/j.memsci.2012.01.029" target="_blank" rel="noopener">Koutsou &amp; Karabelas (2012)</a>: Stirrer diameter 21 mm, geometry &amp; assumptions
+
+          <!-- Stirred cell controls -->
+          <div id="ctrl-stirred">
+            <div class="field-group">
+              <label>Stirrer Speed</label>
+              <div class="ctrl-row">
+                <span class="ctrl-lbl">RPM</span>
+                <input type="range" id="inp-rpm" min="0" max="5" step="1" value="1" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 100–1000 rpm, Sterlitech HP4750" />
+                <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
+              </div>
+              <div class="field-hint">Range 100–1000 rpm (typical working range). ΔP same as O-CMF.</div>
+            </div>
+            <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
+              <strong>References:</strong><br/>
+              • <a href="https://doi.org/10.1002/aic.690180512" target="_blank" rel="noopener">Colton &amp; Smith (1972)</a>: Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
+              • <a href="https://doi.org/10.1016/j.memsci.2012.01.029" target="_blank" rel="noopener">Koutsou &amp; Karabelas (2012)</a>: Stirrer diameter 21 mm, geometry &amp; assumptions
+            </div>
+          </div>
+
+          <!-- Spiral-wound controls -->
+          <div id="ctrl-spiral" style="display:none;">
+            <div class="field-group">
+              <label for="sel-spacer">Feed spacer</label>
+              <select id="sel-spacer" onchange="onSpacerChange()">
+                <option value="FT30">FilmTec FT30 (d_h 0.95 mm, ε 0.89)</option>
+                <option value="Toray">Toray PEC-1000 (d_h 0.72 mm, ε 0.91)</option>
+                <option value="Naltex">Naltex 1228 (d_h 0.96 mm, ε 0.90)</option>
+                <option value="DesalRO">Desal RO (d_h 0.97 mm, ε 0.88)</option>
+                <option value="DesalUF">Desal UF (d_h 1.39 mm, ε 0.81)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Mean channel velocity</label>
+              <div class="ctrl-row">
+                <span class="ctrl-lbl">v</span>
+                <input type="range" id="inp-vel" min="0" max="6" step="1" value="2" oninput="onVelSlider()" aria-label="Mean interstitial crossflow velocity, 0.02 to 0.35 metres per second" />
+                <span class="ctrl-val"><span id="lbl-vel">0.10</span> m/s</span>
+              </div>
+              <div class="field-hint">Interstitial crossflow velocity in the spacer-filled channel (typical 0.05–0.25 m/s). Resulting feed-channel pressure drop: <strong><span id="lbl-spiral-dpdl">—</span></strong> (element limit ≈ 1 bar/m). Transmembrane ΔP same as O-CMF.</div>
+            </div>
+            <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
+              <strong>References:</strong><br/>
+              • <a href="https://doi.org/10.1016/0011-9164(87)90107-X" target="_blank" rel="noopener">Schock &amp; Miquel (1987)</a>: Sh = 0.065 × Re<sup>0.875</sup> × Sc<sup>0.25</sup>; λ = 6.23 Re<sup>−0.3</sup><br/>
+              • Spacer geometry (d_h, ε) from their Tab. 1. Validity 100 &lt; Re &lt; 1000.
+            </div>
           </div>
         </div>
 
@@ -298,7 +337,7 @@
           <!-- Log-scale tick labels: updated dynamically by updateDpScale() -->
           <div id="dp-scale" class="dp-scale"></div>
           <p class="chart-sub">Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
-          <canvas id="chart-gamma" role="img" aria-label="Chart: Concentration polarization factor Γ versus volumetric flux Jv. Five membrane classes (SWRO, BWRO, LPRO, NF, Loose NF) and Sterlitech operating curves. Green band indicates reliable window (Γ less than 0.20)." height="230"></canvas>
+          <canvas id="chart-gamma" role="img" aria-label="Chart: Concentration polarization factor Γ versus volumetric flux Jv. Five O-CMF membrane classes (SWRO, BWRO, LPRO, NF, Loose NF) plus the selected comparison technology (stirred cell or spiral-wound module). Green band indicates reliable window (Γ less than 0.20)." height="230"></canvas>
         </div>
 
         <!-- Chart 2: Solute passage vs Jv (log scale) -->
@@ -422,6 +461,18 @@ const STERLITECH = {
   color: "#404040"         // dark grey
 };
 
+// Spiral-wound feed spacers — Schock & Miquel (1987) Tab. 1 (d_h, ε)
+const SPACERS = {
+  FT30:    { label: "FilmTec FT30",   dh: 0.95e-3, eps: 0.89 },
+  Toray:   { label: "Toray PEC-1000", dh: 0.72e-3, eps: 0.91 },
+  Naltex:  { label: "Naltex 1228",    dh: 0.96e-3, eps: 0.90 },
+  DesalRO: { label: "Desal RO",       dh: 0.97e-3, eps: 0.88 },
+  DesalUF: { label: "Desal UF",       dh: 1.39e-3, eps: 0.81 }
+};
+// Mean interstitial channel velocity values [m/s] — realistic crossflow range
+const VEL_VALS = [0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.35];
+const SPIRAL_COLOR = "#0066cc";  // blue for spiral-wound curve
+
 // Solver configuration constants
 const SOLVER_CONFIG = {
   TOLERANCE: 1e-7,
@@ -501,6 +552,33 @@ function getSterlitechKc(rpm, sol, C_Am) {
 
   // k_c = Sh × D_A / r_stirrer [m/s]
   return Sh * DA / STERLITECH.stirrer_radius;
+}
+
+// Spiral-wound mass transfer via Schock & Miquel (1987)
+// Input is the mean interstitial channel velocity v_eff [m/s]:
+//   Re = ρ·v_eff·d_h/η,  Sh = 0.065·Re^0.875·Sc^0.25,  k = Sh·D_A/d_h
+function getSpiralWoundKc(v_eff, spacerKey, sol, C_Am) {
+  const sp = SPACERS[spacerKey];
+  const dh = sp.dh;
+  const DA = Math.max(getDA(sol, C_Am), 1e-12);
+  const nu = getNu(sol, C_Am);
+  const eta = nu * RHO;             // dynamic viscosity [Pa·s], concentration-dependent
+  const Re = RHO * v_eff * dh / eta;
+  const Sc = nu / DA;
+  const Sh = 0.065 * Math.pow(Re, 0.875) * Math.pow(Sc, 0.25);
+  return Sh * DA / dh;
+}
+
+// Resulting feed-channel pressure gradient [bar/m] for a given v_eff (S&M friction law)
+//   Δp/L = λ·ρ·v_eff²/(2·d_h),  λ = 6.23·Re^(−0.3)
+function getSpiralDpdl(v_eff, spacerKey, sol, C_Am) {
+  const sp = SPACERS[spacerKey];
+  const dh = sp.dh;
+  const nu = getNu(sol, C_Am);
+  const eta = nu * RHO;
+  const Re = RHO * v_eff * dh / eta;
+  const lambda = 6.23 * Math.pow(Re, -0.3);
+  return lambda * RHO * v_eff * v_eff / (2 * dh) / 1e5;  // bar/m
 }
 
 // ── Geometry helpers ──
@@ -618,6 +696,41 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
   return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc };
 }
 
+// ── Iterative CP solver for spiral-wound (Schock & Miquel) at single ΔP ──
+// Mass transfer fixed by spacer + feed-channel pressure gradient Δp/L
+function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
+  let C_Am = C0;
+  const { TOLERANCE: TOL, MAX_ITERATIONS: MAX_ITER, RELAXATION: RELAX, PHI_MAX } = SOLVER_CONFIG;
+  let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0;
+
+  for (let iter = 0; iter < MAX_ITER; iter++) {
+    const DA   = Math.max(getDA(sol, C_Am), 1e-12);
+    const nu   = getNu(sol, C_Am);
+    const pi_w = getPi(sol, C_Am);
+
+    Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
+    if (Jv <= 0) return null;
+
+    RA = Jv / (Jv + B_SI);
+    Sc = nu / DA;
+
+    // k_c via Schock & Miquel (spiral-wound spacer + channel velocity)
+    kc = getSpiralWoundKc(v_eff, spacerKey, sol, C_Am);
+
+    const phi = Jv / kc;
+    Gamma = RA * (Math.exp(Math.min(phi, PHI_MAX)) - 1);
+
+    const C_new = C0 * (1 + Gamma);
+    const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
+    C_Am        = C_Am + RELAX * (C_new - C_Am);
+    if (err < TOL) break;
+  }
+
+  const R_obs  = Math.max(0, 1 - (1 + Gamma) * (1 - RA));
+  const Jv_lmh = Jv * 3.6e6;
+  return { Gamma, RA, R_obs, Jv_lmh, Sc };
+}
+
 // ── Slider handlers ──
 function onDpSlider() {
   const sliderEl = document.getElementById("inp-dP");
@@ -640,6 +753,18 @@ function onBSlider() {
 function onRpmSlider() {
   const v = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
   document.getElementById("lbl-rpm").textContent = v;
+  update();
+}
+function onVelSlider() {
+  const v = VEL_VALS[parseInt(document.getElementById("inp-vel").value)];
+  document.getElementById("lbl-vel").textContent = v.toFixed(2);
+  update();
+}
+function onSpacerChange() { update(); }
+function onCompareChange() {
+  const mode = document.getElementById("sel-compare").value;
+  document.getElementById("ctrl-stirred").style.display = (mode === "stirred") ? "" : "none";
+  document.getElementById("ctrl-spiral").style.display  = (mode === "spiral")  ? "" : "none";
   update();
 }
 
@@ -760,31 +885,51 @@ function update() {
              jvMax: MEM_CLASSES[cl.key].Jv_max };
   });
 
-  // Sterlitech curve (single intrinsic curve — all classes converge on Sterlitech)
-  // Use NF membrane as reference (but the curve shape is the same for all classes)
-  const rpm_sterlitech = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
-  const lp_ref_sterlitech = MEM_CLASSES.NF.Lp * 1e-3 / 3600 / 1e5;
-  const stSolver = (dP, sol, C0, lp, b) => solveCPSterlitech(dP, sol, C0, lp, b, rpm_sterlitech);
-  const sterlitechCurveData = computeCurve(lp_ref_sterlitech, B_SI, 150, stSolver);
-  const sterlitechCurve = {
-    label: "Sterlitech", color: "#ff0000", lineWidth: 2.5,  // pure red for Sterlitech
+  // Comparison technology curve (single intrinsic curve — all classes converge on it)
+  // Use NF membrane as reference (curve shape is the same for all classes)
+  const compareMode = document.getElementById("sel-compare").value;
+  const lp_ref = MEM_CLASSES.NF.Lp * 1e-3 / 3600 / 1e5;
+  let compSolver, compLabel, compColor;
+  if (compareMode === "spiral") {
+    const v_eff = VEL_VALS[parseInt(document.getElementById("inp-vel").value)];
+    const spacerKey = document.getElementById("sel-spacer").value;
+    compSolver = (dP, s, c, lp, b) => solveCPSpiral(dP, s, c, lp, b, v_eff, spacerKey);
+    compLabel  = "Spiral-wound";
+    compColor  = SPIRAL_COLOR;
+    // Δp/L readout (consequence of v_eff; flags if above the ~1 bar/m element limit)
+    const dpdl = getSpiralDpdl(v_eff, spacerKey, sol, C0);
+    const elD = document.getElementById("lbl-spiral-dpdl");
+    if (elD) {
+      elD.textContent = dpdl.toFixed(2) + " bar/m";
+      elD.style.color = dpdl > 1.0 ? "#c0392b" : "";
+    }
+  } else {
+    const rpm_sterlitech = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
+    compSolver = (dP, s, c, lp, b) => solveCPSterlitech(dP, s, c, lp, b, rpm_sterlitech);
+    compLabel  = "Sterlitech";
+    compColor  = "#ff0000";
+  }
+
+  const compCurveData = computeCurve(lp_ref, B_SI, 150, compSolver);
+  const compCurve = {
+    label: compLabel, color: compColor, lineWidth: 2.5,
     jvMax: 150,
-    ...sterlitechCurveData
+    ...compCurveData
   };
 
-  // Sterlitech operating points (5 classes, each with its own Lp, on the single Sterlitech curve)
-  const st_ops = CLASS_LINES.map(cl => {
+  // Comparison operating points (5 classes, each with its own Lp, on the single curve)
+  const comp_ops = CLASS_LINES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const lp_dom = MEM_CLASSES[cl.key].Lp;  // LMH/bar for display
-    const res = solveCPSterlitech(dP_clamped, sol, C0, lp, B_SI, rpm_sterlitech);
+    const res = compSolver(dP_clamped, sol, C0, lp, B_SI);
     if (!res) return null;  // Explicit validation
     return { ...res, color: cl.color, label: cl.label + ` (${lp_dom} LMH/bar)`,
              jvMax: MEM_CLASSES[cl.key].Jv_max };
   });
 
   // Merge curves and operating points for drawing (keep original function signatures)
-  const allCurves = [...classCurves, sterlitechCurve];
-  const allOps = [...ops, ...st_ops];
+  const allCurves = [...classCurves, compCurve];
+  const allOps = [...ops, ...comp_ops];
 
   // RPM hint (depends only on ΔP and geometry, not on membrane class)
   const { r_m, r_s } = geom_check;  // Reuse cached geometry check
