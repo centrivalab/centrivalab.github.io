@@ -40,6 +40,12 @@
       margin-bottom: 4px;
     }
     .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .geom-readout {
+      display: flex; gap: 18px; margin-top: 12px; padding-top: 11px;
+      border-top: 1px solid var(--line);
+      font-size: 13px; color: var(--navy);
+    }
+    .geom-readout strong { font-weight: 700; }
     .field-group select,
     .field-group input[type="number"] {
       width: 100%;
@@ -218,6 +224,11 @@
               <option value="vf694"      data-rmax="0.106" data-maxrpm="10000">Beckman VF 6.94 — 6×94 mL, 25°, r_max 106 mm, 10 000 rpm</option>
             </select>
           </div>
+          <div class="geom-readout" id="geom-readout">
+            <span>r<sub>m</sub> = <strong id="lbl-rm">—</strong> mm</span>
+            <span>r<sub>s</sub> = <strong id="lbl-rs">—</strong> mm</span>
+          </div>
+          <div class="field-hint">Membrane &amp; feed-surface radii set by the chosen tube + rotor (ΔP = ½ρω²(r<sub>m</sub>²−r<sub>s</sub>²)).</div>
         </div>
 
         <div class="sim-panel">
@@ -1290,6 +1301,9 @@ function drawRej(dPs, curves, dP_op, ops) {
 function onCartridgeChange() {
   const cart = document.getElementById("sel-cartridge").value;
   document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
+  const geom = getGeom();
+  document.getElementById("lbl-rm").textContent = (geom.r_m * 1000).toFixed(1);
+  document.getElementById("lbl-rs").textContent = (geom.r_s * 1000).toFixed(1);
   const rotorDP = getRotorDP();
   const maxIdx  = DP_VALS.filter(v => v <= rotorDP * 1.05).length - 1;
   const slider  = document.getElementById("inp-dP");
