@@ -232,6 +232,14 @@
               <option value="vf694"      data-rmax="0.106" data-maxrpm="10000">Beckman VF 6.94 — 6×94 mL, 25°, r_max 106 mm, 10 000 rpm</option>
             </select>
           </div>
+          <div class="field-group">
+            <label for="inp-vol">Feed volume</label>
+            <div class="ctrl-row">
+              <input type="range" id="inp-vol" min="7.4" max="22.8" step="0.1" value="22.5" oninput="onVolSlider()" aria-label="Feed volume in millilitres" />
+              <span class="ctrl-val"><span id="lbl-vol">22.5</span> mL</span>
+            </div>
+            <div class="field-hint" id="vol-range-hint">—</div>
+          </div>
           <div class="geom-readout" id="geom-readout">
             <span>r<sub>m</sub> = <strong id="lbl-rm">—</strong> mm</span>
             <span>r<sub>s</sub> = <strong id="lbl-rs">—</strong> mm</span>
@@ -389,6 +397,12 @@
           <h3>Solute passage (1−R) vs J<sub>v</sub></h3>
           <p class="chart-sub">Solid line: R<sub>int</sub>(J<sub>v</sub>) = J<sub>v</sub>/(J<sub>v</sub>+B). At the operating ΔP, each class operates at a different J<sub>v</sub>: open circle = R<sub>int</sub>, filled = R<sub>obs</sub>. The gap between them shows the CP correction — larger for classes that require lower RPM.</p>
           <canvas id="chart-rej" role="img" aria-label="Chart: Solute passage (1−R) versus volumetric flux Jv on logarithmic scale. Shows intrinsic rejection R_int and observed rejection R_obs for each membrane class." height="230"></canvas>
+        </div>
+
+        <div class="chart-panel">
+          <h3>CP factor Γ vs feed volume, at constant ΔP</h3>
+          <p class="chart-sub" id="vol-chart-sub">—</p>
+          <canvas id="chart-vol" role="img" aria-label="Chart: Concentration polarization factor Γ versus feed volume at fixed transmembrane pressure, for five O-CMF membrane classes. Reducing the fill volume raises the rotor speed needed to hold the same pressure, which strengthens the acceleration field and suppresses polarization." height="230"></canvas>
         </div>
 
         <p class="preprint-note">
@@ -644,9 +658,19 @@ function getMaxRpm() {
   const rot = document.getElementById("sel-rotor");
   return parseInt(rot.options[rot.selectedIndex].dataset.maxrpm);
 }
-function getGeom() {
+// Fill range the geometry is trusted over. For the 94/25 this is the span of the
+// free-surface measurements; for the 50/34 it is the declared operating range,
+// beyond which the linear δ_s* + αV form has no support.
+function getVolRange() {
+  return document.getElementById("sel-cartridge").value === "50-34"
+    ? { min: 11.0, max: 13.0 }
+    : { min: DS94.vMin, max: DS94.vMax };
+}
+function getVolume() { return parseFloat(document.getElementById("inp-vol").value); }
+
+function getGeom(V) {
   const cart = document.getElementById("sel-cartridge").value;
-  const V    = VOL_NOM[cart];
+  if (V === undefined) V = getVolume();
   const rmax = getRmax();
   let r_m, r_s;
   if (cart === "50-34") {
@@ -654,7 +678,7 @@ function getGeom() {
     r_s = rmax - (DELTA_S_5034 + ALPHA_5034 * V);
   } else {
     r_m = rmax - DELTA_M;
-    r_s = rmax - (DELTA_S_ST + ALPHA * V);
+    r_s = rmax - ds94(V) / 1000;   // measured quadratic, not the local linearisation
   }
   return { r_m, r_s };
 }
@@ -673,8 +697,8 @@ function dpToRpm(dP_bar, r_m, r_s) {
 
 // ── Iterative CP solver at a single ΔP ──
 // Returns null when no permeation (π_wall ≥ ΔP)
-function solveCP(dP_bar, sol, C0, Lp_SI, B_SI) {
-  const { r_m, r_s } = getGeom();
+function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
+  const { r_m, r_s } = geom || getGeom();
   const rpm   = dpToRpm(dP_bar, r_m, r_s);
   const omega = rpm * 2 * Math.PI / 60;
   const a_m   = omega * omega * r_m;
@@ -784,6 +808,21 @@ function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
 }
 
 // ── Slider handlers ──
+function onVolSlider() {
+  document.getElementById("lbl-vol").textContent = getVolume().toFixed(1);
+  const rotorDP = getRotorDP();
+  const maxIdx  = DP_VALS.filter(v => v <= rotorDP * 1.05).length - 1;
+  const slider  = document.getElementById("inp-dP");
+  slider.max = maxIdx;
+  if (parseInt(slider.value) > maxIdx) {
+    slider.value = maxIdx;
+    document.getElementById("lbl-dP").textContent = DP_VALS[maxIdx];
+  }
+  updateDpScale(maxIdx);
+  if (document.getElementById("sel-cartridge").value === "94-25") onLocusChange();
+  update();
+}
+
 function onDpSlider() {
   const sliderEl = document.getElementById("inp-dP");
   const maxIdx = parseInt(sliderEl.max);
@@ -1006,6 +1045,37 @@ function update() {
 
   drawGamma(dPs, allCurves, dP_clamped, allOps);
   drawRej(dPs, allCurves, dP_clamped, allOps);
+
+  // ── Γ vs feed volume, at the selected ΔP ──
+  // Holding ΔP fixed, a smaller fill raises r_s, so a higher speed is needed to
+  // reach the same pressure. That strengthens a_m = ω²r_m and suppresses Γ.
+  const vr    = getVolRange();
+  const nVol  = 60;
+  const vols  = [];
+  for (let i = 0; i <= nVol; i++) vols.push(vr.min + (vr.max - vr.min) * i / nVol);
+  const nMaxRpm = getMaxRpm();
+
+  const volCurves = CLASS_LINES.map(cl => {
+    const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const jvMax = MEM_CLASSES[cl.key].Jv_max;
+    const gammas = vols.map(V => {
+      const geom = getGeom(V);
+      if (geom.r_m <= geom.r_s) return null;
+      // Unreachable if the rotor cannot spin fast enough for this ΔP at this fill
+      if (dpToRpm(dP_clamped, geom.r_m, geom.r_s) > nMaxRpm) return null;
+      const res = solveCP(dP_clamped, sol, C0, lp, B_SI, geom);
+      if (!res || res.Jv_lmh > jvMax) return null;
+      return res.Gamma;
+    });
+    return { label: cl.label, color: cl.color, gammas };
+  });
+  drawVol(vols, volCurves, dP_clamped);
+
+  const gNow = getGeom();
+  document.getElementById("vol-chart-sub").textContent =
+    `ΔP held at ${dP_clamped} bar. Current fill ${getVolume().toFixed(1)} mL → ` +
+    `${Math.round(dpToRpm(dP_clamped, gNow.r_m, gNow.r_s)).toLocaleString("en")} rpm. ` +
+    `Curves stop where the rotor speed limit is reached.`;
 }
 
 // ── Canvas utilities ──
@@ -1199,6 +1269,77 @@ function drawGamma(dPs, curves, dP_op, ops) {
     color: c.color,
     lw: c.lineWidth || 1.5
   })));
+}
+
+function drawVol(vols, curves, dP_op) {
+  const H = 230;
+  const { ctx, W } = initCanvas("chart-vol", H);
+  const pad = { l:54, r:22, t:16, b:38 };
+  ctx.clearRect(0, 0, W, H);
+
+  const all = curves.flatMap(c => c.gammas.filter(g => g !== null && g > 0));
+  if (!all.length) return;
+
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const xMin = vols[0], xMax = vols[vols.length - 1];
+  const tx = v => pad.l + (v - xMin) / (xMax - xMin) * cw;
+
+  // Log y, auto-ranged to the data so a modest change stays legible
+  const loD = Math.floor(Math.log10(Math.min(...all)));
+  const hiD = Math.max(Math.ceil(Math.log10(Math.max(...all))), loD + 1);
+  const ty = g => g <= 0 ? pad.t + ch + 10
+    : pad.t + (1 - (Math.log10(g) - loD) / (hiD - loD)) * ch;
+
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  ctx.fillStyle   = "#5e7c96"; ctx.font = "11px Arial,sans-serif";
+  for (let l = loD; l <= hiD; l++) {
+    const yp = ty(Math.pow(10, l));
+    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+    ctx.textAlign = "right";
+    ctx.fillText(Math.pow(10, l) >= 1 ? String(Math.pow(10, l)) : Math.pow(10, l).toFixed(-l), pad.l - 5, yp + 4);
+    if (l < hiD) {
+      ctx.strokeStyle = "#f0f3f8";
+      for (let m = 2; m <= 9; m++) {
+        const ym = ty(m * Math.pow(10, l));
+        ctx.beginPath(); ctx.moveTo(pad.l, ym); ctx.lineTo(pad.l + cw, ym); ctx.stroke();
+      }
+      ctx.strokeStyle = "#e8edf5";
+    }
+  }
+
+  // x grid + labels
+  const step = (xMax - xMin) > 8 ? 2.5 : 0.5;
+  const xTicks = [];
+  for (let t = Math.ceil(xMin / step) * step; t <= xMax + 1e-9; t += step) xTicks.push(t);
+  ctx.strokeStyle = "#e8edf5";
+  xTicks.forEach(v => { ctx.beginPath(); ctx.moveTo(tx(v), pad.t); ctx.lineTo(tx(v), pad.t + ch); ctx.stroke(); });
+  ctx.fillStyle = "#5e7c96"; ctx.textAlign = "center";
+  xTicks.forEach(v => ctx.fillText(v.toFixed(1), tx(v), H - pad.b + 14));
+  ctx.fillText("Feed volume (mL)", pad.l + cw / 2, H - 2);
+  ctx.save(); ctx.translate(11, pad.t + ch / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center"; ctx.fillText("Γ", 0, 0); ctx.restore();
+
+  // Current operating fill
+  const vNow = getVolume();
+  if (vNow >= xMin && vNow <= xMax) {
+    ctx.strokeStyle = "#9bb0c4"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(tx(vNow), pad.t); ctx.lineTo(tx(vNow), pad.t + ch); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  curves.forEach(c => {
+    ctx.strokeStyle = c.color; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    c.gammas.forEach((g, i) => {
+      if (g === null || g <= 0) { started = false; return; }
+      const X = tx(vols[i]), Y = ty(g);
+      if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+    });
+    ctx.stroke();
+  });
+
+  drawChartLegend(ctx, pad, W, curves.map(c => ({ label: c.label, color: c.color, lw: 1.5 })));
 }
 
 function drawRej(dPs, curves, dP_op, ops) {
@@ -1436,6 +1577,19 @@ function onCartridgeChange() {
   const cart = document.getElementById("sel-cartridge").value;
   document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
   document.getElementById("panel-locus").style.display = cart === "94-25" ? "block" : "none";
+
+  // Re-range the volume slider before any geometry is read from it
+  const vr   = getVolRange();
+  const vSld = document.getElementById("inp-vol");
+  const prev = parseFloat(vSld.value);
+  vSld.min = vr.min; vSld.max = vr.max;
+  vSld.value = (prev >= vr.min && prev <= vr.max) ? prev : VOL_NOM[cart];
+  document.getElementById("lbl-vol").textContent = parseFloat(vSld.value).toFixed(1);
+  document.getElementById("vol-hint").textContent = `Nominal feed volume: ${VOL_NOM[cart]} mL`;
+  document.getElementById("vol-range-hint").innerHTML = cart === "94-25"
+    ? `Measured free-surface curve, valid ${vr.min}–${vr.max}&nbsp;mL.`
+    : `Declared operating range ${vr.min}–${vr.max}&nbsp;mL (linear δ<sub>s</sub> model).`;
+
   if (cart === "94-25") onLocusChange();
   const geom = getGeom();
   document.getElementById("lbl-rm").textContent = (geom.r_m * 1000).toFixed(1);
