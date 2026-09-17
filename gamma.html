@@ -56,7 +56,7 @@
     .kpi-card.main.warn .kpi-label::after { content: " · extrapolated"; color: #c47a00; }
 
     table.res { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: none; border: none; border-radius: 0; }
-    table.res th, table.res td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+    table.res th, table.res td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); }
     table.res th { background: var(--light); color: var(--navy); font-size: 12px; font-weight: 700; border-bottom: 2px solid var(--line); white-space: nowrap; }
     table.res th sub, table.res td sub { font-size: 9px; }
     table.res td:first-child, table.res th:first-child { text-align: left; }
@@ -174,7 +174,7 @@
           </div>
           <div class="two-col">
             <div class="field-group">
-              <label for="inp-jv">Permeate flux J<sub>v</sub> (L m⁻² h⁻¹)</label>
+              <label for="inp-jv">Permeate flux J<sub>v</sub> (LMH)</label>
               <input type="number" id="inp-jv" min="0.1" max="500" step="1" value="30" oninput="update()" />
             </div>
             <div class="field-group">
@@ -182,7 +182,12 @@
               <input type="number" id="inp-T" min="5" max="45" step="1" value="20" oninput="update()" />
             </div>
           </div>
-          <div class="field-hint">J<sub>v</sub>: the flux you expect (or measured) at this ΔP.</div>
+          <div class="field-group">
+            <label for="inp-R">Observed rejection R<sub>obs,A</sub> (%)</label>
+            <input type="number" id="inp-R" min="0.1" max="100" step="0.1" value="95" oninput="update()" />
+          </div>
+          <div class="field-hint">J<sub>v</sub> and R<sub>obs</sub>: what you measure (or expect) at this ΔP. From them the tool
+            backs out the intrinsic rejection and the solute permeability B, and predicts R<sub>obs</sub> at other fluxes.</div>
           <div class="geom-readout">
             <span>a<sub>m</sub> = <strong id="lbl-am">—</strong> × g</span>
             <span>ΔP = ½ρω²(r<sub>m</sub>²−r<sub>s</sub>²)</span>
@@ -226,10 +231,6 @@
                 <option value="gL">g / L</option>
               </select>
             </div>
-          </div>
-          <div class="field-group">
-            <label for="inp-R">Rejection R<sub>A</sub> (%)</label>
-            <input type="number" id="inp-R" min="0" max="100" step="1" value="100" oninput="update()" />
           </div>
           <div class="field-hint">Solute: <strong id="lbl-formula">—</strong> · <span id="lbl-conc-alt">—</span></div>
         </div>
@@ -282,8 +283,8 @@
               <input type="number" id="inp-cb" min="0" step="any" value="10" oninput="update()" />
             </div>
             <div class="field-group">
-              <label for="inp-RB">Rejection R<sub>B</sub> (%)</label>
-              <input type="number" id="inp-RB" min="0" max="100" step="1" value="100" oninput="update()" />
+              <label for="inp-RB">Observed rejection R<sub>obs,B</sub> (%)</label>
+              <input type="number" id="inp-RB" min="0" max="100" step="0.1" value="80" oninput="update()" />
             </div>
           </div>
           <div class="field-hint" id="b-hint">Tracer: <strong id="lbl-bformula">—</strong></div>
@@ -312,24 +313,26 @@
             <div class="kpi-unit"><span id="val-dp">—</span> bar · a<sub>m</sub> = <span id="val-am">—</span> g</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">k<sub>A</sub> / k<sub>B</sub></div>
-            <div class="kpi-value" id="val-kc">—</div>
-            <div class="kpi-unit">µm/s · R<sub>obs,A</sub> = <span id="val-robs">—</span></div>
+            <div class="kpi-label">Intrinsic rejection R<sub>int,A</sub></div>
+            <div class="kpi-value" id="val-rint">—</div>
+            <div class="kpi-unit" id="val-B">—</div>
           </div>
         </div>
 
         <div class="sim-panel">
-          <h3>Γ across the flux range — same ΔP, solution and cartridge</h3>
+          <h3>Γ and observed rejection across the flux range — same ΔP, solution and cartridge, same B</h3>
           <table class="res" id="tbl-res">
             <thead><tr>
-              <th>J<sub>v</sub> (LMH)</th><th>𝒢<sub>A</sub></th><th>k<sub>A</sub> (µm/s)</th><th>J<sub>v</sub>/k<sub>A</sub></th>
-              <th>Γ<sub>A</sub></th><th class="bcol">k<sub>B</sub> (µm/s)</th><th class="bcol">Γ<sub>B</sub></th>
+              <th>J<sub>v</sub> (LMH)</th><th>𝒢<sub>A</sub></th><th>k<sub>A</sub> (µm/s)</th>
+              <th>Γ<sub>A</sub></th><th>R<sub>int,A</sub></th><th>R<sub>obs,A</sub></th>
+              <th class="bcol">k<sub>B</sub> (µm/s)</th><th class="bcol">Γ<sub>B</sub></th><th class="bcol">R<sub>int,B</sub></th><th class="bcol">R<sub>obs,B</sub></th>
             </tr></thead>
             <tbody></tbody>
           </table>
           <div class="field-hint" style="margin-top:8px;">
-            Γ = c<sub>m</sub>/c<sub>0</sub> − 1 from film theory with the predicted k<sub>c</sub>; use c<sub>m</sub> to convert observed into
-            intrinsic rejection. <span style="color:#c47a00;font-weight:700;">Orange rows</span>: outside the range over which the
+            Γ = c<sub>m</sub>/c<sub>0</sub> − 1 from film theory with the predicted k<sub>c</sub>. R<sub>obs</sub> at each flux is what a
+            membrane with the same solute permeability B (solution–diffusion, R<sub>int</sub> = J<sub>v</sub>/(J<sub>v</sub>+B)) would show at that flux;
+            the ◀ row reproduces your input. <span style="color:#c47a00;font-weight:700;">Orange rows</span>: outside the range over which the
             correlation was validated against DNS (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200 for A, up to 3600 for a tracer), or J<sub>v</sub>/k<sub>c</sub> &gt; 1.5 where
             film theory itself loses accuracy — values are extrapolated.
           </div>
@@ -347,9 +350,13 @@
             <span><em>U<sub>A</sub>*</em> <strong id="p-U">—</strong> mm/s</span>
             <span><em>a<sub>m</sub></em> <strong id="p-am">—</strong> m/s²</span>
             <span><em>𝒢<sub>A</sub></em> <strong id="p-G">—</strong></span>
+            <span><em>k<sub>A</sub></em> <strong id="p-kA">—</strong> µm/s · J<sub>v</sub>/k<sub>A</sub> = <span id="p-phiA">—</span></span>
+            <span><em>B<sub>A</sub></em> <strong id="p-BA">—</strong> LMH</span>
             <span class="bcol"><em>Tracer B</em> <strong id="p-bformula">—</strong></span>
             <span class="bcol"><em>D<sub>B</sub></em> <strong id="p-DB">—</strong> ×10⁻⁹ m²/s</span>
             <span class="bcol"><em>Sc<sub>B</sub></em> <strong id="p-ScB">—</strong></span>
+            <span class="bcol"><em>k<sub>B</sub></em> <strong id="p-kB">—</strong> µm/s</span>
+            <span class="bcol"><em>B<sub>B</sub></em> <strong id="p-BB">—</strong> LMH</span>
           </div>
           <div class="field-hint" style="margin-top:10px;" id="p-note">—</div>
         </div>
@@ -568,19 +575,47 @@ function dpFromRpm(rpm, g) { const w = rpm * 2 * Math.PI / 60; return 0.5 * RHO_
 function rpmFromDp(dP, g)  { return Math.sqrt(2 * dP * 1e5 / (RHO_REF * (g.r_m * g.r_m - g.r_s * g.r_s))) * 60 / (2 * Math.PI); }
 
 // ── CP model (Geraldes et al. 2026, Eqs. 35–36 and 47), explicit in the bulk conditions ──
-function solveGamma(Jv_lmh, RA, sA, C0, T, a_m, sB, RB) {
+// Film theory with c_p = (1 − R_obs) c_0 gives Γ = R_obs (e^φ − 1) exactly, φ = J_v/k_c; R_obs is what enters 𝒢.
+// Given a solute permeability B instead (solution–diffusion, R_int = J_v/(J_v + B)) the system in R_obs is solved by fixed point.
+const RintFromObs = (Robs, Gam) => 1 - (1 - Robs) / (1 + Gam);
+const BFromRint = (Jv, Rint) => Rint > 0 ? Jv * (1 - Rint) / Rint : Infinity;    // same units as Jv
+function gammaFilm(phi, Rint) { const E = Math.exp(Math.min(phi, 20)); return Rint * (E - 1) / (Rint + (1 - Rint) * E); }
+
+// spec = { Robs } (operating point) or { B } (other fluxes, B in LMH). sB/specB likewise for the tracer.
+function solveGamma(Jv_lmh, spec, sA, C0, T, a_m, sB, specB) {
   const Jv = Jv_lmh / 3.6e6;
   const p = solnProps(sA, C0, T);
   const UA = Math.pow(a_m * p.D, 1 / 3), ScA = p.nuKin / p.D;
-  const G = RA * sA.beta * C0 * Jv / UA;
-  const kA = K2 * UA * Math.pow(Math.max(G, 1e-30), 0.25) * Math.pow(ScA, -0.25);
+  const kOf = R => { const G = Math.max(R, 1e-6) * sA.beta * C0 * Jv / UA;
+                     return { G, kA: K2 * UA * Math.pow(G, 0.25) * Math.pow(ScA, -0.25) }; };
+  let Robs, Rint, G, kA, GammaA;
+  if (spec.Robs !== undefined) {
+    Robs = spec.Robs; ({ G, kA } = kOf(Robs));
+    GammaA = Robs * (Math.exp(Math.min(Jv / kA, 20)) - 1);
+    Rint = RintFromObs(Robs, GammaA);
+  } else {
+    Rint = Jv_lmh / (Jv_lmh + spec.B);
+    Robs = Rint;
+    for (let it = 0; it < 100; it++) {
+      ({ G, kA } = kOf(Robs));
+      GammaA = gammaFilm(Jv / kA, Rint);
+      const Rn = 1 - (1 - Rint) * (1 + GammaA);
+      if (Math.abs(Rn - Robs) < 1e-9) { Robs = Rn; break; }
+      Robs = 0.5 * (Robs + Rn);
+    }
+  }
   const phiA = Jv / kA;
-  const out = { G, kA, phiA, GammaA: RA * (Math.exp(Math.min(phiA, 20)) - 1), ScA, UA, D: p.D, nuKin: p.nuKin, thermo: p.thermo, etaRel: p.etaRel, I: p.I,
+  const out = { G, kA, phiA, GammaA, RobsA: Robs, RintA: Rint, BA: BFromRint(Jv_lmh, Rint), ScA, UA, D: p.D, nuKin: p.nuKin,
+                thermo: p.thermo, etaRel: p.etaRel, I: p.I,
                 oorG: G < 7e-9 || G > 5e-6, oorSc: ScA < 700 || ScA > 2200, oorPhi: phiA > 1.5 };
   if (sB) {
     const DB = tracerD(sB, p, T), UB = Math.pow(a_m * DB, 1 / 3), ScB = p.nuKin / DB;
     const kB = K2 * UB * Math.pow(Math.max(G, 1e-30), 0.25) * Math.pow(ScB, -0.25);
-    Object.assign(out, { DB, ScB, kB, phiB: Jv / kB, GammaB: RB * (Math.exp(Math.min(Jv / kB, 20)) - 1), oorScB: ScB < 700 || ScB > 3600 || Jv / kB > 1.5 });
+    const phiB = Jv / kB;
+    let RobsB, RintB, GammaB;
+    if (specB.Robs !== undefined) { RobsB = specB.Robs; GammaB = RobsB * (Math.exp(Math.min(phiB, 20)) - 1); RintB = RintFromObs(RobsB, GammaB); }
+    else { RintB = Jv_lmh / (Jv_lmh + specB.B); GammaB = gammaFilm(phiB, RintB); RobsB = 1 - (1 - RintB) * (1 + GammaB); }
+    Object.assign(out, { DB, ScB, kB, phiB, GammaB, RobsB, RintB, BB: BFromRint(Jv_lmh, RintB), oorScB: ScB < 700 || ScB > 3600 || phiB > 1.5 });
   }
   return out;
 }
@@ -658,7 +693,6 @@ function update() {
   const C0 = unit === "M" ? cIn * sA.M : cIn;   // g/L
   setText("lbl-formula", sA.formula);
   setText("lbl-conc-alt", unit === "M" ? `${f(C0, 3)} g/L` : `${f(C0 / sA.M, 4)} mol/L`);
-  const RA = Math.min(1, Math.max(0, val("inp-R") / 100));
 
   // tracer
   const bt = document.getElementById("sel-btype").value;
@@ -671,18 +705,19 @@ function update() {
   setText("lbl-bformula", sB ? sB.formula : "—");
 
   const Jv = val("inp-jv");
+  const RA = Math.min(1, Math.max(0, val("inp-R") / 100));
   let msg = [];
   if (!(C0 > 0) || !(Jv > 0)) { warn("Concentration and flux must be positive."); return; }
   if (rpm > maxRpm) msg.push(`Required speed ${Math.round(rpm).toLocaleString("en-US")} rpm exceeds the rotor limit (${maxRpm.toLocaleString("en-US")} rpm).`);
   if (sA.beta <= 0) { warn("The main solute makes the solution lighter than water (β ≤ 0): the retained layer is stably stratified and the buoyancy-driven model does not apply."); return; }
-  if (RA <= 0) { warn("With R<sub>A</sub> = 0 the main solute generates no density contrast: no buoyancy forcing, model not applicable. Use R<sub>A</sub> &gt; 0."); return; }
+  if (RA <= 0) { warn("With R<sub>obs,A</sub> = 0 the main solute generates no density contrast: no buoyancy forcing, model not applicable. Use R<sub>obs,A</sub> &gt; 0."); return; }
   if (sA.is22) msg.push("2:2 electrolyte: ion pairing lowers D more than the Davies estimate; Γ may be underestimated by ~10–20 %.");
   if (sA.is3x) msg.push("Trivalent ion: hydrolysis and strong non-ideality; treat the estimate as indicative.");
   if (sB && bt === "ion" && sA.kind !== "salt") msg.push("A trace ion needs a supporting electrolyte; with a neutral main solute choose 'Trace salt' instead.");
   if (sB && sB.kind === "salt" && sA.kind === "salt") msg.push("Trace salt in an electrolyte background: each trace ion actually diffuses with its own ionic coefficient — 'Trace ion' is the better choice here.");
   if (sB && CB > 0 && sB.beta > 0 && sB.beta * CB * 1e-3 > 0.05 * sA.beta * C0 * RA) msg.push("Tracer concentration is not negligible for buoyancy (&gt; 5 % of the main solute\'s β·c): the decoupled tracer formula loses accuracy.");
 
-  const main = solveGamma(Jv, RA, sA, C0, T, a_m, sB, RB);
+  const main = solveGamma(Jv, { Robs: RA }, sA, C0, T, a_m, sB, { Robs: RB });
   if (main.oorG || main.oorSc) msg.push("Operating point outside the validated range of the correlation (𝒢 or Sc of A) — extrapolation.");
   if (main.oorPhi) msg.push("J<sub>v</sub>/k<sub>c</sub> &gt; 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
   if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600).");
@@ -699,19 +734,19 @@ function update() {
   }
   setText("val-rpm", Math.round(rpm).toLocaleString("en-US"));
   setText("val-dp", f(dP, 1)); setText("val-am", f(a_m / 9.81, 0));
-  setText("val-kc", sB ? `${f(main.kA * 1e6, 1)} / ${f(main.kB * 1e6, 1)}` : f(main.kA * 1e6, 1));
-  setText("val-robs", f(100 * Math.max(0, 1 - (1 + main.GammaA) * (1 - RA)), 1) + " %");
+  setText("val-rint", f(100 * main.RintA, 1) + " %");
+  setText("val-B", Number.isFinite(main.BA) ? `B<sub>A</sub> = ${f(main.BA, main.BA < 1 ? 3 : 2)} LMH (solution–diffusion)` : "R<sub>obs</sub> = 100 %: B = 0");
 
   // table
   const rows = [...new Set([...JV_TABLE, Jv])].sort((a, b) => a - b);
   document.querySelector("#tbl-res tbody").innerHTML = rows.map(j => {
-    const r = solveGamma(j, RA, sA, C0, T, a_m, sB, RB);
+    const r = solveGamma(j, { B: main.BA }, sA, C0, T, a_m, sB, sB ? { B: main.BB } : null);
     const extrap = r.oorG || r.oorSc || r.oorPhi || (sB && r.oorScB);
     const cls = (j === Jv ? "user " : "") + (extrap ? "extrap" : "");
     return `<tr class="${cls}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${fe(r.G)}</td>` +
-           `<td>${f(r.kA * 1e6, 1)}</td><td>${f(r.phiA, 3)}</td><td class="gam">${f(r.GammaA, 3)}</td>` +
-           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam">${f(r.GammaB, 3)}</td>`
-               : `<td class="bcol">—</td><td class="bcol">—</td>`) + `</tr>`;
+           `<td>${f(r.kA * 1e6, 1)}</td><td class="gam">${f(r.GammaA, 3)}</td><td>${f(100 * r.RintA, 1)} %</td><td>${f(100 * r.RobsA, 1)} %</td>` +
+           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam">${f(r.GammaB, 3)}</td><td class="bcol">${f(100 * r.RintB, 1)} %</td><td class="bcol">${f(100 * r.RobsB, 1)} %</td>`
+               : `<td class="bcol">—</td><td class="bcol">—</td><td class="bcol">—</td><td class="bcol">—</td>`) + `</tr>`;
   }).join("");
 
   // properties
@@ -721,8 +756,11 @@ function update() {
   setText("p-Sc", f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#c47a00" : "";
   setText("p-U", f(main.UA * 1e3, 1)); setText("p-am", f(a_m, 0));
   setText("p-G", fe(main.G)); document.getElementById("p-G").style.color = main.oorG ? "#c47a00" : "";
+  setText("p-kA", f(main.kA * 1e6, 1)); setText("p-phiA", f(main.phiA, 3));
+  setText("p-BA", Number.isFinite(main.BA) ? f(main.BA, main.BA < 1 ? 3 : 2) : "0");
   if (sB) { setText("p-bformula", sB.formula); setText("p-DB", f(main.DB * 1e9, 3)); setText("p-ScB", f(main.ScB, 0));
-            document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : ""; }
+            document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : "";
+            setText("p-kB", f(main.kB * 1e6, 1)); setText("p-BB", Number.isFinite(main.BB) ? f(main.BB, main.BB < 1 ? 3 : 2) : "0"); }
   setText("p-note",
     `At ${f(T, 0)} °C and the feed concentration: D°<sub>A</sub> = ${f(sA.D25 * 1e9, 3)}×10⁻⁹ m²/s at 25 °C` +
     (sA.kind === "salt" ? ` (Nernst–Hartley), thermodynamic factor ${f(main.thermo, 3)} (Davies, I = ${f(main.I, 4)} mol/kg)` : "") +
