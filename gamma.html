@@ -52,14 +52,14 @@
     .kpi-card.main { border-color: var(--blue); background: #f2fbff; }
     .kpi-card.main .kpi-value { font-size: 30px; }
     .kpi-card.main.warn { border-color: #f0a500; background: #fff8e6; }
-    .kpi-card.main.warn .kpi-value { color: #b4232a; }
+    .kpi-card.main.warn .kpi-value { color: #c47a00; }
 
     table.res { width: 100%; border-collapse: collapse; font-size: 13px; }
     table.res th, table.res td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
     table.res th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
     table.res td:first-child, table.res th:first-child { text-align: left; }
     table.res tr.ok td.gam { color: var(--success); font-weight: 700; }
-    table.res tr.hi td.gam { color: #b4232a; font-weight: 700; }
+    table.res tr.hi td.gam { color: #c47a00; font-weight: 700; }
     table.res tr.user td { background: #f2fbff; }
     table.res td.oor { color: #b4232a; }
     .props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 18px; font-size: 13px; color: var(--navy); }
@@ -329,8 +329,10 @@
             <tbody></tbody>
           </table>
           <div class="field-hint" style="margin-top:8px;">
-            Green: Γ &lt; 0.20, the window where rejection measurements are reliable. Red 𝒢<sub>A</sub>: outside the
-            range over which the correlation was validated (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200 for A, up to 3600 for a tracer) — extrapolation.
+            Γ colour: <span style="color:var(--success);font-weight:700;">green</span> &lt; 0.20 — the window where rejection
+            measurements are reliable; <span style="color:#c47a00;font-weight:700;">amber</span> ≥ 0.20 — CP is significant (the model
+            still applies, up to J<sub>v</sub>/k<sub>c</sub> ≈ 1.5). <span style="color:#b4232a;font-weight:700;">Red</span> 𝒢<sub>A</sub> or Sc:
+            outside the range over which the correlation was validated (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200 for A, up to 3600 for a tracer) — extrapolation.
           </div>
         </div>
 
@@ -707,7 +709,7 @@ function update() {
     const cls = (j === Jv ? "user " : "") + (r.GammaA < 0.20 ? "ok" : "hi");
     return `<tr class="${cls}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td class="${r.oorG ? "oor" : ""}">${fe(r.G)}</td>` +
            `<td>${f(r.kA * 1e6, 1)}</td><td>${f(r.phiA, 3)}</td><td class="gam">${f(r.GammaA, 3)}</td>` +
-           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam" style="color:${r.GammaB < 0.2 ? "var(--success)" : "#b4232a"}">${f(r.GammaB, 3)}</td>`
+           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam" style="color:${r.GammaB < 0.2 ? "var(--success)" : "#c47a00"}">${f(r.GammaB, 3)}</td>`
                : `<td class="bcol">—</td><td class="bcol">—</td>`) + `</tr>`;
   }).join("");
 
