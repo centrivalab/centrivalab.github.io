@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Γ Predictor — CentrivaLab</title>
+  <title>CP Calculator — CentrivaLab</title>
   <link rel="icon" href="favicon.ico" />
-  <meta name="description" content="Quick concentration-polarisation estimate for CentrivaLab O-CMF cartridges: pick cation, anion, concentration, pressure and flux — get Γ = c_m/c_0 − 1." />
+  <meta name="description" content="Quick concentration-polarisation estimate for CentrivaLab O-CMF cartridges: pick your solute (any ions or a neutral), concentration, pressure and flux — get Γ = c_m/c_0 − 1, the wall concentration and the intrinsic rejection." />
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
     .sim-layout { display: grid; grid-template-columns: 330px 1fr; gap: 28px; align-items: start; }
@@ -101,15 +101,14 @@
       <a href="specifications.html">Specifications</a>
       <a href="applications.html">Applications</a>
       <a href="publications.html">Publications</a>
-      <a href="simulator.html">CP Simulator</a>
-      <a href="gamma.html" style="color:white;font-weight:700;">Γ Predictor</a>
+      <a href="gamma.html" style="color:white;font-weight:700;">CP Calculator</a>
       <a href="support.html">Support</a>
       <a href="contact.html">Contact</a>
     </nav>
   </div>
   <div class="container page-hero">
-    <div class="breadcrumbs"><a href="index.html">Home</a> › Γ Predictor</div>
-    <h1>Concentration Polarisation Predictor</h1>
+    <div class="breadcrumbs"><a href="index.html">Home</a> › CP Calculator</div>
+    <h1>Concentration Polarisation Calculator</h1>
     <p>
       Quick estimate of the polarisation factor Γ = <em>c</em><sub>m</sub>/<em>c</em><sub>0</sub> − 1 at the
       membrane in a CentrivaLab cartridge. Choose the main solute (any cation + anion, or a neutral solute),
@@ -117,6 +116,9 @@
       wall concentration and the mass-transfer coefficient. Add a dilute tracer (ion, salt or neutral) to get
       its polarisation too. No membrane parameters needed.
     </p>
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="simulator.html">Compare O-CMF with a stirred cell or spiral-wound module →</a>
+    </div>
   </div>
 </header>
 
@@ -375,6 +377,10 @@
           <div class="field-hint" style="margin-top:10px;" id="p-note">—</div>
         </div>
 
+        <p class="preprint-note" style="margin-bottom:14px;">
+          Want to see how this compares with a stirred cell (Sterlitech HP4750) or a spiral-wound element at the same ΔP?
+          Open the <a href="simulator.html"><strong>device comparison</strong></a>.
+        </p>
         <p class="preprint-note">
           Model: Geraldes V., Fan H., Yang M., Rodrigues M., Elimelech M. —
           "<a href="https://doi.org/10.2139/ssrn.6528979" target="_blank" rel="noopener">Predicting concentration polarization in Ortho-Centrifugal Membrane Filters for NF/RO membrane screening</a>" (2026):
@@ -387,7 +393,7 @@
           (Millero 1972); a trace ion in a supporting electrolyte uses its own ionic diffusivity. Neutral solutes: literature D° and
           partial molar volumes. All data at 25 °C (CRC Handbook; Jenkins &amp; Marcus 1995), scaled to the set temperature.
           The framework was derived for neutral solutes; for electrolytes it is applied with the salt (Nernst–Hartley) diffusivity.
-          For NaCl, MgSO₄ and lactose the <a href="simulator.html">CP simulator</a> uses measured property fits instead.
+          For NaCl, MgSO₄ and lactose the <a href="simulator.html">device comparison</a> uses measured property fits instead.
         </p>
       </div>
     </div>
@@ -409,8 +415,7 @@
         <a href="specifications.html">Specifications</a><br>
         <a href="applications.html">Applications</a><br>
         <a href="publications.html">Publications</a><br>
-        <a href="simulator.html">CP Simulator</a><br>
-        <a href="gamma.html">Γ Predictor</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="simulator.html">Device comparison</a><br>
         <a href="support.html">Support</a><br>
         <a href="contact.html">Contact</a>
       </p>
@@ -425,7 +430,7 @@
 
 <script>
 // ============================================================
-//  CentrivaLab Γ Predictor
+//  CentrivaLab CP Calculator
 //  CP model: Geraldes et al. (2026), k_c/U* = 0.28 G^{1/4} Sc^{-1/4}
 //  Electrolyte properties from ionic data (see footnote).
 // ============================================================

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CP Simulator — CentrivaLab</title>
+  <title>Device comparison — CentrivaLab</title>
   <link rel="icon" href="favicon.ico" />
-  <meta name="description" content="Experiment planning tool: predict concentration polarisation across the full pressure range for your membrane and solute." />
+  <meta name="description" content="Compare concentration polarisation in the O-CMF with a stirred cell (Sterlitech HP4750) and a spiral-wound module across the full pressure range, for five reference membrane classes." />
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
     .sim-layout {
@@ -189,20 +189,23 @@
       <a href="specifications.html">Specifications</a>
       <a href="applications.html">Applications</a>
       <a href="publications.html">Publications</a>
-      <a href="simulator.html" style="color:white;font-weight:700;">CP Simulator</a>
-      <a href="gamma.html">Γ Predictor</a>
+      <a href="gamma.html">CP Calculator</a>
       <a href="support.html">Support</a>
       <a href="contact.html">Contact</a>
     </nav>
   </div>
   <div class="container page-hero">
-    <div class="breadcrumbs"><a href="index.html">Home</a> › CP Simulator</div>
-    <h1>Concentration Polarisation Simulator</h1>
+    <div class="breadcrumbs"><a href="index.html">Home</a> › Device comparison</div>
+    <h1>O-CMF vs stirred cell and spiral-wound module</h1>
     <p>
-      Experiment planning tool for O-CMF screening. Select your solute and feed conditions
-      to compare CP behaviour across five reference membrane classes — and identify the
-      operating window where rejection measurements are reliable (Γ &lt; 20%).
+      How does concentration polarisation in a CentrivaLab cartridge compare with the devices you use today?
+      Pick a solute and feed, and see Γ and observed rejection across the full pressure range for five
+      reference membrane classes (SWRO → loose NF) — in the O-CMF, in a Sterlitech HP4750 stirred cell and
+      in a spiral-wound element.
     </p>
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="gamma.html">Looking for the CP of your own solute at a given flux? Use the CP Calculator →</a>
+    </div>
   </div>
 </header>
 
@@ -436,7 +439,7 @@
         <a href="specifications.html">Specifications</a><br>
         <a href="applications.html">Applications</a><br>
         <a href="publications.html">Publications</a><br>
-        <a href="simulator.html">CP Simulator</a><br><a href="gamma.html">Γ Predictor</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="simulator.html">Device comparison</a><br>
         <a href="support.html">Support</a><br>
         <a href="contact.html">Contact</a>
       </p>
@@ -451,7 +454,7 @@
 
 <script>
 // ============================================================
-//  O-CMF CP Simulator — Experiment Planning Mode
+//  O-CMF device comparison (CP simulator)
 //  Model: Geraldes et al. (2026)
 //  Thermo-physical properties at 20 °C, Table 1
 // ============================================================
@@ -709,9 +712,9 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0, G = 0, Ustar = 0;
 
   for (let iter = 0; iter < MAX_ITER; iter++) {
-    const DA   = Math.max(getDA(sol, C_Am), 1e-12);
-    const nu   = getNu(sol, C_Am);
-    const pi_w = getPi(sol, C_Am);
+    const DA   = Math.max(getDA(sol, C0), 1e-12);   // transport properties and 𝒢 at the bulk
+    const nu   = getNu(sol, C0);                      // concentration, as in Eq. (35) of the source paper
+    const pi_w = getPi(sol, C_Am);                    // osmotic pressure at the wall sets the flux
 
     Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
     if (Jv <= 0) return null;
@@ -719,7 +722,7 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
     RA    = Jv / (Jv + B_SI);
     Ustar = Math.pow(a_m * DA, 1/3);
     Sc    = nu / DA;
-    G     = RA * SOLUTES[sol].beta * C_Am * (Jv / Ustar);
+    G     = RA * SOLUTES[sol].beta * C0 * (Jv / Ustar);
     if (G <= 0) return null;
 
     kc    = K2 * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25);
