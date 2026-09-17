@@ -320,12 +320,11 @@
         </div>
 
         <div class="sim-panel">
-          <h3>Γ and observed rejection across the flux range — same ΔP, solution and cartridge, same B</h3>
+          <h3>Main solute A across the flux range — same ΔP, solution and cartridge, same B</h3>
           <table class="res" id="tbl-res">
             <thead><tr>
               <th>J<sub>v</sub> (LMH)</th><th>𝒢<sub>A</sub></th><th>k<sub>A</sub> (µm/s)</th>
-              <th>Γ<sub>A</sub></th><th>R<sub>int,A</sub></th><th>R<sub>obs,A</sub></th>
-              <th class="bcol">k<sub>B</sub> (µm/s)</th><th class="bcol">Γ<sub>B</sub></th><th class="bcol">R<sub>int,B</sub></th><th class="bcol">R<sub>obs,B</sub></th>
+              <th>J<sub>v</sub>/k<sub>A</sub></th><th>Γ<sub>A</sub></th><th>c<sub>m,A</sub> (g/L)</th><th>R<sub>int,A</sub></th><th>R<sub>obs,A</sub></th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -333,8 +332,23 @@
             Γ = c<sub>m</sub>/c<sub>0</sub> − 1 from film theory with the predicted k<sub>c</sub>. R<sub>obs</sub> at each flux is what a
             membrane with the same solute permeability B (solution–diffusion, R<sub>int</sub> = J<sub>v</sub>/(J<sub>v</sub>+B)) would show at that flux;
             the ◀ row reproduces your input. <span style="color:#c47a00;font-weight:700;">Orange rows</span>: outside the range over which the
-            correlation was validated against DNS (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200 for A, up to 3600 for a tracer), or J<sub>v</sub>/k<sub>c</sub> &gt; 1.5 where
+            correlation was validated against DNS (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200), or J<sub>v</sub>/k<sub>c</sub> &gt; 1.5 where
             film theory itself loses accuracy — values are extrapolated.
+          </div>
+        </div>
+
+        <div class="sim-panel bcol" id="panel-tracer">
+          <h3>Tracer B across the flux range — same conditions, same B<sub>B</sub></h3>
+          <table class="res" id="tbl-trc">
+            <thead><tr>
+              <th>J<sub>v</sub> (LMH)</th><th>k<sub>B</sub> (µm/s)</th><th>J<sub>v</sub>/k<sub>B</sub></th><th>Γ<sub>B</sub></th>
+              <th>c<sub>m,B</sub> (mg/L)</th><th>R<sub>int,B</sub></th><th>R<sub>obs,B</sub></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="field-hint" style="margin-top:8px;">
+            k<sub>B</sub> is set by the convective field of solute A (𝒢<sub>A</sub>) and the tracer's own diffusivity (Eq. 47).
+            Orange rows: Sc<sub>B</sub> outside 700–3600 or J<sub>v</sub>/k<sub>B</sub> &gt; 1.5, or the row is already extrapolated for A.
           </div>
         </div>
 
@@ -739,15 +753,17 @@ function update() {
 
   // table
   const rows = [...new Set([...JV_TABLE, Jv])].sort((a, b) => a - b);
-  document.querySelector("#tbl-res tbody").innerHTML = rows.map(j => {
-    const r = solveGamma(j, { B: main.BA }, sA, C0, T, a_m, sB, sB ? { B: main.BB } : null);
-    const extrap = r.oorG || r.oorSc || r.oorPhi || (sB && r.oorScB);
-    const cls = (j === Jv ? "user " : "") + (extrap ? "extrap" : "");
-    return `<tr class="${cls}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${fe(r.G)}</td>` +
-           `<td>${f(r.kA * 1e6, 1)}</td><td class="gam">${f(r.GammaA, 3)}</td><td>${f(100 * r.RintA, 1)} %</td><td>${f(100 * r.RobsA, 1)} %</td>` +
-           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam">${f(r.GammaB, 3)}</td><td class="bcol">${f(100 * r.RintB, 1)} %</td><td class="bcol">${f(100 * r.RobsB, 1)} %</td>`
-               : `<td class="bcol">—</td><td class="bcol">—</td><td class="bcol">—</td><td class="bcol">—</td>`) + `</tr>`;
-  }).join("");
+  const rowRes = rows.map(j => ({ j, r: solveGamma(j, { B: main.BA }, sA, C0, T, a_m, sB, sB ? { B: main.BB } : null) }));
+  const extrapA = r => r.oorG || r.oorSc || r.oorPhi;
+  const mark = j => (j === Jv ? "user " : "");
+  document.querySelector("#tbl-res tbody").innerHTML = rowRes.map(({ j, r }) =>
+    `<tr class="${mark(j)}${extrapA(r) ? "extrap" : ""}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${fe(r.G)}</td>` +
+    `<td>${f(r.kA * 1e6, 1)}</td><td>${f(r.phiA, 3)}</td><td class="gam">${f(r.GammaA, 3)}</td><td>${f((1 + r.GammaA) * C0, 3)}</td>` +
+    `<td>${f(100 * r.RintA, 1)} %</td><td>${f(100 * r.RobsA, 1)} %</td></tr>`).join("");
+  if (sB) document.querySelector("#tbl-trc tbody").innerHTML = rowRes.map(({ j, r }) =>
+    `<tr class="${mark(j)}${extrapA(r) || r.oorScB ? "extrap" : ""}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${f(r.kB * 1e6, 1)}</td>` +
+    `<td>${f(r.phiB, 3)}</td><td class="gam">${f(r.GammaB, 3)}</td><td>${CB > 0 ? f((1 + r.GammaB) * CB, 2) : "—"}</td>` +
+    `<td>${f(100 * r.RintB, 1)} %</td><td>${f(100 * r.RobsB, 1)} %</td></tr>`).join("");
 
   // properties
   setText("p-formula", sA.formula); setText("p-M", f(sA.M, 2));
