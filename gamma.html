@@ -172,10 +172,17 @@
               <input type="number" id="inp-rpm" min="500" max="25000" step="50" value="9430" oninput="update()" />
             </div>
           </div>
-          <div class="field-group">
-            <label for="inp-T">Temperature (°C)</label>
-            <input type="number" id="inp-T" min="5" max="45" step="1" value="20" oninput="update()" />
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-jv">Permeate flux J<sub>v</sub> (L m⁻² h⁻¹)</label>
+              <input type="number" id="inp-jv" min="0.1" max="500" step="1" value="30" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-T">Temperature (°C)</label>
+              <input type="number" id="inp-T" min="5" max="45" step="1" value="20" oninput="update()" />
+            </div>
           </div>
+          <div class="field-hint">J<sub>v</sub>: the flux you expect (or measured) at this ΔP.</div>
           <div class="geom-readout">
             <span>a<sub>m</sub> = <strong id="lbl-am">—</strong> × g</span>
             <span>ΔP = ½ρω²(r<sub>m</sub>²−r<sub>s</sub>²)</span>
@@ -282,17 +289,6 @@
           <div class="field-hint" id="b-hint">Tracer: <strong id="lbl-bformula">—</strong></div>
         </div>
 
-        <div class="sim-panel">
-          <h3>Permeate flux</h3>
-          <div class="field-group">
-            <label for="inp-jv">J<sub>v</sub> at this ΔP (L m⁻² h⁻¹)</label>
-            <input type="number" id="inp-jv" min="0.1" max="500" step="1" value="30" oninput="update()" />
-          </div>
-          <div class="field-hint">
-            The flux you expect (or measured) at this ΔP. Rejection enters only weakly:
-            Γ = R·[exp(J<sub>v</sub>/k<sub>c</sub>) − 1].
-          </div>
-        </div>
       </div>
 
       <!-- ── RIGHT: Results ── -->
