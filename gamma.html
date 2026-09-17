@@ -46,7 +46,7 @@
       background: white; border: 1px solid var(--line); border-radius: 14px; padding: 13px 10px;
       box-shadow: var(--shadow); text-align: center;
     }
-    .kpi-card .kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+    .kpi-card .kpi-label { font-size: 11px; font-weight: 700; letter-spacing: .02em; color: var(--muted); margin-bottom: 5px; }
     .kpi-card .kpi-value { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.1; }
     .kpi-card .kpi-unit  { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .kpi-card.main { border-color: var(--blue); background: #f2fbff; }
@@ -55,9 +55,10 @@
     .kpi-card.main.warn .kpi-value { color: #c47a00; }
     .kpi-card.main.warn .kpi-label::after { content: " · extrapolated"; color: #c47a00; }
 
-    table.res { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.res { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: none; border: none; border-radius: 0; }
     table.res th, table.res td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
-    table.res th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+    table.res th { background: var(--light); color: var(--navy); font-size: 12px; font-weight: 700; border-bottom: 2px solid var(--line); white-space: nowrap; }
+    table.res th sub, table.res td sub { font-size: 9px; }
     table.res td:first-child, table.res th:first-child { text-align: left; }
     table.res td.gam { font-weight: 700; }
     table.res tr.extrap td { color: #c47a00; }
@@ -183,7 +184,8 @@
         </div>
 
         <div class="sim-panel">
-          <h3>Main solute A (drives buoyancy)</h3>
+          <h3>Main solute A</h3>
+          <div class="field-hint" style="margin:-8px 0 12px;">The retained solute that sets the density contrast at the membrane and drives the buoyancy convection.</div>
           <div class="field-group">
             <label for="sel-atype">Type</label>
             <select id="sel-atype" onchange="onTypeChange()">
@@ -226,7 +228,8 @@
         </div>
 
         <div class="sim-panel">
-          <h3>Tracer B (dilute, buoyancy-inactive)</h3>
+          <h3>Tracer B (optional)</h3>
+          <div class="field-hint" style="margin:-8px 0 12px;">A second solute too dilute to affect the density field: it only adds its own diffusivity.</div>
           <div class="field-group">
             <label for="sel-btype">Type</label>
             <select id="sel-btype" onchange="onTypeChange()">
@@ -298,12 +301,12 @@
 
         <div class="kpi-grid">
           <div class="kpi-card main" id="kpi-gamma">
-            <div class="kpi-label">Γ<sub>A</sub> = c<sub>m</sub>/c<sub>0</sub> − 1</div>
+            <div class="kpi-label">Γ<sub>A</sub> — main solute</div>
             <div class="kpi-value" id="val-gamma">—</div>
             <div class="kpi-unit" id="val-cm">—</div>
           </div>
           <div class="kpi-card main" id="kpi-gammab">
-            <div class="kpi-label">Γ<sub>B</sub> (tracer)</div>
+            <div class="kpi-label">Γ<sub>B</sub> — tracer</div>
             <div class="kpi-value" id="val-gammab">—</div>
             <div class="kpi-unit" id="val-cmb">—</div>
           </div>
@@ -474,7 +477,7 @@ const ANIONS = {
   "C2O4 2-": { sym: "C₂O₄",   z: 2, M: 88.02,   lam: 148.2,  V:  16.8,  B:  0.17,  poly: true },
   "PO4 3-":  { sym: "PO₄",    z: 3, M: 94.97,   lam: 207.0,  V: -31.0,  B:  0.59,  poly: true }
 };
-const ION_LABEL = k => k.replace(/(\d?)([+-])$/, (m, n, s) => (n ? "⁰¹²³⁴⁵⁶⁷⁸⁹"[+n] : "") + (s === "+" ? "⁺" : "⁻")).replace(/ /g, "");
+const ION_LABEL = k => { const ion = CATIONS[k] || ANIONS[k]; return ion.sym + (ion.z > 1 ? "⁰¹²³⁴⁵⁶⁷⁸⁹"[ion.z] : "") + (k.endsWith("+") ? "⁺" : "⁻"); };
 
 // ── Neutral solutes at 25 °C ──
 // D25: limiting diffusivity [m²/s]; V: partial molar volume at infinite dilution [cm³/mol]; B: viscosity B-coefficient [dm³/mol]
@@ -587,7 +590,7 @@ function solveGamma(Jv_lmh, RA, sA, C0, T, a_m, sB, RB) {
 }
 
 // ── UI ──
-const JV_TABLE = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200];
+const JV_TABLE = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 250];
 const f = (x, d) => Number.isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
 const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 const fe = x => { if (!Number.isFinite(x) || x <= 0) return "—"; const e = Math.floor(Math.log10(x)); const m = x / Math.pow(10, e);
@@ -623,11 +626,11 @@ function onCartridgeChange() {
   update();
 }
 function warn(msg) {
-  document.getElementById("warning-text").textContent = msg;
+  document.getElementById("warning-text").innerHTML = msg;
   document.getElementById("warning-box").classList.toggle("show", !!msg);
 }
 const val = id => parseFloat(document.getElementById(id).value);
-const setText = (id, s) => { document.getElementById(id).textContent = s; };
+const setText = (id, s) => { document.getElementById(id).innerHTML = s; };
 
 function update() {
   const vr = getVolRange();
@@ -676,27 +679,27 @@ function update() {
   if (!(C0 > 0) || !(Jv > 0)) { warn("Concentration and flux must be positive."); return; }
   if (rpm > maxRpm) msg.push(`Required speed ${Math.round(rpm).toLocaleString("en-US")} rpm exceeds the rotor limit (${maxRpm.toLocaleString("en-US")} rpm).`);
   if (sA.beta <= 0) { warn("The main solute makes the solution lighter than water (β ≤ 0): the retained layer is stably stratified and the buoyancy-driven model does not apply."); return; }
-  if (RA <= 0) { warn("With R_A = 0 the main solute generates no density contrast: no buoyancy forcing, model not applicable. Use R_A > 0."); return; }
+  if (RA <= 0) { warn("With R<sub>A</sub> = 0 the main solute generates no density contrast: no buoyancy forcing, model not applicable. Use R<sub>A</sub> &gt; 0."); return; }
   if (sA.is22) msg.push("2:2 electrolyte: ion pairing lowers D more than the Davies estimate; Γ may be underestimated by ~10–20 %.");
   if (sA.is3x) msg.push("Trivalent ion: hydrolysis and strong non-ideality; treat the estimate as indicative.");
   if (sB && bt === "ion" && sA.kind !== "salt") msg.push("A trace ion needs a supporting electrolyte; with a neutral main solute choose 'Trace salt' instead.");
   if (sB && sB.kind === "salt" && sA.kind === "salt") msg.push("Trace salt in an electrolyte background: each trace ion actually diffuses with its own ionic coefficient — 'Trace ion' is the better choice here.");
-  if (sB && CB > 0 && sB.beta > 0 && sB.beta * CB * 1e-3 > 0.05 * sA.beta * C0 * RA) msg.push("Tracer concentration is not negligible for buoyancy (> 5 % of the main solute's β·c): the decoupled tracer formula loses accuracy.");
+  if (sB && CB > 0 && sB.beta > 0 && sB.beta * CB * 1e-3 > 0.05 * sA.beta * C0 * RA) msg.push("Tracer concentration is not negligible for buoyancy (&gt; 5 % of the main solute\'s β·c): the decoupled tracer formula loses accuracy.");
 
   const main = solveGamma(Jv, RA, sA, C0, T, a_m, sB, RB);
   if (main.oorG || main.oorSc) msg.push("Operating point outside the validated range of the correlation (𝒢 or Sc of A) — extrapolation.");
-  if (main.oorPhi) msg.push("J_v/k_c > 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
+  if (main.oorPhi) msg.push("J<sub>v</sub>/k<sub>c</sub> &gt; 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
   if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600).");
   warn(msg.join(" "));
 
   // KPIs
   document.getElementById("kpi-gamma").classList.toggle("warn", main.oorG || main.oorSc || main.oorPhi);
   setText("val-gamma", f(main.GammaA, 3));
-  setText("val-cm", `c_m = ${f(main.GammaA * C0 + C0, 3)} g/L = ${f((1 + main.GammaA) * C0 / sA.M, 4)} mol/L`);
+  setText("val-cm", `c<sub>m</sub> = ${f(main.GammaA * C0 + C0, 3)} g/L = ${f((1 + main.GammaA) * C0 / sA.M, 4)} mol/L`);
   if (sB) {
     document.getElementById("kpi-gammab").classList.toggle("warn", main.oorG || main.oorSc || main.oorPhi || main.oorScB);
     setText("val-gammab", f(main.GammaB, 3));
-    setText("val-cmb", CB > 0 ? `c_m = ${f((1 + main.GammaB) * CB, 2)} mg/L` : "—");
+    setText("val-cmb", CB > 0 ? `c<sub>m</sub> = ${f((1 + main.GammaB) * CB, 2)} mg/L` : "—");
   }
   setText("val-rpm", Math.round(rpm).toLocaleString("en-US"));
   setText("val-dp", f(dP, 1)); setText("val-am", f(a_m / 9.81, 0));
@@ -725,10 +728,10 @@ function update() {
   if (sB) { setText("p-bformula", sB.formula); setText("p-DB", f(main.DB * 1e9, 3)); setText("p-ScB", f(main.ScB, 0));
             document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : ""; }
   setText("p-note",
-    `At ${f(T, 0)} °C and the feed concentration: D°_A = ${f(sA.D25 * 1e9, 3)}×10⁻⁹ m²/s at 25 °C` +
+    `At ${f(T, 0)} °C and the feed concentration: D°<sub>A</sub> = ${f(sA.D25 * 1e9, 3)}×10⁻⁹ m²/s at 25 °C` +
     (sA.kind === "salt" ? ` (Nernst–Hartley), thermodynamic factor ${f(main.thermo, 3)} (Davies, I = ${f(main.I, 4)} mol/kg)` : "") +
-    `, η/η_w = ${f(main.etaRel, 4)} (Jones–Dole), φ_V° = ${f(sA.phiV, 1)} cm³/mol. ` +
-    `𝒢_A and all properties are evaluated at the bulk feed concentration, as in the source correlation.`);
+    `, η/η<sub>w</sub> = ${f(main.etaRel, 4)} (Jones–Dole), φ<sub>V</sub>° = ${f(sA.phiV, 1)} cm³/mol. ` +
+    `𝒢<sub>A</sub> and all properties are evaluated at the bulk feed concentration, as in the source correlation.`);
 }
 
 fillIons();
