@@ -53,15 +53,15 @@
     .kpi-card.main .kpi-value { font-size: 30px; }
     .kpi-card.main.warn { border-color: #f0a500; background: #fff8e6; }
     .kpi-card.main.warn .kpi-value { color: #c47a00; }
+    .kpi-card.main.warn .kpi-label::after { content: " · extrapolated"; color: #c47a00; }
 
     table.res { width: 100%; border-collapse: collapse; font-size: 13px; }
     table.res th, table.res td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
     table.res th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
     table.res td:first-child, table.res th:first-child { text-align: left; }
-    table.res tr.ok td.gam { color: var(--success); font-weight: 700; }
-    table.res tr.hi td.gam { color: #c47a00; font-weight: 700; }
+    table.res td.gam { font-weight: 700; }
+    table.res tr.extrap td { color: #c47a00; }
     table.res tr.user td { background: #f2fbff; }
-    table.res td.oor { color: #b4232a; }
     .props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 18px; font-size: 13px; color: var(--navy); }
     .props span em { color: var(--muted); font-style: normal; }
     body.no-tracer .bcol, body.no-tracer #kpi-gammab { display: none; }
@@ -329,10 +329,10 @@
             <tbody></tbody>
           </table>
           <div class="field-hint" style="margin-top:8px;">
-            Γ colour: <span style="color:var(--success);font-weight:700;">green</span> &lt; 0.20 — the window where rejection
-            measurements are reliable; <span style="color:#c47a00;font-weight:700;">amber</span> ≥ 0.20 — CP is significant (the model
-            still applies, up to J<sub>v</sub>/k<sub>c</sub> ≈ 1.5). <span style="color:#b4232a;font-weight:700;">Red</span> 𝒢<sub>A</sub> or Sc:
-            outside the range over which the correlation was validated (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200 for A, up to 3600 for a tracer) — extrapolation.
+            Γ = c<sub>m</sub>/c<sub>0</sub> − 1 from film theory with the predicted k<sub>c</sub>; use c<sub>m</sub> to convert observed into
+            intrinsic rejection. <span style="color:#c47a00;font-weight:700;">Orange rows</span>: outside the range over which the
+            correlation was validated against DNS (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200 for A, up to 3600 for a tracer), or J<sub>v</sub>/k<sub>c</sub> &gt; 1.5 where
+            film theory itself loses accuracy — values are extrapolated.
           </div>
         </div>
 
@@ -577,11 +577,11 @@ function solveGamma(Jv_lmh, RA, sA, C0, T, a_m, sB, RB) {
   const kA = K2 * UA * Math.pow(Math.max(G, 1e-30), 0.25) * Math.pow(ScA, -0.25);
   const phiA = Jv / kA;
   const out = { G, kA, phiA, GammaA: RA * (Math.exp(Math.min(phiA, 20)) - 1), ScA, UA, D: p.D, nuKin: p.nuKin, thermo: p.thermo, etaRel: p.etaRel, I: p.I,
-                oorG: G < 7e-9 || G > 5e-6, oorSc: ScA < 700 || ScA > 2200 };
+                oorG: G < 7e-9 || G > 5e-6, oorSc: ScA < 700 || ScA > 2200, oorPhi: phiA > 1.5 };
   if (sB) {
     const DB = tracerD(sB, p, T), UB = Math.pow(a_m * DB, 1 / 3), ScB = p.nuKin / DB;
     const kB = K2 * UB * Math.pow(Math.max(G, 1e-30), 0.25) * Math.pow(ScB, -0.25);
-    Object.assign(out, { DB, ScB, kB, phiB: Jv / kB, GammaB: RB * (Math.exp(Math.min(Jv / kB, 20)) - 1), oorScB: ScB < 700 || ScB > 3600 });
+    Object.assign(out, { DB, ScB, kB, phiB: Jv / kB, GammaB: RB * (Math.exp(Math.min(Jv / kB, 20)) - 1), oorScB: ScB < 700 || ScB > 3600 || Jv / kB > 1.5 });
   }
   return out;
 }
@@ -685,15 +685,16 @@ function update() {
 
   const main = solveGamma(Jv, RA, sA, C0, T, a_m, sB, RB);
   if (main.oorG || main.oorSc) msg.push("Operating point outside the validated range of the correlation (𝒢 or Sc of A) — extrapolation.");
+  if (main.oorPhi) msg.push("J_v/k_c > 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
   if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600).");
   warn(msg.join(" "));
 
   // KPIs
-  document.getElementById("kpi-gamma").classList.toggle("warn", main.GammaA >= 0.20);
+  document.getElementById("kpi-gamma").classList.toggle("warn", main.oorG || main.oorSc || main.oorPhi);
   setText("val-gamma", f(main.GammaA, 3));
   setText("val-cm", `c_m = ${f(main.GammaA * C0 + C0, 3)} g/L = ${f((1 + main.GammaA) * C0 / sA.M, 4)} mol/L`);
   if (sB) {
-    document.getElementById("kpi-gammab").classList.toggle("warn", main.GammaB >= 0.20);
+    document.getElementById("kpi-gammab").classList.toggle("warn", main.oorG || main.oorSc || main.oorPhi || main.oorScB);
     setText("val-gammab", f(main.GammaB, 3));
     setText("val-cmb", CB > 0 ? `c_m = ${f((1 + main.GammaB) * CB, 2)} mg/L` : "—");
   }
@@ -706,10 +707,11 @@ function update() {
   const rows = [...new Set([...JV_TABLE, Jv])].sort((a, b) => a - b);
   document.querySelector("#tbl-res tbody").innerHTML = rows.map(j => {
     const r = solveGamma(j, RA, sA, C0, T, a_m, sB, RB);
-    const cls = (j === Jv ? "user " : "") + (r.GammaA < 0.20 ? "ok" : "hi");
-    return `<tr class="${cls}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td class="${r.oorG ? "oor" : ""}">${fe(r.G)}</td>` +
+    const extrap = r.oorG || r.oorSc || r.oorPhi || (sB && r.oorScB);
+    const cls = (j === Jv ? "user " : "") + (extrap ? "extrap" : "");
+    return `<tr class="${cls}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${fe(r.G)}</td>` +
            `<td>${f(r.kA * 1e6, 1)}</td><td>${f(r.phiA, 3)}</td><td class="gam">${f(r.GammaA, 3)}</td>` +
-           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam" style="color:${r.GammaB < 0.2 ? "var(--success)" : "#c47a00"}">${f(r.GammaB, 3)}</td>`
+           (sB ? `<td class="bcol">${f(r.kB * 1e6, 1)}</td><td class="bcol gam">${f(r.GammaB, 3)}</td>`
                : `<td class="bcol">—</td><td class="bcol">—</td>`) + `</tr>`;
   }).join("");
 
@@ -717,11 +719,11 @@ function update() {
   setText("p-formula", sA.formula); setText("p-M", f(sA.M, 2));
   setText("p-beta", f(sA.beta * 1e4, 2));
   setText("p-D", f(main.D * 1e9, 3)); setText("p-nu-k", f(main.nuKin * 1e6, 3));
-  setText("p-Sc", f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#b4232a" : "";
+  setText("p-Sc", f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#c47a00" : "";
   setText("p-U", f(main.UA * 1e3, 1)); setText("p-am", f(a_m, 0));
-  setText("p-G", fe(main.G)); document.getElementById("p-G").style.color = main.oorG ? "#b4232a" : "";
+  setText("p-G", fe(main.G)); document.getElementById("p-G").style.color = main.oorG ? "#c47a00" : "";
   if (sB) { setText("p-bformula", sB.formula); setText("p-DB", f(main.DB * 1e9, 3)); setText("p-ScB", f(main.ScB, 0));
-            document.getElementById("p-ScB").style.color = main.oorScB ? "#b4232a" : ""; }
+            document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : ""; }
   setText("p-note",
     `At ${f(T, 0)} °C and the feed concentration: D°_A = ${f(sA.D25 * 1e9, 3)}×10⁻⁹ m²/s at 25 °C` +
     (sA.kind === "salt" ? ` (Nernst–Hartley), thermodynamic factor ${f(main.thermo, 3)} (Davies, I = ${f(main.I, 4)} mol/kg)` : "") +
