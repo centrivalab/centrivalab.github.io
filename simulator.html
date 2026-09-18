@@ -190,6 +190,7 @@
       <a href="applications.html">Applications</a>
       <a href="publications.html">Publications</a>
       <a href="gamma.html">CP Calculator</a>
+      <a href="speed.html">Rotor Speed</a>
       <a href="support.html">Support</a>
       <a href="contact.html">Contact</a>
     </nav>
@@ -228,13 +229,7 @@
           </div>
           <div class="field-group" id="group-rotor" style="display:none;">
             <label for="sel-rotor">Rotor</label>
-            <select id="sel-rotor" onchange="onCartridgeChange()">
-              <option value="sigma12159" data-rmax="0.098" data-maxrpm="15500">Sigma 12159 — 6×94 mL, 25°, r_max 98 mm, 15 500 rpm</option>
-              <option value="fiberlite"  data-rmax="0.098" data-maxrpm="15000">Thermo FiberLite F15-6×100y — 6×100 mL, 25°, r_max 98 mm, 15 000 rpm</option>
-              <option value="sigma12155" data-rmax="0.091" data-maxrpm="20000">Sigma 12155 — 4×94 mL, 26°, r_max 91 mm, 20 000 rpm</option>
-              <option value="fx6100"     data-rmax="0.098" data-maxrpm="10200">Beckman FX6100/JA-10.100 — 6×100 mL, 25°, r_max 98 mm, 10 200 rpm</option>
-              <option value="vf694"      data-rmax="0.106" data-maxrpm="10000">Beckman VF 6.94 — 6×94 mL, 25°, r_max 106 mm, 10 000 rpm</option>
-            </select>
+            <select id="sel-rotor" onchange="onRotorChange()"></select>
           </div>
           <div class="field-group">
             <label for="inp-vol">Feed volume</label>
@@ -439,7 +434,7 @@
         <a href="specifications.html">Specifications</a><br>
         <a href="applications.html">Applications</a><br>
         <a href="publications.html">Publications</a><br>
-        <a href="gamma.html">CP Calculator</a><br><a href="simulator.html">Device comparison</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="speed.html">Rotor Speed Calculator</a><br><a href="simulator.html">Device comparison</a><br>
         <a href="support.html">Support</a><br>
         <a href="contact.html">Contact</a>
       </p>
@@ -452,6 +447,7 @@
   </div>
 </footer>
 
+<script src="assets/ocmf-geometry.js"></script>
 <script>
 // ============================================================
 //  O-CMF device comparison (CP simulator)
@@ -473,28 +469,20 @@ function fmtVal(v) { return v < 1 ? v.toString() : v % 1 === 0 ? v.toString() : 
 
 const RHO        = 1000;       // kg/m³
 
-// 94/25 cartridge geometry  (validated, Sep&Purif Tech 2025)
-const DELTA_M    = 0.0268;     // m  (r_max − r_m)
-const DELTA_S_ST = 2.384e-2;   // m
-const ALPHA      = 1.315e-3;   // m/mL
-
-// 50/34 cartridge geometry  (validated vs spec table, r_s(V)=(7.13−0.16V)/100 m)
-const DELTA_M_5034  = 0.0318;  // m  (r_max − r_m = 0.108 − 0.0762)
-const DELTA_S_5034  = 0.0367;  // m
-const ALPHA_5034    = 1.60e-3; // m/mL
+// Cartridge geometry: single source in assets/ocmf-geometry.js (shared with gamma.html and speed.html)
+const DELTA_M      = OCMF.CARTRIDGES["94-25"].deltaM;   // m  (r_max − r_m)
+const DELTA_M_5034 = OCMF.CARTRIDGES["50-34"].deltaM;   // m  (r_max − r_m = 0.108 − 0.0762)
+const DELTA_S_5034 = OCMF.CARTRIDGES["50-34"].deltaS;   // m
+const ALPHA_5034   = OCMF.CARTRIDGES["50-34"].alpha;    // m/mL
 const K2         = 0.28;       // correlation constant (Eq. 26)
 const NU_W       = 1.004e-6;   // m²/s  kinematic viscosity of water at 20 °C
 
 // Nominal feed volumes [mL]
-const VOL_NOM = { "50-34": 13.0, "94-25": 22.5 };
+const VOL_NOM = { "50-34": OCMF.CARTRIDGES["50-34"].vol.nom, "94-25": OCMF.CARTRIDGES["94-25"].vol.nom };
 
-// 94/25 measured free-surface curve: δ_s(V) = A + B·V + C·V²  (mm, V in mL).
-// Cartridge-intrinsic, so r_s = r_max − δ_s(V) holds for any of the 25° rotors.
-// Fitted to 9 CAD measurements spanning 7.4–22.8 mL. Quadratic rather than linear
-// because the equipotential is a cylinder, not a plane: over this span a straight
-// line leaves 1.1 mm of systematic residual, the parabola 0.47 mm.
+// 94/25 measured free-surface curve δ_s(V) = A + B·V + C·V² (mm, V in mL) — see ocmf-geometry.js.
 // Do not extrapolate — the tool refuses volumes outside the measured span.
-const DS94 = { A: 18.7197, B: 2.03995, C: -0.022293, vMin: 7.4, vMax: 22.8 };
+const DS94 = { ...OCMF.CARTRIDGES["94-25"].ds, vMin: OCMF.CARTRIDGES["94-25"].vol.min, vMax: OCMF.CARTRIDGES["94-25"].vol.max };
 
 // Membrane class presets: { Lp [LMH/bar], Jv_max [LMH] }
 const MEM_CLASSES = {
@@ -516,8 +504,8 @@ const CLASS_LINES = [
 const RINT_COLOR = "#1a3a6b";
 
 // 50/34 rotor: Beckman JA-20, r_max = 108.0 mm (r_m=76.2 mm, δ_m=31.8 mm)
-const RMAX_50_34  = 0.1080;
-const MAXRPM_50_34 = 20000;
+const RMAX_50_34   = OCMF.CARTRIDGES["50-34"].rotors[0].rmax;
+const MAXRPM_50_34 = OCMF.CARTRIDGES["50-34"].rotors[0].maxRpm;
 
 // Sterlitech HP4750 discrete RPM values (typical working range)
 const RPM_VALS = [100, 200, 400, 600, 800, 1000];
@@ -652,16 +640,9 @@ function getSpiralDpdl(v_eff, spacerKey, sol, C_Am) {
 }
 
 // ── Geometry helpers ──
-function getRmax() {
-  if (document.getElementById("sel-cartridge").value === "50-34") return RMAX_50_34;
-  const rot = document.getElementById("sel-rotor");
-  return parseFloat(rot.options[rot.selectedIndex].dataset.rmax);
-}
-function getMaxRpm() {
-  if (document.getElementById("sel-cartridge").value === "50-34") return MAXRPM_50_34;
-  const rot = document.getElementById("sel-rotor");
-  return parseInt(rot.options[rot.selectedIndex].dataset.maxrpm);
-}
+function rotorSel() { return OCMF.rotor(document.getElementById("sel-cartridge").value, document.getElementById("sel-rotor").value); }
+function getRmax()   { return rotorSel().rmax; }
+function getMaxRpm() { return rotorSel().maxRpm; }
 // Fill range the geometry is trusted over. For the 94/25 this is the span of the
 // free-surface measurements; for the 50/34 it is the declared operating range,
 // beyond which the linear δ_s* + αV form has no support.
@@ -1484,14 +1465,8 @@ function drawRej(dPs, curves, dP_op, ops) {
 }
 
 // ── Feed volume at fixed ΔP (94/25 only) ──
-function ds94(V) { return DS94.A + DS94.B * V + DS94.C * V * V; }   // mm
-
-// Inverse of ds94: the physical branch is the root that lands inside the tube.
-function v94FromDs(ds) {
-  const disc = DS94.B * DS94.B - 4 * DS94.C * (DS94.A - ds);
-  if (disc < 0) return null;
-  return (-DS94.B + Math.sqrt(disc)) / (2 * DS94.C);
-}
+const ds94 = V => OCMF.deltaS("94-25", V) * 1000;   // mm
+const v94FromDs = OCMF.v94FromDs;                    // inverse (physical branch), mm in
 
 function rpmForV94(dP_bar, V) {
   const rmax = getRmax();
@@ -1577,9 +1552,11 @@ function onLocusChange() {
 }
 
 // ── Init ──
+function onRotorChange() { onCartridgeChange(); }
 function onCartridgeChange() {
   const cart = document.getElementById("sel-cartridge").value;
   document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
+  OCMF.fillRotorSelect(document.getElementById("sel-rotor"), cart);   // keeps the current rotor when still valid
   document.getElementById("panel-locus").style.display = cart === "94-25" ? "block" : "none";
 
   // Re-range the volume slider before any geometry is read from it

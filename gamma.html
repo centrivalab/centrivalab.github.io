@@ -112,6 +112,7 @@
       <a href="applications.html">Applications</a>
       <a href="publications.html">Publications</a>
       <a href="gamma.html" style="color:white;font-weight:700;">CP Calculator</a>
+      <a href="speed.html">Rotor Speed</a>
       <a href="support.html">Support</a>
       <a href="contact.html">Contact</a>
     </nav>
@@ -151,13 +152,7 @@
           </div>
           <div class="field-group" id="group-rotor">
             <label for="sel-rotor">Rotor</label>
-            <select id="sel-rotor" onchange="onCartridgeChange()">
-              <option value="sigma12159" data-rmax="0.098" data-maxrpm="15500">Sigma 12159 — 6×94 mL, 25°, r_max 98 mm, 15 500 rpm</option>
-              <option value="fiberlite"  data-rmax="0.098" data-maxrpm="15000">Thermo FiberLite F15-6×100y — 6×100 mL, 25°, r_max 98 mm, 15 000 rpm</option>
-              <option value="sigma12155" data-rmax="0.091" data-maxrpm="20000">Sigma 12155 — 4×94 mL, 26°, r_max 91 mm, 20 000 rpm</option>
-              <option value="fx6100"     data-rmax="0.098" data-maxrpm="10200">Beckman FX6100/JA-10.100 — 6×100 mL, 25°, r_max 98 mm, 10 200 rpm</option>
-              <option value="vf694"      data-rmax="0.106" data-maxrpm="10000">Beckman VF 6.94 — 6×94 mL, 25°, r_max 106 mm, 10 000 rpm</option>
-            </select>
+            <select id="sel-rotor" onchange="update()"></select>
           </div>
           <div class="two-col">
             <div class="field-group">
@@ -166,7 +161,7 @@
             </div>
             <div class="field-group">
               <label for="inp-vp">Permeate collected V<sub>p</sub> (mL)</label>
-              <input type="number" id="inp-vp" min="0" step="any" value="0.5" oninput="update()" />
+              <input type="number" id="inp-vp" min="0" max="2" step="any" value="0.5" oninput="update()" />
             </div>
           </div>
           <div class="field-hint" id="vol-range-hint">—</div>
@@ -449,7 +444,7 @@
         <a href="specifications.html">Specifications</a><br>
         <a href="applications.html">Applications</a><br>
         <a href="publications.html">Publications</a><br>
-        <a href="gamma.html">CP Calculator</a><br><a href="simulator.html">Device comparison</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="speed.html">Rotor Speed Calculator</a><br><a href="simulator.html">Device comparison</a><br>
         <a href="support.html">Support</a><br>
         <a href="contact.html">Contact</a>
       </p>
@@ -462,6 +457,7 @@
   </div>
 </footer>
 
+<script src="assets/ocmf-geometry.js"></script>
 <script>
 // ============================================================
 //  CentrivaLab CP Calculator
@@ -469,14 +465,10 @@
 //  Electrolyte properties from ionic data (see footnote).
 // ============================================================
 
-// ── Cartridge geometry (same constants as the CP simulator / spec pages) ──
+// ── Cartridge geometry: assets/ocmf-geometry.js (shared with speed.html and simulator.html) ──
 // ΔP–rpm conversion uses the actual feed density (solnProps); the spec pages assume water at 20 °C
-const DELTA_M_9425 = 0.0268;          // m, r_max − r_m
-const DS94 = { A: 18.7197, B: 2.03995, C: -0.022293, vMin: 7.4, vMax: 22.8 };  // δ_s(V) mm, V mL
-const DELTA_M_5034 = 0.0318, DELTA_S_5034 = 0.0367, ALPHA_5034 = 1.60e-3;      // m, m, m/mL
-const RMAX_50_34 = 0.1080, MAXRPM_50_34 = 20000, VOL_50_34 = { min: 11.0, max: 13.0, nom: 13.0, vpNom: 0.5 };
-const VP_NOM_94_25 = 0.5;             // mL, default permeate volume
 const DP_DROP_WARN = 0.30;            // warn when ΔP falls by more than this fraction during the run
+const VP_MAX = 2.0;                   // mL, largest permeate volume the tool accepts
 const PI_MAX = 50;                    // bar, feed osmotic pressure above which the tool refuses the input (Pitzer)
 const K2 = 0.28;
 
@@ -653,7 +645,7 @@ const gcd = (a, b) => b ? gcd(b, a % b) : a;
 
 // ── Water at temperature T [°C] ──
 function waterEta(T)  { return 0.02939e-3 * Math.exp(507.88 / (T + 273.15 - 149.3)); }   // Pa·s (Vogel; 1.002 mPa·s at 20 °C)
-function waterRho(T)  { const t = T; return 999.84 + 0.0680 * t - 0.00909 * t * t + 0.0000976 * t * t * t - 1.7e-6 * t * t * t * t; } // kg/m³
+const waterRho = OCMF.waterRho;                                     // kg/m³
 function dhAlnT(T)    { return 1.1744 * (1 + 0.0028 * (T - 25)); }   // Debye–Hückel A (ln basis), weak T dependence
 const ionD25 = ion => R_GAS * 298.15 / (F_CONST * F_CONST) * ion.lam * 1e-4 / (ion.z * ion.z);   // Nernst–Einstein, m²/s
 
@@ -710,25 +702,13 @@ function tracerD(b, pA, T) { return b.D25 * ((T + 273.15) / 298.15) * (waterEta(
 
 // ── Geometry ──
 function cart() { return document.getElementById("sel-cartridge").value; }
-function rotorSel() { const r = document.getElementById("sel-rotor"); return r.options[r.selectedIndex].dataset; }
-function getRmax()   { return cart() === "50-34" ? RMAX_50_34 : parseFloat(rotorSel().rmax); }
-function getMaxRpm() { return cart() === "50-34" ? MAXRPM_50_34 : parseInt(rotorSel().maxrpm); }
-function getVolRange() { return cart() === "50-34" ? VOL_50_34 : { min: DS94.vMin, max: DS94.vMax, nom: 22.5, vpNom: VP_NOM_94_25 }; }
-function ds94(V) { return DS94.A + DS94.B * V + DS94.C * V * V; }
-function rsOf(V) {
-  const rmax = getRmax();
-  return cart() === "50-34" ? rmax - (DELTA_S_5034 + ALPHA_5034 * V) : rmax - ds94(V) / 1000;
-}
-// Geometry of a run from V0 down to V0 − Vp. The mean of ΔP(V0) and ΔP(V0 − Vp) at a given speed equals
-// ½ρω²·(r_m² − r_s²)_eff with (r_s²)_eff = ½(r_s0² + r_s1²), so one effective term serves both conversions.
-function getGeom(V0, Vp) {
-  const rmax = getRmax(), r_m = rmax - (cart() === "50-34" ? DELTA_M_5034 : DELTA_M_9425);
-  const r_s0 = rsOf(V0), r_s1 = rsOf(V0 - Vp);
-  return { r_m, r_s0, r_s1, sq0: r_m * r_m - r_s0 * r_s0, sq1: r_m * r_m - r_s1 * r_s1,
-           sqEff: r_m * r_m - 0.5 * (r_s0 * r_s0 + r_s1 * r_s1) };
-}
-function dpFromRpm(rpm, rho, sq) { const w = rpm * 2 * Math.PI / 60; return 0.5 * rho * w * w * sq / 1e5; }
-function rpmFromDp(dP, rho, sq)  { return Math.sqrt(2 * dP * 1e5 / (rho * sq)) * 60 / (2 * Math.PI); }
+function rotorSel() { return OCMF.rotor(cart(), document.getElementById("sel-rotor").value); }
+function getRmax()   { return rotorSel().rmax; }
+function getMaxRpm() { return rotorSel().maxRpm; }
+function getVolRange() { return OCMF.CARTRIDGES[cart()].vol; }
+// Geometry of a run from V0 down to V0 − Vp (mean-ΔP effective term: see ocmf-geometry.js)
+function getGeom(V0, Vp) { return OCMF.geomRun(cart(), getRmax(), V0, Vp); }
+const dpFromRpm = OCMF.dpFromRpm, rpmFromDp = OCMF.rpmFromDp;
 
 // ── CP model (Geraldes et al. 2026, Eqs. 35–36 and 47), explicit in the bulk conditions ──
 // Film theory with c_p = (1 − R_obs) c_0 gives Γ = R_obs (e^φ − 1) exactly, φ = J_v/k_c; R_obs is what enters 𝒢.
@@ -870,10 +850,12 @@ function onTypeChange() {
   update();
 }
 function onCartridgeChange() {
-  document.getElementById("group-rotor").style.display = cart() === "94-25" ? "" : "none";
+  const c = OCMF.CARTRIDGES[cart()];
+  document.getElementById("group-rotor").style.display = c.rotorSelect ? "" : "none";
+  OCMF.fillRotorSelect(document.getElementById("sel-rotor"), cart());
   const vr = getVolRange(), vi = document.getElementById("inp-vol"), vp = document.getElementById("inp-vp");
   vi.min = vr.min; vi.max = vr.max; vi.value = vr.nom;
-  vp.max = vr.nom; vp.value = vr.vpNom;
+  vp.value = vr.vpNom;
   update();
 }
 function warn(msg) {
@@ -908,6 +890,7 @@ function update() {
   const V0 = val("inp-vol"), Vp = Math.max(0, val("inp-vp") || 0), V1 = V0 - Vp;
   setText("vol-range-hint", `Calibrated fill range ${vr.min}–${vr.max} mL (nominal ${vr.nom} mL). Final volume V<sub>0</sub> − V<sub>p</sub> = ${f(V1, 1)} mL.`);
   if (!(V0 >= vr.min && V0 <= vr.max)) { stop(`Initial feed volume outside the calibrated range ${vr.min}–${vr.max} mL.`); return; }
+  if (!(Vp <= VP_MAX)) { stop(`Permeate volume is limited to ${VP_MAX.toFixed(1)} mL per run: collect it in steps and re-set the speed for each.`); return; }
   if (!(Vp < V0)) { stop("Permeate volume must be smaller than the initial feed volume."); return; }
   const g = getGeom(V0, Vp);
   setText("lbl-rm", f(g.r_m * 1e3, 1)); setText("lbl-rs", f(g.r_s0 * 1e3, 1)); setText("lbl-rs1", f(g.r_s1 * 1e3, 1));
@@ -1016,7 +999,7 @@ fillIons();
 attachStepper("inp-c0", (v, d) => { const n = step125(v, d); return n !== null && n <= c0Max() * 1.000001 ? n : null; });
 attachStepper("inp-cb", (v, d) => { const n = step125(v, d); return n !== null && n <= 10000 ? n : null; });
 attachStepper("inp-vol", stepLin(0.5, () => ({ min: getVolRange().min, max: getVolRange().max })));
-attachStepper("inp-vp",  stepLin(0.5, () => ({ min: 0, max: val("inp-vol") })));
+attachStepper("inp-vp",  stepLin(0.1, () => ({ min: 0, max: VP_MAX })));
 document.body.classList.add("no-tracer");
 window.addEventListener("DOMContentLoaded", onCartridgeChange);
 </script>

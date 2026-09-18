@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Speed Calculator — CentrivaLab</title>
+  <link rel="icon" href="favicon.ico" />
+  <meta name="description" content="Rotor speed for a target pressure in a CentrivaLab O-CMF cartridge: pick cartridge, rotor, initial and permeate volumes — get the rpm for the mean pressure of the run, or the pressure at a given speed." />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .sim-layout { display: grid; grid-template-columns: 330px 1fr; gap: 28px; align-items: start; }
+    .sim-panel {
+      background: white; border: 1px solid var(--line); border-radius: 18px;
+      padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 16px;
+    }
+    .sim-panel h3 {
+      margin: 0 0 14px; font-size: 11px; font-weight: 700; color: var(--navy);
+      text-transform: uppercase; letter-spacing: .07em;
+    }
+    .field-group { margin-bottom: 13px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label { display: block; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .field-group select, .field-group input[type="number"] {
+      width: 100%; padding: 8px 11px; font-size: 14px; font-family: inherit; color: var(--navy);
+      background: var(--light); border: 1px solid var(--line); border-radius: 10px;
+      appearance: none; -webkit-appearance: none; box-sizing: border-box;
+    }
+    .field-group select:focus, .field-group input[type="number"]:focus { border-color: var(--blue); background: white; outline: none; }
+    .field-group input[type="number"]:disabled { color: var(--muted); }
+    .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e7c96' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .radio-row { display: flex; gap: 16px; font-size: 13px; color: var(--navy); margin-bottom: 6px; }
+    .radio-row label { font-weight: 400; display: inline-flex; align-items: center; gap: 5px; margin: 0; }
+    .stepper { display: flex; align-items: stretch; }
+    .stepper input[type="number"] { flex: 1; min-width: 0; border-radius: 10px 0 0 10px; -moz-appearance: textfield; }
+    .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .stepper button {
+      width: 30px; border: 1px solid var(--line); border-left: none; background: var(--light); color: var(--navy);
+      font-size: 16px; line-height: 1; cursor: pointer; padding: 0; font-family: inherit;
+    }
+    .stepper button:last-child { border-radius: 0 10px 10px 0; }
+    .stepper button:hover { background: white; color: var(--blue); }
+    .geom-readout {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin-top: 12px; padding-top: 11px;
+      border-top: 1px solid var(--line); font-size: 13px; color: var(--navy);
+    }
+    .geom-readout strong { font-weight: 700; }
+    .geom-readout strong.out { color: #b4232a; }
+
+    .big-card {
+      background: white; border: 2px solid var(--blue); border-radius: 18px; padding: 22px 24px; box-shadow: var(--shadow);
+      margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; align-items: center;
+    }
+    .big-card.warn { border-color: #f0a500; background: #fff8e6; }
+    .big-card .big-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; }
+    .big-card .big-value { font-size: 54px; font-weight: 700; color: var(--navy); line-height: 1; margin: 6px 0 2px; }
+    .big-card .big-value small { font-size: 20px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+    .big-card.warn .big-value { color: #c47a00; }
+    .big-card .side { font-size: 14px; color: var(--navy); line-height: 1.7; }
+    .big-card .side em { color: var(--muted); font-style: normal; }
+    .big-card .side strong { font-weight: 700; }
+    .big-card .side strong.out { color: #b4232a; }
+
+    table.res { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: none; border: none; border-radius: 0; }
+    table.res th, table.res td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); }
+    table.res th { background: var(--light); color: var(--navy); font-size: 12px; font-weight: 700; border-bottom: 2px solid var(--line); white-space: nowrap; }
+    table.res th sub, table.res td sub { font-size: 9px; }
+    table.res td:first-child, table.res th:first-child { text-align: left; }
+    table.res td.rpm { font-weight: 700; }
+    table.res tr.over td { color: #b4232a; }
+    table.res tr.user td { background: #f2fbff; }
+    .table-wrap { overflow-x: auto; }
+    .warning-box {
+      display: none; background: #fff8e6; border: 1px solid #f6c85f; border-left: 5px solid #f0a500;
+      border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00; margin-bottom: 14px;
+    }
+    .warning-box.show { display: block; }
+    .preprint-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 4px; }
+    .preprint-note a { color: var(--muted); }
+    @media (max-width: 1000px) {
+      .sim-layout { grid-template-columns: 1fr; }
+      .big-card { grid-template-columns: 1fr; }
+      .big-card .big-value { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container topbar">
+    <a class="brand" href="index.html">
+      <img class="brand-mark" src="assets/logo.svg" alt="CentrivaLab logo" />
+      <span class="brand-name">CentrivaLab™</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" onclick="this.nextElementSibling.classList.toggle('open')">
+      <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+        <rect width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="7" width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="14" width="22" height="2" rx="1" fill="currentColor"/>
+      </svg>
+    </button>
+    <nav class="nav">
+      <a href="technology.html">Technology</a>
+      <a href="products.html">Products</a>
+      <a href="specifications.html">Specifications</a>
+      <a href="applications.html">Applications</a>
+      <a href="publications.html">Publications</a>
+      <a href="gamma.html">CP Calculator</a>
+      <a href="speed.html" style="color:white;font-weight:700;">Rotor Speed</a>
+      <a href="support.html">Support</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+  <div class="container page-hero">
+    <div class="breadcrumbs"><a href="index.html">Home</a> › Speed Calculator</div>
+    <h1>Rotor Speed Calculator</h1>
+    <p>
+      The rotor speed that gives a target pressure in a CentrivaLab cartridge — or the pressure you get at a
+      given speed. Because the free surface recedes as permeate is collected, ΔP falls during a run at constant
+      speed: enter the initial feed volume and the permeate you intend to collect, and the speed is set for the
+      <strong>mean pressure between the start and the end of the run</strong>.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="gamma.html">Need the concentration polarisation too? Open the CP Calculator →</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container" style="margin-top:36px; margin-bottom:56px;">
+    <div class="sim-layout">
+
+      <!-- ── LEFT: Inputs ── -->
+      <div>
+        <div class="sim-panel">
+          <h3>Cartridge &amp; Rotor</h3>
+          <div class="field-group">
+            <label for="sel-cartridge">Cartridge</label>
+            <select id="sel-cartridge" onchange="onCartridgeChange()">
+              <option value="94-25" selected>CentrivaLab 94/25</option>
+              <option value="50-34">CentrivaLab 50/34</option>
+            </select>
+          </div>
+          <div class="field-group" id="group-rotor">
+            <label for="sel-rotor">Rotor</label>
+            <select id="sel-rotor" onchange="onRotorChange()"></select>
+          </div>
+          <div class="two-col" id="group-custom" style="display:none;">
+            <div class="field-group">
+              <label for="inp-rmax">r<sub>max</sub> (mm)</label>
+              <input type="number" id="inp-rmax" min="60" max="200" step="0.5" value="98" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-maxrpm">Max speed (rpm)</label>
+              <input type="number" id="inp-maxrpm" min="1000" max="30000" step="100" value="15000" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" id="rotor-hint" style="margin:-6px 0 12px;">Any fixed-angle 25° rotor for 94–100 mL Oak Ridge tubes fits: choose "Other rotor" and enter its r<sub>max</sub> from the rotor manual.</div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-vol">Initial feed volume V<sub>0</sub> (mL)</label>
+              <input type="number" id="inp-vol" min="7.4" max="22.8" step="any" value="22.5" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-vp">Permeate collected V<sub>p</sub> (mL)</label>
+              <input type="number" id="inp-vp" min="0" max="2" step="any" value="0.5" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" id="vol-range-hint">—</div>
+          <div class="field-group" style="margin-top:13px;">
+            <label for="inp-rho">Feed density (kg/m³)</label>
+            <input type="number" id="inp-rho" min="900" max="1400" step="any" value="998" oninput="update()" />
+            <div class="field-hint">Water at 20 °C = 998. Dense feeds raise ΔP at the same speed: 0.5 M NaCl ≈ 1018, 1 M NaCl ≈ 1040, 1 M MgSO₄ ≈ 1115. The <a href="gamma.html">CP Calculator</a> computes it from the solute.</div>
+          </div>
+          <div class="geom-readout">
+            <span>r<sub>m</sub> = <strong id="lbl-rm">—</strong> mm</span>
+            <span>r<sub>max</sub> = <strong id="lbl-rmax">—</strong> mm</span>
+            <span>r<sub>s</sub> start = <strong id="lbl-rs">—</strong> mm</span>
+            <span>r<sub>s</sub> end = <strong id="lbl-rs1">—</strong> mm</span>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Operating point</h3>
+          <div class="radio-row">
+            <label><input type="radio" name="opmode" value="dp" checked onchange="update()" /> set mean ΔP</label>
+            <label><input type="radio" name="opmode" value="rpm" onchange="update()" /> set rotor speed</label>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-dp">Mean ΔP (bar)</label>
+              <input type="number" id="inp-dp" min="0.1" max="80" step="any" value="15" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-rpm">Rotor speed (rpm)</label>
+              <input type="number" id="inp-rpm" min="100" max="30000" step="any" value="9500" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint">Mean ΔP = ½(ΔP<sub>start</sub> + ΔP<sub>end</sub>) over the collection of V<sub>p</sub>; with V<sub>p</sub> = 0 it is the pressure at the initial fill.</div>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Results ── -->
+      <div>
+        <div class="warning-box" id="warning-box"><strong>⚠</strong> <span id="warning-text"></span></div>
+
+        <div class="big-card" id="big">
+          <div>
+            <div class="big-label" id="big-label">Rotor speed</div>
+            <div class="big-value"><span id="big-value">—</span><small id="big-unit">rpm</small></div>
+            <div class="field-hint" id="big-sub">—</div>
+          </div>
+          <div class="side">
+            <em>ΔP start</em> <strong id="v-dp0">—</strong> bar<br>
+            <em>ΔP end</em> <strong id="v-dp1">—</strong> bar (<strong id="v-drop">—</strong>)<br>
+            <em>a<sub>m</sub> at the membrane</em> <strong id="v-am">—</strong> × g<br>
+            <em>Rotor limit</em> <strong id="v-lim">—</strong>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Speed table for these volumes and density</h3>
+          <div class="table-wrap">
+          <table class="res" id="tbl">
+            <thead><tr>
+              <th>Mean ΔP (bar)</th><th>Rotor speed (rpm)</th><th>ΔP start (bar)</th><th>ΔP end (bar)</th><th>a<sub>m</sub> (× g)</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          </div>
+          <div class="field-hint" style="margin-top:8px;">
+            The ◀ row is your operating point. <span style="color:#b4232a;font-weight:700;">Red rows</span> exceed the rotor's maximum speed.
+            Speeds are rounded to 10 rpm; most centrifuges accept 10 or 100 rpm steps.
+          </div>
+        </div>
+
+        <p class="preprint-note">
+          Model: ΔP = ½ρω²(r<sub>m</sub>² − r<sub>s</sub>²), with r<sub>m</sub> = r<sub>max</sub> − δ<sub>m</sub> the membrane radius and
+          r<sub>s</sub>(V) = r<sub>max</sub> − δ<sub>s</sub>(V) the free-surface radius from the cartridge calibration
+          (94/25: measured over 7.4–22.8 mL; 50/34: 11–13 mL). r<sub>max</sub> is the rotor's maximum radius as given by the manufacturer.
+          Over a run the speed is chosen for the arithmetic mean of ΔP at V<sub>0</sub> and at V<sub>0</sub> − V<sub>p</sub>, which is within
+          ~0.3 bar of the time-averaged pressure for V<sub>p</sub> up to about half of V<sub>0</sub>. Same constants as the
+          <a href="specifications.html">specification pages</a> and the <a href="gamma.html">CP Calculator</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>CentrivaLab™</h4>
+      <p>CentrivaLab is a commercial brand of Talentground Lda.</p>
+      <p>CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+    </div>
+    <div>
+      <h4>Pages</h4>
+      <p>
+        <a href="technology.html">Technology</a><br>
+        <a href="products.html">Products</a><br>
+        <a href="specifications.html">Specifications</a><br>
+        <a href="applications.html">Applications</a><br>
+        <a href="publications.html">Publications</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="speed.html">Speed Calculator</a><br><a href="simulator.html">Device comparison</a><br>
+        <a href="support.html">Support</a><br>
+        <a href="contact.html">Contact</a>
+      </p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p><a href="mailto:info@centrivalab.com">info@centrivalab.com</a><br>
+         <a href="mailto:commercial@centrivalab.com">commercial@centrivalab.com</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/ocmf-geometry.js"></script>
+<script>
+// ============================================================
+//  CentrivaLab Speed Calculator — rpm ↔ mean ΔP over a run
+//  Geometry and ΔP model: assets/ocmf-geometry.js
+// ============================================================
+const DP_DROP_WARN = 0.30;
+const VP_MAX = 2.0;                   // mL, largest permeate volume the tool accepts
+const DP_TABLE = [2, 5, 10, 15, 20, 25, 30, 40, 50, 60];
+const CUSTOM = "custom";
+
+const $ = id => document.getElementById(id);
+const val = id => parseFloat($(id).value);
+const setText = (id, s) => { $(id).innerHTML = s; };
+const f = (x, d) => Number.isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
+const fr = rpm => (Math.round(rpm / 10) * 10).toLocaleString("en-US");
+
+function cart() { return $("sel-cartridge").value; }
+function rotorSpec() {
+  if (cart() === "94-25" && $("sel-rotor").value === CUSTOM) return { rmax: val("inp-rmax") / 1000, maxRpm: val("inp-maxrpm"), custom: true };
+  return OCMF.rotor(cart(), $("sel-rotor").value);
+}
+function onCartridgeChange() {
+  const c = OCMF.CARTRIDGES[cart()];
+  $("group-rotor").style.display = c.rotorSelect ? "" : "none";
+  $("rotor-hint").style.display = c.rotorSelect ? "" : "none";
+  const sel = $("sel-rotor");
+  OCMF.fillRotorSelect(sel, cart());
+  if (c.rotorSelect) sel.add(new Option("Other rotor — enter r_max and max speed", CUSTOM));
+  $("inp-vol").min = c.vol.min; $("inp-vol").max = c.vol.max; $("inp-vol").value = c.vol.nom;
+  $("inp-vp").value = c.vol.vpNom;
+  onRotorChange();
+}
+function onRotorChange() {
+  $("group-custom").style.display = (cart() === "94-25" && $("sel-rotor").value === CUSTOM) ? "" : "none";
+  update();
+}
+function warn(msg) { setText("warning-text", msg); $("warning-box").classList.toggle("show", !!msg); }
+function stop(msg) {
+  warn(msg);
+  for (const id of ["big-value", "v-dp0", "v-dp1", "v-drop", "v-am", "v-lim", "lbl-rm", "lbl-rs", "lbl-rs1"]) setText(id, "—");
+  setText("big-sub", "—"); document.querySelector("#tbl tbody").innerHTML = "";
+}
+
+function update() {
+  const c = OCMF.CARTRIDGES[cart()], rot = rotorSpec();
+  const V0 = val("inp-vol"), Vp = Math.max(0, val("inp-vp") || 0), V1 = V0 - Vp, rho = val("inp-rho");
+  setText("vol-range-hint", `Calibrated fill range ${c.vol.min}–${c.vol.max} mL (nominal ${c.vol.nom} mL). Final volume V<sub>0</sub> − V<sub>p</sub> = ${f(V1, 1)} mL.`);
+  if (!(rot.rmax > 0.03 && rot.rmax < 0.3) || !(rot.maxRpm > 0)) { stop("Enter a valid r<sub>max</sub> (30–300 mm) and maximum speed for the rotor."); return; }
+  if (!(rho >= 900 && rho <= 1400)) { stop("Feed density must be between 900 and 1400 kg/m³."); return; }
+  if (!(V0 >= c.vol.min && V0 <= c.vol.max)) { stop(`Initial feed volume outside the calibrated range ${c.vol.min}–${c.vol.max} mL.`); return; }
+  if (!(Vp <= VP_MAX)) { stop(`Permeate volume is limited to ${VP_MAX.toFixed(1)} mL per run: collect it in steps and re-set the speed for each.`); return; }
+  if (!(Vp < V0)) { stop("Permeate volume must be smaller than the initial feed volume."); return; }
+
+  const g = OCMF.geomRun(cart(), rot.rmax, V0, Vp);
+  setText("lbl-rm", f(g.r_m * 1e3, 1)); setText("lbl-rmax", f(rot.rmax * 1e3, 1));
+  setText("lbl-rs", f(g.r_s0 * 1e3, 1)); setText("lbl-rs1", f(g.r_s1 * 1e3, 1));
+
+  const mode = document.querySelector('input[name="opmode"]:checked').value;
+  const dpIn = $("inp-dp"), rpmIn = $("inp-rpm");
+  let dP, rpm;
+  if (mode === "dp") { dP = val("inp-dp"); rpm = OCMF.rpmFromDp(dP, rho, g.sqEff); rpmIn.value = Math.round(rpm); }
+  else               { rpm = val("inp-rpm"); dP = OCMF.dpFromRpm(rpm, rho, g.sqEff); dpIn.value = dP.toFixed(2); }
+  dpIn.disabled = mode !== "dp"; rpmIn.disabled = mode !== "rpm";
+  if (!(dP > 0) || !(rpm > 0)) { stop("Pressure and speed must be positive."); return; }
+
+  const dP0 = OCMF.dpFromRpm(rpm, rho, g.sq0), dP1 = OCMF.dpFromRpm(rpm, rho, g.sq1), drop = 1 - dP1 / dP0;
+  const over = rpm > rot.maxRpm, dPmax = OCMF.dpFromRpm(rot.maxRpm, rho, g.sqEff);
+  const msg = [];
+  if (over) msg.push(`Required speed ${fr(rpm)} rpm exceeds the rotor limit (${rot.maxRpm.toLocaleString("en-US")} rpm): the highest mean ΔP available for these volumes is ${f(dPmax, 1)} bar.`);
+  if (V1 < c.vol.min) msg.push(`Final volume ${f(V1, 1)} mL is below the calibrated range (min ${c.vol.min} mL): r<sub>s</sub> at the end of the run is extrapolated.`);
+  if (drop > DP_DROP_WARN) msg.push(`ΔP falls by ${f(100 * drop, 0)} % during the run (${f(dP0, 1)} → ${f(dP1, 1)} bar): the mean-pressure estimate becomes rough. Collect less permeate, or split the run and re-set the speed.`);
+  if (rot.custom) msg.push("Custom rotor: the cartridge calibration assumes a 25° fixed-angle rotor for 94–100 mL Oak Ridge tubes; r<sub>max</sub> must be the value quoted by the manufacturer for that rotor.");
+  warn(msg.join(" "));
+
+  // big card
+  $("big").classList.toggle("warn", over);
+  if (mode === "dp") { setText("big-label", "Rotor speed for a mean ΔP of " + f(dP, 1) + " bar"); setText("big-value", fr(rpm)); setText("big-unit", "rpm"); }
+  else               { setText("big-label", "Mean ΔP at " + fr(rpm) + " rpm"); setText("big-value", f(dP, 1)); setText("big-unit", "bar"); }
+  setText("big-sub", `${c.name} · r<sub>max</sub> ${f(rot.rmax * 1e3, 0)} mm · ${f(V0, 1)} mL → ${f(V1, 1)} mL · ρ ${f(rho, 0)} kg/m³`);
+  setText("v-dp0", f(dP0, 1)); setText("v-dp1", f(dP1, 1)); setText("v-drop", "−" + f(100 * drop, 0) + " %");
+  $("v-drop").classList.toggle("out", drop > DP_DROP_WARN);
+  setText("v-am", f(OCMF.amOf(rpm, g.r_m) / OCMF.G, 0));
+  setText("v-lim", `${rot.maxRpm.toLocaleString("en-US")} rpm → max mean ΔP ${f(dPmax, 1)} bar`);
+  $("v-lim").classList.toggle("out", over);
+
+  // table
+  const rows = [...new Set([...DP_TABLE, +dP.toFixed(2)])].sort((a, b) => a - b);
+  document.querySelector("#tbl tbody").innerHTML = rows.map(p => {
+    const n = OCMF.rpmFromDp(p, rho, g.sqEff), isUser = Math.abs(p - dP) < 1e-6;
+    return `<tr class="${isUser ? "user " : ""}${n > rot.maxRpm ? "over" : ""}"><td>${f(p, isUser && p % 1 ? 2 : 0)}${isUser ? " ◀" : ""}</td>` +
+           `<td class="rpm">${fr(n)}</td><td>${f(OCMF.dpFromRpm(n, rho, g.sq0), 1)}</td><td>${f(OCMF.dpFromRpm(n, rho, g.sq1), 1)}</td>` +
+           `<td>${f(OCMF.amOf(n, g.r_m) / OCMF.G, 0)}</td></tr>`;
+  }).join("");
+}
+
+// ── ± steppers (same behaviour as the CP Calculator) ──
+const stepLin = (st, lim) => (v, dir) => {
+  const { min, max } = lim ? lim() : {};
+  let n = +(Math.round((v + dir * st) / st) * st).toPrecision(12);
+  if (min !== undefined) n = Math.max(min, n);
+  if (max !== undefined) n = Math.min(max, n);
+  return n === v ? null : n;
+};
+function attachStepper(id, fn) {
+  const inp = $(id), wrap = document.createElement("div");
+  wrap.className = "stepper"; inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+  const go = dir => { const nv = fn(parseFloat(inp.value) || 0, dir); if (nv !== null) { inp.value = nv; update(); } };
+  for (const d of [-1, 1]) {
+    const b = document.createElement("button"); b.type = "button"; b.tabIndex = -1;
+    b.textContent = d > 0 ? "+" : "−"; b.setAttribute("aria-label", d > 0 ? "increase" : "decrease");
+    b.onclick = () => go(d); wrap.appendChild(b);
+  }
+  inp.addEventListener("keydown", e => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); go(e.key === "ArrowUp" ? 1 : -1); } });
+}
+attachStepper("inp-vol", stepLin(0.5, () => OCMF.CARTRIDGES[cart()].vol));
+attachStepper("inp-vp",  stepLin(0.1, () => ({ min: 0, max: VP_MAX })));
+attachStepper("inp-dp",  stepLin(1, () => ({ min: 1, max: 80 })));
+attachStepper("inp-rpm", stepLin(100, () => ({ min: 100, max: 30000 })));
+attachStepper("inp-rho", stepLin(5, () => ({ min: 900, max: 1400 })));
+window.addEventListener("DOMContentLoaded", onCartridgeChange);
+</script>
+</body>
+</html>
