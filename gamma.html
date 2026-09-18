@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CP Calculator — CentrivaLab</title>
   <link rel="icon" href="favicon.ico" />
-  <meta name="description" content="Quick concentration-polarisation estimate for CentrivaLab O-CMF cartridges: pick your solute (any ions or a neutral), concentration, pressure and flux — get Γ = c_m/c_0 − 1, the wall concentration and the intrinsic rejection." />
+  <meta name="description" content="Quick concentration-polarisation estimate for CentrivaLab O-CMF cartridges: pick your solute (any ions or a neutral), concentration, initial and permeate volumes, pressure and flux — get the rotor speed for the mean pressure of the run, Γ = c_m/c_0 − 1, the wall concentration and the intrinsic rejection." />
   <link rel="stylesheet" href="assets/styles.css" />
   <style>
     .sim-layout { display: grid; grid-template-columns: 330px 1fr; gap: 28px; align-items: start; }
@@ -32,6 +32,16 @@
       background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
     }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    /* custom ± stepper: 1-2-5 decades for concentrations, 0.5 mL for volumes */
+    .stepper { display: flex; align-items: stretch; }
+    .stepper input[type="number"] { flex: 1; min-width: 0; border-radius: 10px 0 0 10px; -moz-appearance: textfield; }
+    .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .stepper button {
+      width: 30px; border: 1px solid var(--line); border-left: none; background: var(--light); color: var(--navy);
+      font-size: 16px; line-height: 1; cursor: pointer; padding: 0; font-family: inherit;
+    }
+    .stepper button:last-child { border-radius: 0 10px 10px 0; }
+    .stepper button:hover { background: white; color: var(--blue); }
     .radio-row { display: flex; gap: 16px; font-size: 13px; color: var(--navy); margin-bottom: 6px; }
     .radio-row label { font-weight: 400; display: inline-flex; align-items: center; gap: 5px; margin: 0; }
     .geom-readout {
@@ -112,9 +122,11 @@
     <p>
       Quick estimate of the polarisation factor Γ = <em>c</em><sub>m</sub>/<em>c</em><sub>0</sub> − 1 at the
       membrane in a CentrivaLab cartridge. Choose the main solute (any cation + anion, or a neutral solute),
-      its concentration, the operating pressure and the permeate flux you expect — the tool returns Γ, the
-      wall concentration and the mass-transfer coefficient. Add a dilute tracer (ion, salt or neutral) to get
-      its polarisation too. No membrane parameters needed.
+      its concentration, the initial feed and permeate volumes, the operating pressure and the permeate flux you
+      expect — the tool returns the rotor speed, Γ, the wall concentration and the mass-transfer coefficient.
+      Because the free surface recedes as permeate is collected, ΔP falls during a run at constant speed: the
+      speed is set for the <strong>mean pressure between the start and the end of the collection</strong>.
+      Add a dilute tracer (ion, salt or neutral) to get its polarisation too. No membrane parameters needed.
     </p>
     <div class="hero-actions">
       <a class="btn btn-secondary" href="simulator.html">Compare O-CMF with a stirred cell or spiral-wound module →</a>
@@ -147,26 +159,34 @@
               <option value="vf694"      data-rmax="0.106" data-maxrpm="10000">Beckman VF 6.94 — 6×94 mL, 25°, r_max 106 mm, 10 000 rpm</option>
             </select>
           </div>
-          <div class="field-group">
-            <label for="inp-vol">Feed volume (mL)</label>
-            <input type="number" id="inp-vol" min="7.4" max="22.8" step="0.1" value="22.5" oninput="update()" />
-            <div class="field-hint" id="vol-range-hint">—</div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-vol">Initial feed volume V<sub>0</sub> (mL)</label>
+              <input type="number" id="inp-vol" min="7.4" max="22.8" step="any" value="22.5" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-vp">Permeate collected V<sub>p</sub> (mL)</label>
+              <input type="number" id="inp-vp" min="0" step="any" value="0.5" oninput="update()" />
+            </div>
           </div>
+          <div class="field-hint" id="vol-range-hint">—</div>
           <div class="geom-readout">
             <span>r<sub>m</sub> = <strong id="lbl-rm">—</strong> mm</span>
-            <span>r<sub>s</sub> = <strong id="lbl-rs">—</strong> mm</span>
+            <span>ρ<sub>feed</sub> = <strong id="lbl-rho">—</strong> kg/m³</span>
+            <span>r<sub>s</sub> start = <strong id="lbl-rs">—</strong> mm</span>
+            <span>r<sub>s</sub> end = <strong id="lbl-rs1">—</strong> mm</span>
           </div>
         </div>
 
         <div class="sim-panel">
           <h3>Operating point</h3>
           <div class="radio-row">
-            <label><input type="radio" name="opmode" value="dp" checked onchange="update()" /> set ΔP</label>
+            <label><input type="radio" name="opmode" value="dp" checked onchange="update()" /> set mean ΔP</label>
             <label><input type="radio" name="opmode" value="rpm" onchange="update()" /> set rotor speed</label>
           </div>
           <div class="two-col">
             <div class="field-group">
-              <label for="inp-dp">ΔP (bar)</label>
+              <label for="inp-dp">Mean ΔP (bar)</label>
               <input type="number" id="inp-dp" min="0.5" max="80" step="0.5" value="15" oninput="update()" />
             </div>
             <div class="field-group">
@@ -193,8 +213,13 @@
           <div class="geom-readout">
             <span>a<sub>m</sub> = <strong id="lbl-am">—</strong> × g</span>
             <span>ΔP = ½ρω²(r<sub>m</sub>²−r<sub>s</sub>²)</span>
+            <span>ΔP start = <strong id="lbl-dp0">—</strong> bar</span>
+            <span>ΔP end = <strong id="lbl-dp1">—</strong> bar (<strong id="lbl-dpdrop">—</strong>)</span>
           </div>
           <div class="field-hint" id="op-hint">—</div>
+          <div class="field-hint">Mean ΔP = ½(ΔP<sub>start</sub> + ΔP<sub>end</sub>). Γ, the fluxes and the rejections below
+            refer to this mean pressure, i.e. to the permeate collected over the whole run. ρ is the feed density at the set
+            concentration and temperature.</div>
         </div>
 
         <div class="sim-panel">
@@ -312,7 +337,7 @@
           <div class="kpi-card">
             <div class="kpi-label">Rotor speed</div>
             <div class="kpi-value" id="val-rpm">—</div>
-            <div class="kpi-unit"><span id="val-dp">—</span> bar · a<sub>m</sub> = <span id="val-am">—</span> g</div>
+            <div class="kpi-unit">mean ΔP <span id="val-dp">—</span> bar (<span id="val-dp01">—</span>) · a<sub>m</sub> = <span id="val-am">—</span> g</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Intrinsic rejection R<sub>int,A</sub></div>
@@ -322,7 +347,7 @@
         </div>
 
         <div class="sim-panel">
-          <h3>Main solute A across the flux range — same ΔP, solution and cartridge, same B</h3>
+          <h3>Main solute A across the flux range — same mean ΔP, solution and cartridge, same B</h3>
           <table class="res" id="tbl-res">
             <thead><tr>
               <th>J<sub>v</sub> (LMH)</th><th>𝒢<sub>A</sub></th><th>k<sub>A</sub> (µm/s)</th>
@@ -368,6 +393,7 @@
             <span><em>𝒢<sub>A</sub></em> <strong id="p-G">—</strong></span>
             <span><em>k<sub>A</sub></em> <strong id="p-kA">—</strong> µm/s · J<sub>v</sub>/k<sub>A</sub> = <span id="p-phiA">—</span></span>
             <span><em>B<sub>A</sub></em> <strong id="p-BA">—</strong> LMH</span>
+            <span><em>π<sub>feed</sub> / π<sub>wall</sub></em> <strong id="p-pi">—</strong> bar (<span id="p-phi">—</span>)</span>
             <span class="bcol"><em>Tracer B</em> <strong id="p-bformula">—</strong></span>
             <span class="bcol"><em>D<sub>B</sub></em> <strong id="p-DB">—</strong> ×10⁻⁹ m²/s</span>
             <span class="bcol"><em>Sc<sub>B</sub></em> <strong id="p-ScB">—</strong></span>
@@ -394,6 +420,14 @@
           partial molar volumes. All data at 25 °C (CRC Handbook; Jenkins &amp; Marcus 1995), scaled to the set temperature.
           The framework was derived for neutral solutes; for electrolytes it is applied with the salt (Nernst–Hartley) diffusivity.
           For NaCl, MgSO₄ and lactose the <a href="simulator.html">device comparison</a> uses measured property fits instead.
+          Osmotic pressure π = φ ν m R T ρ<sub>w</sub> with the osmotic coefficient φ from the Pitzer ion-interaction model
+          (β⁽⁰⁾, β⁽¹⁾, β⁽²⁾, C<sup>φ</sup> at 25 °C from Kim &amp; Frederick, <em>J. Chem. Eng. Data</em> 33 (1988) 177, for ~140 salts; class-average
+          parameters, flagged, otherwise) and φ = 1 + b·m for neutral solutes; it is used only to bound the input (π<sub>feed</sub> ≤ 50 bar)
+          and to check that the set flux is compatible with ΔP.
+          Pressure: ΔP = ½ρω²(r<sub>m</sub>² − r<sub>s</sub>²) with the feed density ρ and the free-surface radius r<sub>s</sub>(V)
+          from the cartridge calibration; since r<sub>s</sub> increases as the feed volume drops, the rotor speed is chosen for
+          the arithmetic mean of ΔP at the initial volume V<sub>0</sub> and at the final volume V<sub>0</sub> − V<sub>p</sub>
+          (within ~0.3 bar of the time-averaged pressure for V<sub>p</sub> up to ~half of V<sub>0</sub>).
         </p>
       </div>
     </div>
@@ -436,11 +470,14 @@
 // ============================================================
 
 // ── Cartridge geometry (same constants as the CP simulator / spec pages) ──
-const RHO_REF = 1000;                 // kg/m³ used in the ΔP–rpm model of the spec pages (water, 20 °C)
+// ΔP–rpm conversion uses the actual feed density (solnProps); the spec pages assume water at 20 °C
 const DELTA_M_9425 = 0.0268;          // m, r_max − r_m
 const DS94 = { A: 18.7197, B: 2.03995, C: -0.022293, vMin: 7.4, vMax: 22.8 };  // δ_s(V) mm, V mL
 const DELTA_M_5034 = 0.0318, DELTA_S_5034 = 0.0367, ALPHA_5034 = 1.60e-3;      // m, m, m/mL
-const RMAX_50_34 = 0.1080, MAXRPM_50_34 = 20000, VOL_50_34 = { min: 11.0, max: 13.0, nom: 13.0 };
+const RMAX_50_34 = 0.1080, MAXRPM_50_34 = 20000, VOL_50_34 = { min: 11.0, max: 13.0, nom: 13.0, vpNom: 0.5 };
+const VP_NOM_94_25 = 0.5;             // mL, default permeate volume
+const DP_DROP_WARN = 0.30;            // warn when ΔP falls by more than this fraction during the run
+const PI_MAX = 50;                    // bar, feed osmotic pressure above which the tool refuses the input (Pitzer)
 const K2 = 0.28;
 
 // ── Ionic data at 25 °C ──
@@ -518,6 +555,97 @@ const NEUTRALS = {
   "PEG 1000":        { M: 1000,   D25: 0.26e-9,  V: 850,   B: 2.5  }
 };
 
+// ── Pitzer ion-interaction parameters at 25 °C: β⁽⁰⁾, β⁽¹⁾, (β⁽²⁾ for 2-2), Cᵠ  [kg/mol basis] ──
+// Kim & Frederick, J. Chem. Eng. Data 33 (1988) 177–184, Tables I–IV and VI (checked against the paper, 2026-09-18).
+// Key = cation key + "|" + anion key. Salts not listed use class-average parameters and are flagged as estimates.
+// NaClO₄: K&F print β⁽⁰⁾ = 0.25446 (evident misprint); Pitzer & Mayorga (1973) value used instead.
+const PITZER = {
+  // 1-1
+  "H+|F-":      [0.02212, 0.40156, 0, -0.00018], "H+|Cl-":     [0.20332, -0.01668, 0, -0.00372],
+  "H+|Br-":     [0.24153, -0.16119, 0, -0.00101], "H+|I-":      [0.23993, 0.28351, 0, 0.00138],
+  "H+|ClO4-":   [0.21617, -0.22769, 0, 0.00192],  "H+|NO3-":    [0.08830, 0.48338, 0, -0.00233],
+  "Li+|Cl-":    [0.20972, -0.34380, 0, -0.00433], "Li+|Br-":    [0.24554, -0.44244, 0, -0.00293],
+  "Li+|I-":     [0.14661, 0.75394, 0, 0.02126],   "Li+|OH-":    [0.05085, -0.07247, 0, -0.00337],
+  "Li+|ClO4-":  [0.20400, 0.32251, 0, -0.00118],  "Li+|NO3-":   [0.13008, 0.04957, 0, -0.00382],
+  "Li+|NO2-":   [0.12147, 0.45734, 0, -0.00383],  "Li+|ClO3-":  [0.17049, 0.22944, 0, -0.00524],
+  "Li+|BrO3-":  [0.08928, 0.21573, 0, -0.00005],  "Li+|CH3COO-":[0.11215, 0.20243, 0, -0.00519],
+  "Na+|F-":     [0.03183, 0.18697, 0, -0.00840],  "Na+|Cl-":    [0.07722, 0.25183, 0, 0.00106],
+  "Na+|Br-":    [0.11077, 0.13760, 0, -0.00153],  "Na+|I-":     [0.13463, 0.19479, 0, -0.00117],
+  "Na+|OH-":    [0.17067, -0.08411, 0, -0.00342], "Na+|ClO3-":  [0.01908, 0.27932, 0, 0.00181],
+  "Na+|ClO4-":  [0.0554, 0.2755, 0, -0.00118],    "Na+|BrO3-":  [-0.02154, 0.18207, 0, 0.00633],
+  "Na+|NO3-":   [0.00388, 0.21151, 0, -0.00006],  "Na+|NO2-":   [0.04793, 0.22465, 0, -0.00226],
+  "Na+|H2PO4-": [-0.04746, -0.07586, 0, 0.00659], "Na+|CH3COO-":[0.13723, 0.34195, 0, -0.00474],
+  "Na+|HCOO-":  [0.07187, 0.32247, 0, -0.00236],
+  "K+|F-":      [0.10013, -0.02175, 0, -0.00159], "K+|Cl-":     [0.04661, 0.22341, 0, -0.00044],
+  "K+|Br-":     [0.05592, 0.22094, 0, -0.00162],  "K+|I-":      [0.07253, 0.27710, 0, -0.00381],
+  "K+|OH-":     [0.17501, -0.01634, 0, -0.00267], "K+|ClO3-":   [-0.09193, 0.23343, 0, 0],
+  "K+|BrO3-":   [-0.11426, 0.20414, 0, 0],        "K+|NO3-":    [-0.08511, 0.10518, 0, 0.00773],
+  "K+|NO2-":    [0.00349, 0.15708, 0, -0.00025],  "K+|H2PO4-":  [-0.11411, 0.06898, 0, 0.02069],
+  "K+|CH3COO-": [0.15283, 0.35513, 0, -0.00432],
+  "Rb+|F-":     [0.10872, 0.39804, 0, -0.00874],  "Rb+|Cl-":    [0.04660, 0.12983, 0, -0.00163],
+  "Rb+|Br-":    [0.03868, 0.16723, 0, -0.00123],  "Rb+|I-":     [0.03902, 0.15224, 0, -0.00095],
+  "Rb+|NO3-":   [-0.08174, -0.03175, 0, 0.00624], "Rb+|CH3COO-":[0.16296, 0.32918, 0, -0.00561],
+  "Cs+|F-":     [0.13644, 0.14166, 0, -0.00674],  "Cs+|Cl-":    [0.03643, -0.01169, 0, -0.00096],
+  "Cs+|Br-":    [0.02311, 0.04587, 0, 0.00092],   "Cs+|I-":     [0.02121, 0.07307, 0, -0.00307],
+  "Cs+|NO3-":   [-0.13004, 0.08169, 0, 0.03018],  "Cs+|NO2-":   [0.00926, 0.32052, 0, -0.00036],
+  "Cs+|OH-":    [0.14768, 0.34572, 0, -0.00819],  "Cs+|CH3COO-":[0.17144, 0.32896, 0, -0.00793],
+  "Ag+|NO3-":   [-0.07102, -0.16793, 0, 0.00322],
+  "NH4+|Cl-":   [0.05191, 0.17937, 0, -0.00301],  "NH4+|I-":    [0.05701, 0.31566, 0, -0.00308],
+  "NH4+|ClO4-": [-0.00697, -0.05618, 0, -0.00071], "NH4+|NO3-": [-0.01476, 0.13826, 0, 0.00029],
+  // 1-2
+  "H+|SO4 2-":  [0.14098, -0.56843, 0, -0.00237], "Li+|SO4 2-": [0.14473, 1.29952, 0, -0.00616],
+  "Na+|SO4 2-": [0.04604, 0.93350, 0, -0.00483],  "Na+|CO3 2-": [0.05306, 1.29262, 0, 0.00094],
+  "Na+|HPO4 2-":[-0.02169, 1.24472, 0, 0.00726],  "Na+|CrO4 2-":[0.06526, 1.63256, 0, 0.00884],
+  "Na+|S2O3 2-":[0.06347, 1.32115, 0, 0.00475],   "K+|SO4 2-":  [0.07548, 0.44371, 0, 0],
+  "K+|HPO4 2-": [0.05307, 1.10271, 0, 0],         "K+|CrO4 2-": [0.07702, 1.22681, 0, -0.00095],
+  "Rb+|SO4 2-": [0.09123, 0.77863, 0, -0.01282],  "Cs+|SO4 2-": [0.14174, 0.69456, 0, -0.02686],
+  "NH4+|SO4 2-":[0.04841, 1.13240, 0, -0.00155],  "NH4+|HPO4 2-":[-0.0425, -0.69871, 0, 0.00527],
+  // 2-1
+  "Mg2+|Cl-":   [0.35573, 1.61738, 0, 0.00474],   "Mg2+|Br-":   [0.4346, 1.73184, 0, 0.00275],
+  "Mg2+|I-":    [0.49161, 1.78273, 0, 0.00780],   "Mg2+|ClO4-": [0.49753, 1.79492, 0, 0.00875],
+  "Mg2+|NO3-":  [0.34284, 2.68244, 0, -0.00723],  "Mg2+|CH3COO-":[0.22930, 2.04167, 0, -0.01460],
+  "Ca2+|Cl-":   [0.32579, 1.38412, 0, -0.00174],  "Ca2+|Br-":   [0.33899, 2.04551, 0, 0.01067],
+  "Ca2+|I-":    [0.43225, 1.84879, 0, 0.00085],   "Ca2+|ClO4-": [0.47924, 2.16287, 0, -0.00837],
+  "Ca2+|NO3-":  [0.17030, 2.02106, 0, -0.00690],
+  "Sr2+|Cl-":   [0.28170, 1.61666, 0, -0.00071],  "Sr2+|Br-":   [0.32410, 1.78223, 0, 0.00344],
+  "Sr2+|I-":    [0.39394, 1.92536, 0, 0.00474],   "Sr2+|ClO4-": [0.44138, 2.00236, 0, -0.01454],
+  "Sr2+|NO3-":  [0.11832, 2.41503, 0, -0.00852],
+  "Ba2+|Cl-":   [0.29073, 1.24998, 0, -0.03046],  "Ba2+|Br-":   [0.31552, 1.57056, 0, -0.01610],
+  "Ba2+|I-":    [0.40227, 1.90862, 0, -0.00936],  "Ba2+|ClO4-": [0.32673, 2.53859, 0, -0.01576],
+  "Ba2+|NO3-":  [-0.04371, 1.11778, 0, 0],        "Ba2+|CH3COO-":[0.28725, 2.87507, 0, -0.04539],
+  "Mn2+|Cl-":   [0.29486, 2.01251, 0, -0.01528],  "Mn2+|Br-":   [0.44655, 1.34477, 0, -0.02269],
+  "Ni2+|Cl-":   [0.39304, 0.99773, 0, -0.01658],  "Ni2+|Br-":   [0.44305, 1.48323, 0, -0.00590],
+  "Ni2+|ClO4-": [0.49285, 1.98517, 0, 0.01679],   "Ni2+|NO3-":  [0.30978, 2.10644, 0, -0.00394],
+  "Co2+|Cl-":   [0.37351, 1.25999, 0, -0.01803],  "Co2+|Br-":   [0.47172, 0.98425, 0, -0.01716],
+  "Co2+|I-":    [0.51953, 1.71266, 0, -0.00101],  "Co2+|NO3-":  [0.30654, 1.80197, 0, -0.00649],
+  "Co2+|ClO4-": [0.50409, 1.96664, 0, 0.01349],
+  "Cu2+|Cl-":   [0.23052, 2.20897, 0, -0.01639],  "Cu2+|Br-":   [0.41247, 1.66270, 0, -0.04262],
+  "Cu2+|ClO4-": [0.48984, 1.90361, 0, 0.00839],   "Cu2+|NO3-":  [0.28124, 1.72906, 0, -0.00842],
+  "Fe2+|Cl-":   [0.35011, 1.40092, 0, -0.01412],
+  "Zn2+|Cl-":   [0.08887, 2.94869, 0, 0.00095],   "Zn2+|Br-":   [0.18728, 4.34674, 0, -0.00911],
+  "Zn2+|I-":    [0.28596, 5.08037, 0, -0.02004],  "Zn2+|ClO4-": [0.52365, 1.46569, 0, 0.00748],
+  "Zn2+|NO3-":  [0.32587, 1.90781, 0, -0.00842],
+  "Cd2+|Cl-":   [0.01624, 0.43945, 0, 0.00109],   "Cd2+|Br-":   [0.02087, -0.86302, 0, 0.00284],
+  "Cd2+|I-":    [0.14916, 0.55935, 0, -0.01117],  "Cd2+|ClO4-": [0.38986, 1.99610, 0, 0.02075],
+  "Cd2+|NO3-":  [0.28764, 1.68468, 0, -0.02587],
+  "Pb2+|ClO4-": [0.33500, 1.61813, 0, -0.00904],  "Pb2+|NO3-":  [0.01506, -0.27095, 0, -0.01330],
+  // 3-1
+  "La3+|Cl-":   [0.59602, 5.6000, 0, -0.02464],   "La3+|ClO4-": [0.83815, 6.5333, 0, -0.01288],
+  "La3+|NO3-":  [0.30507, 5.1333, 0, -0.01750],
+  // 2-2 (α₁ = 1.4, α₂ = 12)
+  "Mg2+|SO4 2-":[0.22438, 3.3067, -40.493, 0.02512], "Ca2+|SO4 2-":[0.20000, 3.7762, -58.388, 0],
+  "Cu2+|SO4 2-":[0.20458, 2.7490, -42.038, 0.01886], "Zn2+|SO4 2-":[0.18404, 3.0310, -27.709, 0.03286],
+  "Ni2+|SO4 2-":[0.15471, 3.0769, -37.593, 0.04301], "Mn2+|SO4 2-":[0.20563, 2.9362, -38.931, 0.01650],
+  "Co2+|SO4 2-":[0.20000, 2.9709, -28.752, 0],       "Cd2+|SO4 2-":[0.20948, 2.6474, -44.473, 0.01021]
+};
+// class averages used when a salt is not tabulated (indexed by "z+z-")
+const PITZER_CLASS = { "11": [0.08, 0.25, 0, 0], "21": [0.30, 1.60, 0, 0], "12": [0.05, 1.10, 0, 0],
+                       "22": [0.20, 2.90, -40, 0.02], "31": [0.65, 5.7, 0, 0], "13": [0.3, 4.0, 0, 0], "32": [0.85, 18.5, 0, 0], "23": [0.85, 18.5, 0, 0] };
+// Neutral solutes: φ = 1 + b·m (second osmotic virial coefficient, kg/mol, from 25 °C water-activity data; approximate)
+const NEUTRAL_BOSM = { "Lactose": 0.09, "Sucrose": 0.088, "Glucose": 0.036, "Glycerol": 0.01, "Urea": -0.04,
+                       "Ethylene glycol": 0.02, "Boric acid": 0, "Caffeine": -0.10, "Ethanol": 0.0, "PEG 400": 0.5, "PEG 1000": 2.5 };
+const M_WATER = 0.018015;             // kg/mol
+
 const R_GAS = 8.314462, F_CONST = 96485.33;
 const SUB = "₀₁₂₃₄₅₆₇₈₉";
 const sub = n => String(n).split("").map(d => SUB[+d]).join("");
@@ -540,8 +668,10 @@ function buildSalt(catKey, anKey) {
   const Dp = ionD25(c), Dm = ionD25(a);
   const D25 = (c.z + a.z) * Dp * Dm / (c.z * Dp + a.z * Dm);        // Nernst–Hartley
   const phiV = nuP * c.V + nuM * a.V;
+  const pz = PITZER[catKey + "|" + anKey];
   return {
-    kind: "salt", formula: fmt(c, nuP) + fmt(a, nuM), M, nuP, nuM, D25, phiV,
+    kind: "salt", formula: fmt(c, nuP) + fmt(a, nuM), M, nuP, nuM, D25, phiV, zP: c.z, zM: a.z,
+    pitzer: pz || PITZER_CLASS[String(c.z) + String(a.z)] || PITZER_CLASS["11"], pitzerTab: !!pz,
     beta: (M - 0.997 * phiV) / (M * 997),
     Bjd: nuP * c.B + nuM * a.B, Ajd: 0.006 * Math.sqrt(c.z * a.z),
     Ifac: 0.5 * (nuP * c.z * c.z + nuM * a.z * a.z), zz: c.z * a.z,
@@ -550,7 +680,7 @@ function buildSalt(catKey, anKey) {
 }
 function buildNeutral(key) {
   const n = NEUTRALS[key];
-  return { kind: "neutral", formula: key, M: n.M, nuP: 1, nuM: 0, D25: n.D25, phiV: n.V,
+  return { kind: "neutral", formula: key, M: n.M, nuP: 1, nuM: 0, D25: n.D25, phiV: n.V, bOsm: NEUTRAL_BOSM[key] || 0,
            beta: (n.M - 0.997 * n.V) / (n.M * 997), Bjd: n.B, Ajd: 0, Ifac: 0, zz: 0 };
 }
 function buildIon(key) {          // trace ion in a supporting electrolyte: own ionic diffusivity
@@ -583,15 +713,22 @@ function cart() { return document.getElementById("sel-cartridge").value; }
 function rotorSel() { const r = document.getElementById("sel-rotor"); return r.options[r.selectedIndex].dataset; }
 function getRmax()   { return cart() === "50-34" ? RMAX_50_34 : parseFloat(rotorSel().rmax); }
 function getMaxRpm() { return cart() === "50-34" ? MAXRPM_50_34 : parseInt(rotorSel().maxrpm); }
-function getVolRange() { return cart() === "50-34" ? VOL_50_34 : { min: DS94.vMin, max: DS94.vMax, nom: 22.5 }; }
+function getVolRange() { return cart() === "50-34" ? VOL_50_34 : { min: DS94.vMin, max: DS94.vMax, nom: 22.5, vpNom: VP_NOM_94_25 }; }
 function ds94(V) { return DS94.A + DS94.B * V + DS94.C * V * V; }
-function getGeom(V) {
+function rsOf(V) {
   const rmax = getRmax();
-  if (cart() === "50-34") return { r_m: rmax - DELTA_M_5034, r_s: rmax - (DELTA_S_5034 + ALPHA_5034 * V) };
-  return { r_m: rmax - DELTA_M_9425, r_s: rmax - ds94(V) / 1000 };
+  return cart() === "50-34" ? rmax - (DELTA_S_5034 + ALPHA_5034 * V) : rmax - ds94(V) / 1000;
 }
-function dpFromRpm(rpm, g) { const w = rpm * 2 * Math.PI / 60; return 0.5 * RHO_REF * w * w * (g.r_m * g.r_m - g.r_s * g.r_s) / 1e5; }
-function rpmFromDp(dP, g)  { return Math.sqrt(2 * dP * 1e5 / (RHO_REF * (g.r_m * g.r_m - g.r_s * g.r_s))) * 60 / (2 * Math.PI); }
+// Geometry of a run from V0 down to V0 − Vp. The mean of ΔP(V0) and ΔP(V0 − Vp) at a given speed equals
+// ½ρω²·(r_m² − r_s²)_eff with (r_s²)_eff = ½(r_s0² + r_s1²), so one effective term serves both conversions.
+function getGeom(V0, Vp) {
+  const rmax = getRmax(), r_m = rmax - (cart() === "50-34" ? DELTA_M_5034 : DELTA_M_9425);
+  const r_s0 = rsOf(V0), r_s1 = rsOf(V0 - Vp);
+  return { r_m, r_s0, r_s1, sq0: r_m * r_m - r_s0 * r_s0, sq1: r_m * r_m - r_s1 * r_s1,
+           sqEff: r_m * r_m - 0.5 * (r_s0 * r_s0 + r_s1 * r_s1) };
+}
+function dpFromRpm(rpm, rho, sq) { const w = rpm * 2 * Math.PI / 60; return 0.5 * rho * w * w * sq / 1e5; }
+function rpmFromDp(dP, rho, sq)  { return Math.sqrt(2 * dP * 1e5 / (rho * sq)) * 60 / (2 * Math.PI); }
 
 // ── CP model (Geraldes et al. 2026, Eqs. 35–36 and 47), explicit in the bulk conditions ──
 // Film theory with c_p = (1 − R_obs) c_0 gives Γ = R_obs (e^φ − 1) exactly, φ = J_v/k_c; R_obs is what enters 𝒢.
@@ -646,6 +783,69 @@ const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 const fe = x => { if (!Number.isFinite(x) || x <= 0) return "—"; const e = Math.floor(Math.log10(x)); const m = x / Math.pow(10, e);
                   return m.toFixed(1) + "×10" + (e < 0 ? "⁻" : "") + String(Math.abs(e)).split("").map(d => SUP[+d]).join(""); };
 
+// ── Osmotic pressure: Pitzer osmotic coefficient (electrolytes) or virial φ = 1 + b·m (neutrals) ──
+// π = φ ν m R T ρ_w  (from ln a_w = −φ ν m M_w and V̄_w ≈ M_w/ρ_w), m = molality of the solute
+function soluteA() {
+  return document.getElementById("sel-atype").value === "salt"
+    ? buildSalt(document.getElementById("sel-cation").value, document.getElementById("sel-anion").value)
+    : buildNeutral(document.getElementById("sel-aneutral").value);
+}
+const nuIons = s => s.kind === "salt" ? s.nuP + s.nuM : 1;
+function aPhi(T) { return 0.3767 + 4.9e-4 * T + 3.9e-6 * T * T; }   // Debye–Hückel slope for φ, kg^½ mol^−½ (0.3915 at 25 °C)
+function osmoticCoeff(s, m, T) {
+  if (s.kind !== "salt") return 1 + (s.bOsm || 0) * m;
+  const [b0, b1, b2, cphi] = s.pitzer, nu = s.nuP + s.nuM, zz = s.zP * s.zM;
+  const I = s.Ifac * m, sI = Math.sqrt(I);
+  if (!(I > 0)) return 1;
+  const a1 = zz === 4 ? 1.4 : 2.0, a2 = 12.0;
+  const fphi = -aPhi(T) * sI / (1 + 1.2 * sI);
+  const Bphi = b0 + b1 * Math.exp(-a1 * sI) + (b2 ? b2 * Math.exp(-a2 * sI) : 0);
+  const Cterm = m * m * (2 * Math.pow(s.nuP * s.nuM, 1.5) / nu) * cphi;
+  return 1 + zz * fphi + m * (2 * s.nuP * s.nuM / nu) * Bphi + Cterm;
+}
+function piOsm(s, C, T) {                                            // bar, C in g/L
+  if (!(C > 0)) return { pi: 0, phi: 1, m: 0 };
+  const m = solnProps(s, C, T).m, phi = osmoticCoeff(s, m, T);
+  return { pi: phi * nuIons(s) * m * R_GAS * (T + 273.15) * waterRho(T) / 1e5, phi, m };
+}
+function c0Max() {                                                   // concentration at π = PI_MAX, in the selected unit
+  const s = soluteA(), T = val("inp-T") || 20;
+  let lo = 0, hi = 2000;                                             // g/L; bisection on π(C), monotonic in practice
+  for (let i = 0; i < 60; i++) { const mid = 0.5 * (lo + hi); if (piOsm(s, mid, T).pi < PI_MAX) lo = mid; else hi = mid; }
+  return document.getElementById("sel-cunit").value === "M" ? lo / s.M : lo;
+}
+
+// ── ± steppers ──
+// 1-2-5 series per decade (0.01, 0.02, 0.05, 0.1, …): the natural grid for concentrations spanning decades
+function step125(v, dir) {
+  if (!(v > 0)) return dir > 0 ? 0.01 : null;
+  const e = Math.floor(Math.log10(v));
+  let best = null;
+  for (const ee of [e - 1, e, e + 1]) for (const m of [1, 2, 5]) {
+    const c = +(m * Math.pow(10, ee)).toPrecision(12);
+    if (dir > 0 ? c > v * 1.000001 : c < v * 0.999999) if (best === null || (dir > 0 ? c < best : c > best)) best = c;
+  }
+  return best;
+}
+const stepLin = (st, lim) => (v, dir) => {
+  const { min, max } = lim ? lim() : {};
+  let n = +(Math.round((v + dir * st) / st) * st).toPrecision(12);
+  if (min !== undefined) n = Math.max(min, n);
+  if (max !== undefined) n = Math.min(max, n);
+  return n === v ? null : n;
+};
+function attachStepper(id, fn) {
+  const inp = document.getElementById(id), wrap = document.createElement("div");
+  wrap.className = "stepper"; inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+  const go = dir => { const nv = fn(parseFloat(inp.value) || 0, dir); if (nv !== null) { inp.value = nv; update(); } };
+  for (const d of [-1, 1]) {
+    const b = document.createElement("button"); b.type = "button"; b.tabIndex = -1;
+    b.textContent = d > 0 ? "+" : "−"; b.setAttribute("aria-label", d > 0 ? "increase" : "decrease");
+    b.onclick = () => go(d); wrap.appendChild(b);
+  }
+  inp.addEventListener("keydown", e => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); go(e.key === "ArrowUp" ? 1 : -1); } });
+}
+
 function fillSelect(id, keys, labelFn, def) {
   const el = document.getElementById(id);
   keys.forEach(k => el.add(new Option(labelFn(k), k)));
@@ -671,47 +871,62 @@ function onTypeChange() {
 }
 function onCartridgeChange() {
   document.getElementById("group-rotor").style.display = cart() === "94-25" ? "" : "none";
-  const vr = getVolRange(), vi = document.getElementById("inp-vol");
+  const vr = getVolRange(), vi = document.getElementById("inp-vol"), vp = document.getElementById("inp-vp");
   vi.min = vr.min; vi.max = vr.max; vi.value = vr.nom;
+  vp.max = vr.nom; vp.value = vr.vpNom;
   update();
 }
 function warn(msg) {
   document.getElementById("warning-text").innerHTML = msg;
   document.getElementById("warning-box").classList.toggle("show", !!msg);
 }
+// Input rejected: blank the results instead of leaving stale numbers on screen
+function stop(msg) {
+  warn(msg);
+  for (const id of ["val-gamma", "val-gammab", "val-rpm", "val-rint", "val-cm", "val-cmb", "val-dp", "val-dp01", "val-am", "val-B"]) setText(id, "—");
+  for (const t of ["#tbl-res tbody", "#tbl-trc tbody"]) document.querySelector(t).innerHTML = "";
+}
 const val = id => parseFloat(document.getElementById(id).value);
 const setText = (id, s) => { document.getElementById(id).innerHTML = s; };
 
 function update() {
-  const vr = getVolRange();
-  const V = val("inp-vol");
-  setText("vol-range-hint", `Calibrated fill range ${vr.min}–${vr.max} mL (nominal ${vr.nom} mL).`);
-  if (!(V >= vr.min && V <= vr.max)) { warn(`Feed volume outside the calibrated range ${vr.min}–${vr.max} mL.`); return; }
-  const g = getGeom(V);
-  setText("lbl-rm", f(g.r_m * 1e3, 1)); setText("lbl-rs", f(g.r_s * 1e3, 1));
+  // main solute (first: its density enters the ΔP–rpm conversion)
+  const T = val("inp-T");
+  const sA = soluteA();
+  const cIn = val("inp-c0"), unit = document.getElementById("sel-cunit").value;
+  const C0 = unit === "M" ? cIn * sA.M : cIn;   // g/L
+  const osm0 = piOsm(sA, C0, T), pi0 = osm0.pi;
+  document.getElementById("inp-c0").max = +c0Max().toPrecision(3);
+  setText("lbl-formula", sA.formula);
+  setText("lbl-conc-alt", (unit === "M" ? `${f(C0, 3)} g/L` : `${f(C0 / sA.M, 4)} mol/L`) + ` · π<sub>feed</sub> ≈ ${f(pi0, 1)} bar`);
+  if (pi0 > PI_MAX) { stop(`Feed osmotic pressure ≈ ${f(pi0, 0)} bar (Pitzer) exceeds ${PI_MAX} bar: outside the range of the tool. Maximum for ${sA.formula}: ${f(c0Max(), unit === "M" ? 2 : 0)} ${unit === "M" ? "mol/L" : "g/L"}.`); return; }
+  const rho = C0 > 0 ? solnProps(sA, C0, T).rho : waterRho(T);
+  setText("lbl-rho", f(rho, 0));
 
-  // operating point
+  // volumes and geometry
+  const vr = getVolRange();
+  const V0 = val("inp-vol"), Vp = Math.max(0, val("inp-vp") || 0), V1 = V0 - Vp;
+  setText("vol-range-hint", `Calibrated fill range ${vr.min}–${vr.max} mL (nominal ${vr.nom} mL). Final volume V<sub>0</sub> − V<sub>p</sub> = ${f(V1, 1)} mL.`);
+  if (!(V0 >= vr.min && V0 <= vr.max)) { stop(`Initial feed volume outside the calibrated range ${vr.min}–${vr.max} mL.`); return; }
+  if (!(Vp < V0)) { stop("Permeate volume must be smaller than the initial feed volume."); return; }
+  const g = getGeom(V0, Vp);
+  setText("lbl-rm", f(g.r_m * 1e3, 1)); setText("lbl-rs", f(g.r_s0 * 1e3, 1)); setText("lbl-rs1", f(g.r_s1 * 1e3, 1));
+
+  // operating point — rpm ↔ mean ΔP over the run
   const mode = document.querySelector('input[name="opmode"]:checked').value;
   const dpIn = document.getElementById("inp-dp"), rpmIn = document.getElementById("inp-rpm");
   let dP, rpm;
-  if (mode === "dp") { dP = parseFloat(dpIn.value); rpm = rpmFromDp(dP, g); rpmIn.value = Math.round(rpm); }
-  else               { rpm = parseFloat(rpmIn.value); dP = dpFromRpm(rpm, g); dpIn.value = dP.toFixed(2); }
+  if (mode === "dp") { dP = parseFloat(dpIn.value); rpm = rpmFromDp(dP, rho, g.sqEff); rpmIn.value = Math.round(rpm); }
+  else               { rpm = parseFloat(rpmIn.value); dP = dpFromRpm(rpm, rho, g.sqEff); dpIn.value = dP.toFixed(2); }
   dpIn.disabled = mode !== "dp"; rpmIn.disabled = mode !== "rpm";
+  const dP0 = dpFromRpm(rpm, rho, g.sq0), dP1 = dpFromRpm(rpm, rho, g.sq1), drop = 1 - dP1 / dP0;
+  setText("lbl-dp0", f(dP0, 1)); setText("lbl-dp1", f(dP1, 1)); setText("lbl-dpdrop", "−" + f(100 * drop, 0) + " %");
+  document.getElementById("lbl-dpdrop").classList.toggle("out", drop > DP_DROP_WARN);
   const maxRpm = getMaxRpm();
   const omega = rpm * 2 * Math.PI / 60, a_m = omega * omega * g.r_m;
   const amEl = document.getElementById("lbl-am");
   amEl.textContent = f(a_m / 9.81, 0); amEl.classList.toggle("out", rpm > maxRpm);
-  setText("op-hint", `Rotor limit ${maxRpm.toLocaleString("en-US")} rpm (max ΔP ${f(dpFromRpm(maxRpm, g), 1)} bar at this fill). ΔP–rpm model assumes water density; correct for dense feeds.`);
-
-  // main solute
-  const T = val("inp-T");
-  const sA = document.getElementById("sel-atype").value === "salt"
-    ? buildSalt(document.getElementById("sel-cation").value, document.getElementById("sel-anion").value)
-    : buildNeutral(document.getElementById("sel-aneutral").value);
-  const cIn = val("inp-c0"), unit = document.getElementById("sel-cunit").value;
-  const C0 = unit === "M" ? cIn * sA.M : cIn;   // g/L
-  setText("lbl-formula", sA.formula);
-  setText("lbl-conc-alt", unit === "M" ? `${f(C0, 3)} g/L` : `${f(C0 / sA.M, 4)} mol/L`);
+  setText("op-hint", `Rotor limit ${maxRpm.toLocaleString("en-US")} rpm (max mean ΔP ${f(dpFromRpm(maxRpm, rho, g.sqEff), 1)} bar for these volumes).`);
 
   // tracer
   const bt = document.getElementById("sel-btype").value;
@@ -726,10 +941,12 @@ function update() {
   const Jv = val("inp-jv");
   const RA = Math.min(1, Math.max(0, val("inp-R") / 100));
   let msg = [];
-  if (!(C0 > 0) || !(Jv > 0)) { warn("Concentration and flux must be positive."); return; }
+  if (!(C0 > 0) || !(Jv > 0)) { stop("Concentration and flux must be positive."); return; }
   if (rpm > maxRpm) msg.push(`Required speed ${Math.round(rpm).toLocaleString("en-US")} rpm exceeds the rotor limit (${maxRpm.toLocaleString("en-US")} rpm).`);
-  if (sA.beta <= 0) { warn("The main solute makes the solution lighter than water (β ≤ 0): the retained layer is stably stratified and the buoyancy-driven model does not apply."); return; }
-  if (RA <= 0) { warn("With R<sub>obs,A</sub> = 0 the main solute generates no density contrast: no buoyancy forcing, model not applicable. Use R<sub>obs,A</sub> &gt; 0."); return; }
+  if (V1 < vr.min) msg.push(`Final volume ${f(V1, 1)} mL is below the calibrated range (min ${vr.min} mL): r<sub>s</sub> at the end of the run is extrapolated.`);
+  if (drop > DP_DROP_WARN) msg.push(`ΔP falls by ${f(100 * drop, 0)} % during the run (${f(dP0, 1)} → ${f(dP1, 1)} bar): the mean-pressure estimate becomes rough. Collect less permeate, or split the run and re-set the speed.`);
+  if (sA.beta <= 0) { stop("The main solute makes the solution lighter than water (β ≤ 0): the retained layer is stably stratified and the buoyancy-driven model does not apply."); return; }
+  if (RA <= 0) { stop("With R<sub>obs,A</sub> = 0 the main solute generates no density contrast: no buoyancy forcing, model not applicable. Use R<sub>obs,A</sub> &gt; 0."); return; }
   if (sA.is22) msg.push("2:2 electrolyte: ion pairing lowers D more than the Davies estimate; Γ may be underestimated by ~10–20 %.");
   if (sA.is3x) msg.push("Trivalent ion: hydrolysis and strong non-ideality; treat the estimate as indicative.");
   if (sB && bt === "ion" && sA.kind !== "salt") msg.push("A trace ion needs a supporting electrolyte; with a neutral main solute choose 'Trace salt' instead.");
@@ -737,6 +954,10 @@ function update() {
   if (sB && CB > 0 && sB.beta > 0 && sB.beta * CB * 1e-3 > 0.05 * sA.beta * C0 * RA) msg.push("Tracer concentration is not negligible for buoyancy (&gt; 5 % of the main solute\'s β·c): the decoupled tracer formula loses accuracy.");
 
   const main = solveGamma(Jv, { Robs: RA }, sA, C0, T, a_m, sB, { Robs: RB });
+  const osmW = piOsm(sA, (1 + main.GammaA) * C0, T), piWall = osmW.pi;
+  if (sA.kind === "salt" && !sA.pitzerTab) msg.push(`No Pitzer parameters tabulated for ${sA.formula}: osmotic pressure uses class-average parameters for ${sA.zP}:${sA.zM} electrolytes (indicative).`);
+  if (pi0 >= dP) msg.push(`Feed osmotic pressure ≈ ${f(pi0, 1)} bar is not below the mean ΔP (${f(dP, 1)} bar): no permeation is possible; the set flux cannot occur.`);
+  else if (piWall >= dP) msg.push(`Osmotic pressure at the membrane ≈ ${f(piWall, 1)} bar (Pitzer at c<sub>m</sub>) reaches the mean ΔP (${f(dP, 1)} bar): the set flux is not attainable at this pressure.`);
   if (main.oorG || main.oorSc) msg.push("Operating point outside the validated range of the correlation (𝒢 or Sc of A) — extrapolation.");
   if (main.oorPhi) msg.push("J<sub>v</sub>/k<sub>c</sub> &gt; 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
   if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600).");
@@ -752,7 +973,7 @@ function update() {
     setText("val-cmb", CB > 0 ? `c<sub>m</sub> = ${f((1 + main.GammaB) * CB, 2)} mg/L` : "—");
   }
   setText("val-rpm", Math.round(rpm).toLocaleString("en-US"));
-  setText("val-dp", f(dP, 1)); setText("val-am", f(a_m / 9.81, 0));
+  setText("val-dp", f(dP, 1)); setText("val-dp01", `${f(dP0, 1)} → ${f(dP1, 1)}`); setText("val-am", f(a_m / 9.81, 0));
   setText("val-rint", f(100 * main.RintA, 1) + " %");
   setText("val-B", Number.isFinite(main.BA) ? `B<sub>A</sub> = ${f(main.BA, main.BA < 1 ? 3 : 2)} LMH (solution–diffusion)` : "R<sub>obs</sub> = 100 %: B = 0");
 
@@ -779,6 +1000,8 @@ function update() {
   setText("p-G", fe(main.G)); document.getElementById("p-G").style.color = main.oorG ? "#c47a00" : "";
   setText("p-kA", f(main.kA * 1e6, 1)); setText("p-phiA", f(main.phiA, 3));
   setText("p-BA", Number.isFinite(main.BA) ? f(main.BA, main.BA < 1 ? 3 : 2) : "0");
+  setText("p-pi", `${f(pi0, 1)} / ${f(piWall, 1)}`); document.getElementById("p-pi").style.color = piWall >= dP ? "#c47a00" : "";
+  setText("p-phi", (sA.kind === "salt" ? (sA.pitzerTab ? "Pitzer" : "Pitzer, class est.") : "virial") + `, φ = ${f(osm0.phi, 3)} / ${f(osmW.phi, 3)}`);
   if (sB) { setText("p-bformula", sB.formula); setText("p-DB", f(main.DB * 1e9, 3)); setText("p-ScB", f(main.ScB, 0));
             document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : "";
             setText("p-kB", f(main.kB * 1e6, 1)); setText("p-BB", Number.isFinite(main.BB) ? f(main.BB, main.BB < 1 ? 3 : 2) : "0"); }
@@ -790,6 +1013,10 @@ function update() {
 }
 
 fillIons();
+attachStepper("inp-c0", (v, d) => { const n = step125(v, d); return n !== null && n <= c0Max() * 1.000001 ? n : null; });
+attachStepper("inp-cb", (v, d) => { const n = step125(v, d); return n !== null && n <= 10000 ? n : null; });
+attachStepper("inp-vol", stepLin(0.5, () => ({ min: getVolRange().min, max: getVolRange().max })));
+attachStepper("inp-vp",  stepLin(0.5, () => ({ min: 0, max: val("inp-vol") })));
 document.body.classList.add("no-tracer");
 window.addEventListener("DOMContentLoaded", onCartridgeChange);
 </script>
