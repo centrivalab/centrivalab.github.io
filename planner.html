@@ -19,7 +19,7 @@
     }
     .field-group { margin-bottom: 13px; }
     .field-group:last-child { margin-bottom: 0; }
-    .field-group label { display: block; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .field-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
     .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
     .field-hint strong { color: var(--navy); }
     .field-group select, .field-group input[type="number"] {
@@ -38,6 +38,7 @@
     .radio-row { display: flex; gap: 16px; font-size: 13px; color: var(--navy); margin-bottom: 6px; flex-wrap: wrap; }
     .radio-row label { font-weight: 400; display: inline-flex; align-items: center; gap: 5px; margin: 0; }
     .check-row { font-size: 12px; color: var(--navy); display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+    .check-row label { display: inline; font-weight: 400; font-size: 12px; margin: 0; }
     .readout {
       display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; margin-top: 12px; padding-top: 11px;
       border-top: 1px solid var(--line); font-size: 12.5px; color: var(--navy);
@@ -45,6 +46,30 @@
     .readout strong { font-weight: 700; }
     .readout strong.out { color: #b4232a; }
 
+    /* contextual help */
+    .help-btn {
+      width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--muted); background: white; color: var(--muted);
+      font-size: 11px; font-weight: 700; line-height: 1; cursor: pointer; padding: 0; font-family: inherit; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .help-btn:hover, .help-btn:focus-visible, .help-btn[aria-expanded="true"] { border-color: var(--blue); color: var(--blue); outline: none; }
+    .help-btn:focus-visible { box-shadow: 0 0 0 3px rgba(56,182,255,.35); }
+    #help-pop {
+      display: none; position: absolute; z-index: 40; max-width: 300px; background: var(--navy); color: white;
+      font-size: 12.5px; line-height: 1.5; padding: 10px 13px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-weight: 400;
+    }
+    #help-pop.show { display: block; }
+    #help-pop a { color: var(--blue-light); }
+
+    /* result cards */
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .btn-tool {
+      font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: white; color: var(--navy);
+      cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-tool:hover, .btn-tool:focus-visible { border-color: var(--blue); color: var(--blue); outline: none; }
+    .btn-tool.primary { background: var(--navy); color: white; border-color: var(--navy); }
+    .btn-tool.primary:hover { background: var(--navy-2); color: white; }
     .big-card {
       background: white; border: 2px solid var(--blue); border-radius: 18px; padding: 22px 24px; box-shadow: var(--shadow);
       margin-bottom: 16px;
@@ -52,7 +77,7 @@
     .big-card.warn { border-color: #f0a500; background: #fff8e6; }
     .big-card.stop { border-color: #b4232a; background: #fff3f3; }
     .big-grid { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 10px 24px; align-items: start; }
-    .big-card .big-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; }
+    .big-card .big-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
     .big-card .big-value { font-size: 46px; font-weight: 700; color: var(--navy); line-height: 1; margin: 6px 0 2px; white-space: nowrap; }
     .big-card .big-value small { font-size: 18px; font-weight: 600; color: var(--muted); margin-left: 6px; }
     .big-card.warn .big-value { color: #c47a00; }
@@ -60,6 +85,7 @@
     .big-card .side { font-size: 13.5px; color: var(--navy); line-height: 1.75; }
     .big-card .side em { color: var(--muted); font-style: normal; }
     .big-card .side strong { font-weight: 700; }
+    .big-card .side a { color: var(--muted); font-size: 12px; }
     .big-card .stop-msg { font-size: 15px; color: #b4232a; font-weight: 600; line-height: 1.5; }
 
     table.res { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: none; border: none; border-radius: 0; }
@@ -76,30 +102,66 @@
       border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00; margin-bottom: 14px; line-height: 1.5;
     }
     .warning-box.show { display: block; }
-    .howto {
-      background: var(--light); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 13px;
-      color: var(--navy); line-height: 1.6; margin-top: 14px;
-    }
-    .howto ol { margin: 6px 0 0 18px; padding: 0; }
-    .howto li { margin-bottom: 3px; }
-    .preprint-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 4px; }
-    .preprint-note a { color: var(--muted); }
-    .btn-print { font-size: 13px; padding: 7px 14px; border-radius: 9px; border: 1px solid var(--line); background: white; color: var(--navy); cursor: pointer; font-family: inherit; }
-    .btn-print:hover { border-color: var(--blue); color: var(--blue); }
-    .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .panel-head h3 { margin: 0; }
+    .note-line { font-size: 12.5px; color: var(--navy); margin: 10px 0 0; line-height: 1.5; }
+    .note-line strong { font-weight: 700; }
     details.model { font-size: 13px; color: var(--navy); line-height: 1.6; }
     details.model summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
     details.model p { margin: 0 0 8px; }
+
+    /* experimental guide drawer */
+    #guide {
+      position: fixed; top: 0; right: 0; height: 100%; width: 400px; max-width: 100%; background: white; z-index: 60;
+      box-shadow: -8px 0 30px rgba(8,32,58,.18); transform: translateX(105%); transition: transform .25s ease; overflow-y: auto;
+      padding: 22px 26px 40px; box-sizing: border-box; font-size: 13.5px; line-height: 1.6; color: var(--navy);
+    }
+    #guide.open { transform: translateX(0); }
+    #guide h2 { font-size: 18px; margin: 0 0 4px; color: var(--navy); }
+    #guide h3 { font-size: 13px; margin: 18px 0 4px; color: var(--navy); }
+    #guide p { margin: 0 0 8px; }
+    #guide ul { margin: 0 0 8px 18px; padding: 0; }
+    #guide li { margin-bottom: 4px; }
+    .drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .btn-close {
+      width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: white; color: var(--navy); font-size: 18px; line-height: 1;
+      cursor: pointer; font-family: inherit; flex: none;
+    }
+    .btn-close:hover, .btn-close:focus-visible { border-color: var(--blue); color: var(--blue); outline: none; }
+    .guide-lead { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+
+    /* scale-down protocol view */
+    #protocol {
+      display: none; position: fixed; inset: 0; z-index: 70; background: rgba(8,32,58,.45); overflow-y: auto; padding: 30px 16px;
+    }
+    #protocol.open { display: block; }
+    .proto-sheet {
+      background: white; max-width: 860px; margin: 0 auto; border-radius: 18px; padding: 30px 36px 36px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      color: var(--navy); font-size: 13.5px; line-height: 1.55;
+    }
+    .proto-sheet h2 { font-size: 22px; margin: 0 0 2px; }
+    .proto-sheet .meta { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+    .proto-sheet h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; margin: 18px 0 8px; color: var(--navy); }
+    .proto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: 13px; }
+    .proto-grid span em { color: var(--muted); font-style: normal; }
+    .proto-sheet ol { margin: 0 0 0 20px; padding: 0; }
+    .proto-sheet li { margin-bottom: 5px; }
+    .proto-sheet .proto-warn { font-size: 12px; color: #6b4c00; background: #fff8e6; border-left: 4px solid #f0a500; padding: 8px 12px; border-radius: 8px; margin-top: 10px; }
+    .proto-actions { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 14px; }
+    .proto-sheet table.res td, .proto-sheet table.res th { font-size: 12.5px; }
+    .field-list { font-size: 12px; color: var(--muted); }
+
     @media (max-width: 1000px) {
       .sim-layout { grid-template-columns: 1fr; }
       .big-grid { grid-template-columns: 1fr; }
       .big-card .big-value { font-size: 40px; }
+      #guide { width: 100%; }
+      .proto-sheet { padding: 22px 18px 28px; }
+      .proto-grid { grid-template-columns: 1fr; }
     }
     @media print {
-      .site-header, .footer, .btn-print, .sim-layout > div:first-child, details.model { display: none !important; }
-      .sim-layout { grid-template-columns: 1fr; }
-      .sim-panel, .big-card { box-shadow: none; break-inside: avoid; }
+      body.print-protocol > *:not(#protocol) { display: none !important; }
+      body.print-protocol #protocol { display: block; position: static; background: none; padding: 0; overflow: visible; }
+      body.print-protocol .proto-sheet { box-shadow: none; max-width: none; padding: 0; border-radius: 0; }
+      body.print-protocol .proto-actions { display: none; }
     }
   </style>
 </head>
@@ -135,15 +197,10 @@
     <div class="breadcrumbs"><a href="index.html">Home</a> › Test Planner</div>
     <h1>Spiral-Wound Test Planner</h1>
     <p>
-      A membrane only responds to two things: the flux through it and the solute concentration at its surface.
-      Describe the spiral-wound element you want to reproduce — size, feed flow, recovery, pressure, solvent and
-      solute — and the planner returns the <strong>rotor speed</strong> and the <strong>feed concentration</strong>
-      that expose the membrane in a CentrivaLab cartridge to the same conditions. The permeate you then measure
-      is the permeate the element would give.
+      Describe the spiral-wound element you want to reproduce and get the <strong>rotor speed</strong> and
+      <strong>feed concentration</strong> for a CentrivaLab run that exposes the membrane to the same flux and the
+      same concentration at its surface. The permeate you measure is the permeate the element would give.
     </p>
-    <div class="hero-actions">
-      <a class="btn btn-secondary" href="simulator.html">Want to see how Γ compares across devices? Open the device comparison →</a>
-    </div>
   </div>
 </header>
 
@@ -156,7 +213,7 @@
         <div class="sim-panel">
           <h3>1 · Spiral-wound element</h3>
           <div class="field-group">
-            <label for="sel-module">Element size</label>
+            <label for="sel-module">Element size <button type="button" class="help-btn" data-help="module" aria-label="Help: element size" aria-expanded="false">?</button></label>
             <select id="sel-module" onchange="onModuleChange()"></select>
           </div>
           <div class="two-col" id="group-module-custom" style="display:none;">
@@ -170,7 +227,7 @@
             </div>
           </div>
           <div class="field-group">
-            <label for="sel-spacer">Feed spacer</label>
+            <label for="sel-spacer">Feed spacer <button type="button" class="help-btn" data-help="spacer" aria-label="Help: feed spacer" aria-expanded="false">?</button></label>
             <select id="sel-spacer" onchange="onSpacerChange()"></select>
           </div>
           <div class="three-col" id="group-spacer-custom" style="display:none;">
@@ -193,7 +250,7 @@
               <input type="number" id="inp-nel" min="1" max="8" step="1" value="1" oninput="update()" />
             </div>
             <div class="field-group">
-              <label for="inp-q">Feed flow (m³/h)</label>
+              <label for="inp-q">Feed flow (m³/h) <button type="button" class="help-btn" data-help="flow" aria-label="Help: feed flow" aria-expanded="false">?</button></label>
               <input type="number" id="inp-q" min="0.01" max="50" step="any" value="2" oninput="update()" />
             </div>
           </div>
@@ -201,6 +258,7 @@
           <div class="radio-row">
             <label><input type="radio" name="ymode" value="recovery" checked onchange="update()" /> set recovery</label>
             <label><input type="radio" name="ymode" value="permeance" onchange="update()" /> set permeance</label>
+            <button type="button" class="help-btn" data-help="ymode" aria-label="Help: recovery or permeance" aria-expanded="false">?</button>
           </div>
           <div class="two-col">
             <div class="field-group">
@@ -212,7 +270,6 @@
               <input type="number" id="inp-lp" min="0.01" max="200" step="any" value="1" oninput="update()" />
             </div>
           </div>
-          <div class="field-hint" style="margin:-6px 0 12px;">Recovery is a process specification; the permeance the membrane must have to reach it is shown in the results. Or set the permeance from the datasheet and read the recovery.</div>
           <div class="two-col">
             <div class="field-group">
               <label for="inp-dp">Feed pressure (bar)</label>
@@ -228,7 +285,7 @@
         <div class="sim-panel">
           <h3>2 · Solvent &amp; solute</h3>
           <div class="field-group">
-            <label for="sel-solvent">Solvent</label>
+            <label for="sel-solvent">Solvent <button type="button" class="help-btn" data-help="solvent" aria-label="Help: solvent" aria-expanded="false">?</button></label>
             <select id="sel-solvent" onchange="onSolventChange()"></select>
           </div>
           <div class="two-col" id="group-solvent-custom" style="display:none;">
@@ -241,23 +298,21 @@
               <input type="number" id="inp-mu" min="0.1" max="50" step="any" value="0.56" oninput="update()" />
             </div>
           </div>
-          <div class="field-hint" id="hint-solvent" style="margin:-6px 0 12px;">—</div>
           <div class="two-col">
             <div class="field-group">
               <label for="inp-M">Solute molar mass (g/mol)</label>
               <input type="number" id="inp-M" min="50" max="20000" step="any" value="500" oninput="update()" />
             </div>
             <div class="field-group">
-              <label for="inp-rhos">Solute density (g/mL)</label>
+              <label for="inp-rhos">Solute density (g/mL) <button type="button" class="help-btn" data-help="rhos" aria-label="Help: solute density" aria-expanded="false">?</button></label>
               <input type="number" id="inp-rhos" min="0.5" max="3" step="any" value="1.3" oninput="update()" />
             </div>
           </div>
-          <div class="field-hint" style="margin:-6px 0 12px;">Density of the pure (solid or liquid) solute: it sets the density contrast β of the retained layer, which drives mass transfer in the O-CMF. Typical: dyes and oligomers 1.2–1.5, PEG 1.1–1.2, triglycerides 0.9.</div>
           <div class="two-col">
             <div class="field-group">
-              <label for="inp-D">Diffusivity (10⁻¹⁰ m²/s)</label>
+              <label for="inp-D">Diffusivity (10⁻¹⁰ m²/s) <button type="button" class="help-btn" data-help="D" aria-label="Help: diffusivity" aria-expanded="false">?</button></label>
               <input type="number" id="inp-D" min="0.1" max="100" step="any" value="7.3" oninput="update()" disabled />
-              <div class="check-row"><input type="checkbox" id="chk-D" onchange="update()" /><label for="chk-D" style="display:inline;font-weight:400;font-size:12px;">enter my own value</label></div>
+              <div class="check-row"><input type="checkbox" id="chk-D" onchange="update()" /><label for="chk-D">enter my own value</label></div>
             </div>
             <div class="field-group">
               <label for="inp-c0">Feed concentration (g/L)</label>
@@ -266,15 +321,14 @@
           </div>
           <div class="two-col">
             <div class="field-group">
-              <label for="inp-R">Expected rejection (%)</label>
+              <label for="inp-R">Intrinsic rejection (%) <button type="button" class="help-btn" data-help="R" aria-label="Help: intrinsic rejection" aria-expanded="false">?</button></label>
               <input type="number" id="inp-R" min="0" max="100" step="any" value="95" oninput="update()" />
             </div>
             <div class="field-group">
-              <label for="inp-i">van't Hoff factor</label>
+              <label for="inp-i">van't Hoff factor <button type="button" class="help-btn" data-help="i" aria-label="Help: van't Hoff factor" aria-expanded="false">?</button></label>
               <input type="number" id="inp-i" min="1" max="4" step="any" value="1" oninput="update()" />
             </div>
           </div>
-          <div class="field-hint" style="margin:-6px 0 0;">Intrinsic rejection of the membrane (from the datasheet, or your best guess). It sets the wall concentration; refine it after the first run. van't Hoff factor 1 for neutral solutes, 2 for a 1:1 salt.</div>
           <div class="readout">
             <span>ρ<sub>solvent</sub> = <strong id="lbl-rho">—</strong> kg/m³</span>
             <span>μ = <strong id="lbl-mu">—</strong> mPa·s</span>
@@ -295,7 +349,7 @@
             </select>
           </div>
           <div class="field-group" id="group-rotor">
-            <label for="sel-rotor">Rotor</label>
+            <label for="sel-rotor">Rotor <button type="button" class="help-btn" data-help="rotor" aria-label="Help: rotor" aria-expanded="false">?</button></label>
             <select id="sel-rotor" onchange="onRotorChange()"></select>
           </div>
           <div class="two-col" id="group-rotor-custom" style="display:none;">
@@ -310,20 +364,24 @@
           </div>
           <div class="two-col">
             <div class="field-group">
-              <label for="inp-vol">Feed volume V<sub>0</sub> (mL)</label>
+              <label for="inp-vol">Feed volume V<sub>0</sub> (mL) <button type="button" class="help-btn" data-help="vol" aria-label="Help: feed volume" aria-expanded="false">?</button></label>
               <input type="number" id="inp-vol" min="7.4" max="22.8" step="any" value="22.5" oninput="update()" />
             </div>
             <div class="field-group">
-              <label for="inp-vp">Permeate to collect (mL)</label>
+              <label for="inp-vp">Permeate to collect (mL) <button type="button" class="help-btn" data-help="vp" aria-label="Help: permeate volume" aria-expanded="false">?</button></label>
               <input type="number" id="inp-vp" min="0.1" max="2" step="any" value="0.5" oninput="update()" />
             </div>
           </div>
-          <div class="field-hint" id="vol-range-hint">—</div>
         </div>
       </div>
 
       <!-- ── RIGHT: Results ── -->
       <div>
+        <div class="toolbar">
+          <button type="button" class="btn-tool primary" id="btn-protocol" onclick="openProtocol()">Scale-Down Protocol · view / print</button>
+          <button type="button" class="btn-tool" id="btn-guide" onclick="toggleGuide()" aria-expanded="false" aria-controls="guide">Experimental guide</button>
+        </div>
+
         <div class="warning-box" id="warn"></div>
 
         <div class="big-card" id="big">
@@ -334,14 +392,15 @@
               <div class="big-sub">mean ΔP <strong id="v-dp">—</strong> bar · <span id="v-ag">—</span> g at the membrane</div>
             </div>
             <div>
-              <div class="big-label">Feed concentration</div>
+              <div class="big-label">Cartridge feed concentration <button type="button" class="help-btn" data-help="c0cl" aria-label="Help: cartridge feed concentration" aria-expanded="false">?</button></div>
               <div class="big-value"><span id="v-c0">—</span><small>g/L</small></div>
-              <div class="big-sub">module feed is <strong id="v-c0mod">—</strong> g/L</div>
+              <div class="big-sub">element feed is <strong id="v-c0mod">—</strong> g/L</div>
             </div>
             <div class="side">
               <em>collect</em> <strong id="v-vp">—</strong> mL <em>in about</em> <strong id="v-time">—</strong> min<br/>
+              <a href="#" onclick="openGuide('g-collect'); return false;">estimated collection time only — preparation and stabilisation not included</a><br/>
               <em>expected flux</em> <strong id="v-jv">—</strong> LMH<br/>
-              <em>c<sub>m</sub> reproduced</em> <strong id="v-cm">—</strong> g/L <em>(module mean)</em><br/>
+              <em>wall concentration c<sub>m</sub></em> <strong id="v-cm">—</strong> g/L <em>in both</em><br/>
               <em>expected c<sub>p</sub></em> <strong id="v-cp">—</strong> g/L
             </div>
           </div>
@@ -349,29 +408,18 @@
         </div>
 
         <div class="sim-panel">
-          <div class="panel-head">
-            <h3>Test programme</h3>
-            <button class="btn-print" type="button" onclick="window.print()">Print programme</button>
-          </div>
+          <h3>Test programme</h3>
           <p class="field-hint" id="prog-hint" style="margin:-8px 0 10px;">—</p>
           <div class="table-wrap">
             <table class="res" id="tbl-prog">
               <thead><tr>
                 <th>Run</th><th>target c<sub>m</sub> (g/L)</th><th>ΔP (bar)</th><th>rpm</th><th>feed C<sub>0</sub> (g/L)</th>
-                <th>J<sub>v</sub> (LMH)</th><th>V<sub>p</sub> (mL)</th><th>time (min)</th><th>expected c<sub>p</sub> (g/L)</th><th>R<sub>obs</sub> in cartridge</th>
+                <th>J<sub>v</sub> (LMH)</th><th>V<sub>p</sub> (mL)</th><th>time (min)</th><th>expected c<sub>p</sub> (g/L)</th><th>R<sub>obs</sub> in cartridge <button type="button" class="help-btn" data-help="robs" aria-label="Help: observed rejection in cartridge" aria-expanded="false">?</button></th>
               </tr></thead>
               <tbody></tbody>
             </table>
           </div>
-          <div class="howto">
-            <strong>How to read the result.</strong>
-            <ol>
-              <li>Prepare the feed at the concentration in the table (same solvent, same temperature as the element).</li>
-              <li>Fill the cartridge with V<sub>0</sub>, spin at the speed in the table, stop at the permeate volume in the table.</li>
-              <li>Measure the permeate concentration c<sub>p</sub>. The <strong>element</strong> rejection is 1 − c<sub>p</sub> / C<sub>0,element</sub> — divide by the element's feed concentration, not by the cartridge feed.</li>
-              <li>If the measured rejection differs from the "expected rejection" you entered, enter the new value and re-plan: c<sub>m</sub> moves a little with rejection.</li>
-            </ol>
-          </div>
+          <p class="note-line"><strong>Element rejection = 1 − c<sub>p</sub> / C<sub>0,element</sub></strong> — divide the measured permeate concentration by the element feed, not by the cartridge feed.</p>
         </div>
 
         <div class="sim-panel">
@@ -397,26 +445,26 @@
 
         <div class="sim-panel">
           <details class="model">
-            <summary>Model and validity</summary>
-            <p><strong>Element.</strong> 1-D plug flow along the feed channel, discretised in 60 cells per element. Mass transfer from
+            <summary>Model &amp; validity</summary>
+            <p><strong>Element.</strong> 1-D plug flow along the feed channel, 60 cells per element. Mass transfer from
               Schock &amp; Miquel (1987), Sh = 0.065 Re<sup>0.875</sup> Sc<sup>0.25</sup> with Re on the interstitial velocity and the
               spacer hydraulic diameter; channel friction λ = 6.23 Re<sup>−0.3</sup>. Film model c<sub>m</sub> = c<sub>p</sub> + (c<sub>b</sub> − c<sub>p</sub>) e<sup>J<sub>v</sub>/k</sup>
               with c<sub>p</sub> = (1 − R<sub>int</sub>) c<sub>m</sub>. Osmotic pressure by van't Hoff (dilute solutions; for concentrated aqueous electrolytes
-              use the Pitzer-based <a href="gamma.html">CP Calculator</a>). The feed-channel cross-section is derived from the active area, the element
-              length and the spacer thickness (A<sub>ch</sub> = A·h / 2L).</p>
+              use the Pitzer-based <a href="gamma.html">CP Calculator</a>). Feed-channel cross-section A<sub>ch</sub> = A·h / 2L from the active area, element
+              length and spacer thickness.</p>
             <p><strong>Cartridge.</strong> Concentration polarisation from the buoyancy-driven model of
               <a href="https://doi.org/10.2139/ssrn.6528979" target="_blank" rel="noopener">Geraldes et al. (2026)</a>,
-              k = 0.28 U* 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>, at the run-mean pressure and bulk concentration. The planner solves for the feed
-              concentration whose run-mean c<sub>m</sub> equals the area-mean c<sub>m</sub> of the element at the same ΔP. Because the same membrane at
-              the same ΔP and the same c<sub>m</sub> gives the same flux, the cartridge flux is taken equal to the element mean flux.</p>
+              k = 0.28 U* 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>, at the run-mean pressure and bulk concentration. The planner solves for the cartridge feed
+              concentration whose run-mean wall concentration c<sub>m</sub> equals the area-mean c<sub>m</sub> of the element at the same ΔP. The same membrane at
+              the same ΔP and c<sub>m</sub> gives the same flux, so the cartridge flux is taken equal to the element mean flux.</p>
             <p><strong>Properties.</strong> Solvent density and viscosity from handbook data (Andrade fit, 10–50 °C). Solute diffusivity by Stokes–Einstein
               with the molecular radius from molar mass and solute density; density contrast β = (1 − ρ<sub>solvent</sub>/ρ<sub>solute</sub>)/ρ<sub>solvent</sub>
-              (volume-additive mixture). Both can be overridden or replaced by measured values.</p>
+              (volume-additive mixture). Both can be overridden by measured values.</p>
             <p><strong>Validity.</strong> The O-CMF correlation was validated with aqueous salts (Sc 700–2200, J<sub>v</sub>/k ≤ 1.5). In organic solvents it is an
               extrapolation, flagged as such: confirm it in your system with two runs at the same speed and feed concentrations differing by a factor of 3 —
               the observed rejection should rise with C<sub>0</sub> as k ∝ C<sub>0</sub><sup>1/4</sup> predicts. Solvents denser than the solute (DCM, chloroform, DMSO with most
               solutes) give β ≤ 0: the retained layer is stably stratified, the buoyancy model does not apply and the planner stops.</p>
-            <p><strong>Rejection.</strong> A membrane's intrinsic rejection can depend on c<sub>m</sub>. That is exactly why the planner reproduces c<sub>m</sub> instead of
+            <p><strong>Rejection.</strong> A membrane's intrinsic rejection can depend on c<sub>m</sub>. That is why the planner reproduces c<sub>m</sub> instead of
               transferring a rejection measured elsewhere. When the element spans a wide range of c<sub>m</sub> (high recovery, several elements in series), the
               programme adds inlet, mid-length and outlet runs so the membrane is tested across that range.</p>
           </details>
@@ -425,6 +473,96 @@
     </div>
   </div>
 </main>
+
+<!-- contextual help popover (single, repositioned) -->
+<div id="help-pop" role="tooltip"></div>
+
+<!-- ── Experimental guide (drawer) ── -->
+<aside id="guide" aria-labelledby="guide-title" aria-hidden="true">
+  <div class="drawer-head">
+    <h2 id="guide-title">Experimental guide</h2>
+    <button type="button" class="btn-close" onclick="closeGuide()" aria-label="Close guide">×</button>
+  </div>
+  <p class="guide-lead">What the planner assumes about the run, and what to do on the bench so that the assumptions hold. Times and speeds for the preparation steps depend on your membrane and solvent — they are not calculated here.</p>
+
+  <h3 id="g-precond">Membrane preconditioning</h3>
+  <ul>
+    <li>Condition the membrane coupon in the test solvent the same way the element would be conditioned before service (solvent exchange, soaking, first-flush). The cartridge must hold the membrane in the same swollen/compacted state as the element.</li>
+    <li>For OSN membranes shipped in a preservative, exchange it completely before mounting.</li>
+    <li>Check the cartridge's solvent compatibility on the <a href="support.html">Support</a> page.</li>
+  </ul>
+
+  <h3 id="g-thermal">Thermal equilibration</h3>
+  <ul>
+    <li>Set the centrifuge to the element temperature entered in the planner. Solvent viscosity and solute diffusivity change quickly with temperature, and the mass-transfer prediction uses the temperature you entered.</li>
+    <li>Bring feed, cartridge and rotor to that temperature before the run. A low-speed spin during equilibration is acceptable if it stays below the speed at which permeation starts — the <a href="speed.html">Rotor Speed</a> page gives the pressure at any speed.</li>
+  </ul>
+
+  <h3 id="g-stab">Filtration stabilisation</h3>
+  <ul>
+    <li>The first permeate reflects compaction and the build-up of the polarised layer, not the steady state the planner describes. Discard an initial fraction, or collect in steps and use the later ones.</li>
+    <li>Keep the total permeate small relative to the feed (the planner limits it to 2 mL per run) so the feed concentration and the mean pressure stay close to the values the plan assumes. For more permeate, collect in steps and re-plan the speed for each.</li>
+  </ul>
+
+  <h3 id="g-collect">Collection and timing</h3>
+  <ul>
+    <li>Stop at the permeate volume in the programme: it fixes both the mean pressure of the run and the recovery in the tube.</li>
+    <li>The time shown next to the volume is the <strong>estimated collection time</strong> from the predicted flux — it does not include preconditioning, equilibration or stabilisation. Weigh the permeate and record the actual time: they give you the measured flux.</li>
+  </ul>
+
+  <h3 id="g-analysis">Analysis and reading the result</h3>
+  <ul>
+    <li>Measure the permeate concentration c<sub>p</sub> and confirm the cartridge feed concentration.</li>
+    <li>Element rejection = 1 − c<sub>p</sub> / C<sub>0,element</sub>. Divide by the <em>element</em> feed concentration: the cartridge feed was chosen to give the same wall concentration, so the observed rejection in the cartridge is not the element's.</li>
+    <li>If the intrinsic rejection you measure (1 − c<sub>p</sub>/c<sub>m</sub>) differs from the value you entered, enter it and re-plan — c<sub>m</sub> moves a little with rejection.</li>
+    <li>Run two cartridges per condition.</li>
+  </ul>
+
+  <h3 id="g-validity">Checking the model in your solvent</h3>
+  <ul>
+    <li>Run twice at the same speed with feed concentrations differing by a factor of three. The observed rejection should rise with concentration as the cartridge mass-transfer model predicts (k ∝ C<sub>0</sub><sup>1/4</sup>). If it does not, tell us — the model was validated with aqueous salts and organic solvents are an extrapolation.</li>
+  </ul>
+</aside>
+
+<!-- ── Scale-Down Protocol (view / print) ── -->
+<div id="protocol" role="dialog" aria-modal="true" aria-labelledby="proto-title" aria-hidden="true">
+  <div class="proto-sheet">
+    <div class="proto-actions">
+      <button type="button" class="btn-tool" onclick="printProtocol()">Print</button>
+      <button type="button" class="btn-tool" onclick="closeProtocol()">Back to planner</button>
+    </div>
+    <h2 id="proto-title">Scale-Down Protocol</h2>
+    <div class="meta" id="proto-meta">—</div>
+
+    <h3>Target: spiral-wound element</h3>
+    <div class="proto-grid" id="proto-element"></div>
+
+    <h3>System</h3>
+    <div class="proto-grid" id="proto-system"></div>
+
+    <h3>CentrivaLab runs</h3>
+    <div class="table-wrap">
+      <table class="res" id="proto-runs">
+        <thead><tr><th>Run</th><th>rpm</th><th>feed C<sub>0</sub> (g/L)</th><th>V<sub>0</sub> (mL)</th><th>collect V<sub>p</sub> (mL)</th><th>est. time (min)</th><th>expected c<sub>p</sub> (g/L)</th><th>target c<sub>m</sub> (g/L)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="proto-warn" id="proto-warn" style="display:none;"></div>
+
+    <h3>Procedure</h3>
+    <ol>
+      <li>Precondition the membrane coupon in <span class="proto-solvent">the solvent</span> as the element would be conditioned; check cartridge compatibility.</li>
+      <li>Prepare the cartridge feed at the concentration in the table, in the same solvent; measure and record its concentration.</li>
+      <li>Set the centrifuge to <span class="proto-T">—</span> °C; bring feed, cartridge and rotor to temperature.</li>
+      <li>Fill the cartridge with V<sub>0</sub>; spin at the speed in the table.</li>
+      <li>Discard an initial permeate fraction (compaction and polarisation build-up), then collect the permeate volume in the table; weigh it and record the time.</li>
+      <li>Measure the permeate concentration c<sub>p</sub>.</li>
+      <li><strong>Element rejection = 1 − c<sub>p</sub> / C<sub>0,element</sub></strong> (C<sub>0,element</sub> = <span class="proto-c0el">—</span> g/L). Flux from the weighed permeate, the time and 1.45 cm².</li>
+      <li>Two cartridges per run. If the measured intrinsic rejection differs from the value assumed (<span class="proto-R">—</span> %), re-plan with the measured value.</li>
+    </ol>
+    <p class="field-list" style="margin-top:14px;">Generated by the CentrivaLab Test Planner — centrivalab.com/planner.html. Model: Schock &amp; Miquel (1987) for the element; Geraldes et al. (2026) for the cartridge.</p>
+  </div>
+</div>
 
 <footer class="footer">
   <div class="container footer-grid">
@@ -467,6 +605,64 @@ const fr = x => (isFinite(x) ? (Math.round(x / 10) * 10).toLocaleString("en-US")
 const sig = (x, n = 3) => (isFinite(x) && x !== 0 ? Number(x.toPrecision(n)).toString() : "—");
 const CM_RATIO_MULTI = 1.5;      // element c_m,out / c_m,in above which the programme adds inlet/mid/outlet runs
 
+// ── contextual help ──
+const HELP = {
+  module: "Standard 40-inch elements with typical active areas. Choose <b>Custom</b> to enter the area and length from your element's datasheet — OSN elements from different makers vary.",
+  spacer: "The feed-spacer net sets the channel height and the mass transfer (Schock &amp; Miquel). 28 mil is the usual RO/NF net; 34 and 46 mil are the wider nets used for fouling feeds and OSN. Choose <b>Custom</b> to enter thickness, hydraulic diameter and porosity.",
+  flow: "Feed flow to the first element. The interstitial velocity it gives is shown under the field; typical elements run at 0.1–0.25 m/s.",
+  ymode: "<b>Recovery</b> is a process specification (permeate / feed); the planner then reports the membrane permeance needed to reach it. Or set the <b>permeance</b> from the datasheet and read the resulting recovery.",
+  solvent: "Density and viscosity at the entered temperature from handbook data. Choose <b>Custom solvent</b> for mixtures or solvents not listed. Dense solvents (DCM, chloroform, DMSO) usually make the solute lighter than the solvent, in which case the cartridge model does not apply.",
+  rhos: "Density of the pure solute (solid or liquid). Together with the solvent density it gives the density contrast β of the retained layer, which drives mass transfer in the cartridge. Typical: dyes and oligomers 1.2–1.5, PEG 1.1–1.2, triglycerides 0.9 g/mL.",
+  D: "Estimated by Stokes–Einstein from molar mass, solute density and solvent viscosity. Tick the box to enter a measured or literature value instead.",
+  R: "<b>Intrinsic</b> rejection, 1 − c<sub>p</sub>/c<sub>m</sub>, referred to the concentration at the membrane surface — not the observed rejection referred to the feed. Use the datasheet value or your best estimate; it sets the wall concentration and can be refined after the first run.",
+  i: "Number of particles per formula unit in solution for the osmotic pressure (van't Hoff): 1 for neutral solutes, 2 for a 1:1 salt.",
+  rotor: "Any fixed-angle rotor for the cartridge tubes fits. Choose <b>Other rotor</b> to enter r<sub>max</sub> and the maximum speed from the rotor manual.",
+  vol: "Initial feed volume in the cartridge. Stay within the calibrated fill range shown in the results.",
+  vp: "Permeate volume to collect in one run, 0.1–2 mL. It sets the mean pressure of the run and the recovery in the tube; collect more in steps.",
+  c0cl: "The cartridge feed concentration that gives the <b>same concentration at the membrane surface</b> as the element mean, at the same pressure. It differs from the element feed because the two devices polarise differently.",
+  robs: "Observed rejection you will measure <b>in the cartridge</b>, 1 − c<sub>p</sub>/C<sub>0,cartridge</sub>. It is not the element rejection: divide c<sub>p</sub> by the element feed for that."
+};
+const pop = $("help-pop");
+let popBtn = null;
+function closeHelp() { if (!popBtn) return; pop.classList.remove("show"); popBtn.setAttribute("aria-expanded", "false"); popBtn = null; }
+function openHelp(btn) {
+  if (popBtn === btn) { closeHelp(); return; }
+  closeHelp();
+  pop.innerHTML = HELP[btn.dataset.help] || "";
+  pop.classList.add("show");
+  const r = btn.getBoundingClientRect(), pw = pop.offsetWidth;
+  let left = r.left + window.scrollX - 8; if (left + pw > window.scrollX + window.innerWidth - 8) left = window.scrollX + window.innerWidth - pw - 8;
+  pop.style.left = Math.max(8, left) + "px"; pop.style.top = (r.bottom + window.scrollY + 6) + "px";
+  btn.setAttribute("aria-expanded", "true"); popBtn = btn;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".help-btn");
+  if (b) { e.preventDefault(); openHelp(b); return; }
+  if (!e.target.closest("#help-pop")) closeHelp();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { closeHelp(); if ($("protocol").classList.contains("open")) closeProtocol(); else if ($("guide").classList.contains("open")) closeGuide(); }
+});
+
+// ── guide drawer ──
+function openGuide(anchor) {
+  const g = $("guide"); g.classList.add("open"); g.setAttribute("aria-hidden", "false"); $("btn-guide").setAttribute("aria-expanded", "true");
+  if (anchor && $(anchor)) $(anchor).scrollIntoView({ block: "start" }); else g.scrollTop = 0;
+}
+function closeGuide() { const g = $("guide"); g.classList.remove("open"); g.setAttribute("aria-hidden", "true"); $("btn-guide").setAttribute("aria-expanded", "false"); }
+function toggleGuide() { $("guide").classList.contains("open") ? closeGuide() : openGuide(); }
+
+// ── protocol view ──
+function openProtocol() {
+  if (!last) return;
+  fillProtocol();
+  const p = $("protocol"); p.classList.add("open"); p.setAttribute("aria-hidden", "false"); p.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+}
+function closeProtocol() { const p = $("protocol"); p.classList.remove("open"); p.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; }
+function printProtocol() { document.body.classList.add("print-protocol"); window.print(); setTimeout(() => document.body.classList.remove("print-protocol"), 500); }
+window.addEventListener("afterprint", () => document.body.classList.remove("print-protocol"));
+
 // ── selects ──
 function fillSelects() {
   const sm = $("sel-module"); for (const k in PLANNER.MODULES) sm.add(new Option(PLANNER.MODULES[k].label, k)); sm.value = "4040";
@@ -485,11 +681,7 @@ function onSpacerChange() {
   if (k !== "custom") { $("inp-h").value = s.h * 1e3; $("inp-dh").value = s.dh * 1e3; $("inp-eps").value = s.eps; }
   update();
 }
-function onSolventChange() {
-  const k = $("sel-solvent").value;
-  $("group-solvent-custom").style.display = k === "custom" ? "" : "none";
-  update();
-}
+function onSolventChange() { $("group-solvent-custom").style.display = $("sel-solvent").value === "custom" ? "" : "none"; update(); }
 function cart() { return $("sel-cartridge").value; }
 function onCartridgeChange() {
   const c = OCMF.CARTRIDGES[cart()];
@@ -499,11 +691,7 @@ function onCartridgeChange() {
   $("inp-vol").value = c.vol.nom; $("inp-vol").min = c.vol.min; $("inp-vol").max = c.vol.max;
   onRotorChange();
 }
-function onRotorChange() {
-  const custom = $("sel-rotor").value === "custom";
-  $("group-rotor-custom").style.display = custom ? "" : "none";
-  update();
-}
+function onRotorChange() { $("group-rotor-custom").style.display = $("sel-rotor").value === "custom" ? "" : "none"; update(); }
 function rotorSel() {
   if ($("sel-rotor").value === "custom") return { rmax: val("inp-rmax") / 1000, maxRpm: val("inp-maxrpm"), label: "custom rotor" };
   return OCMF.rotor(cart(), $("sel-rotor").value);
@@ -522,8 +710,6 @@ function update() {
   if (sk === "custom") { const rho = val("inp-rho"), mu = val("inp-mu") * 1e-3; sol = { rho, mu, nu: mu / rho, M: 100, name: "custom solvent", dense: false }; }
   else sol = SOLV.props(sk, T);
   setText("lbl-rho", f(sol.rho, 0)); setText("lbl-mu", f(sol.mu * 1e3, 3));
-  setText("hint-solvent", sk === "custom" ? "Enter the density and viscosity at the test temperature." :
-    `${sol.name} at ${f(T, 0)} °C: ρ = ${f(sol.rho, 0)} kg/m³, μ = ${f(sol.mu * 1e3, 3)} mPa·s.` + (sol.dense ? " <strong>Dense solvent:</strong> most solutes are lighter than it — see the warning." : ""));
 
   // solute
   const M = val("inp-M"), rhoS = val("inp-rhos") * 1000;
@@ -545,7 +731,7 @@ function update() {
   $("inp-y").disabled = ymode !== "recovery"; $("inp-lp").disabled = ymode !== "permeance";
   const Ach = module.area * spacer.h / (2 * module.W);
   const uIn = Q / 3600 / (spacer.eps * Ach);
-  setText("hint-vel", `Interstitial velocity at the inlet <strong>${f(uIn, 3)} m/s</strong> (channel cross-section ${sig(Ach * 1e4, 3)} cm²). Typical elements run at 0.1–0.25 m/s.`);
+  setText("hint-vel", `Interstitial velocity at the inlet <strong>${f(uIn, 3)} m/s</strong> (channel cross-section ${sig(Ach * 1e4, 3)} cm²).`);
   if (!(Q > 0) || !(module.area > 0) || !(dPin > 0) || !(C0 > 0)) { stop("Enter positive values for flow, area, pressure and concentration."); }
 
   const inp = { module, spacer, nElements: nEl, Q_m3h: Q, dPin_bar: dPin, T, solvent: sol, solute: { D, beta, M, i: iVH }, C0, Rint,
@@ -555,7 +741,6 @@ function update() {
   // cartridge
   const c = OCMF.CARTRIDGES[cart()], rot = rotorSel();
   const V0 = val("inp-vol"), Vp = val("inp-vp");
-  setText("vol-range-hint", `Calibrated fill range ${c.vol.min}–${c.vol.max} mL (nominal ${c.vol.nom} mL). Membrane area 1.45 cm².`);
   if (!(V0 >= c.vol.min && V0 <= c.vol.max)) stop(`Feed volume outside the calibrated range ${c.vol.min}–${c.vol.max} mL.`);
   if (!(Vp > 0 && Vp <= 2)) stop("Permeate volume: 0.1–2 mL per run (collect more in steps).");
   if (beta <= 0) stop("The solute is lighter than the solvent (β ≤ 0): the retained layer is stably stratified and the O-CMF buoyancy model does not apply. The planner cannot set an equivalent run for this system.");
@@ -573,7 +758,17 @@ function update() {
   const multi = ratio > CM_RATIO_MULTI;
   const runs = [{ label: "Element mean", plan: mean, cmTarget: mod.cmMeanA, J: mod.Jmean, main: true }];
   if (multi) for (const p of mod.points) runs.push({ label: p.label, plan: planInp({ dPh: p.dPh, J: p.J, cm: p.cm }), cmTarget: p.cm, J: p.J });
-  last = { mod, runs };
+
+  // warnings
+  for (const w of mod.flags) warn.push(w);
+  for (const w of mean.flags) warn.push(w);
+  if (multi) warn.push(`c<sub>m</sub> varies by a factor ${f(ratio, 1)} from inlet to outlet: the programme adds inlet, mid-length and outlet runs so the membrane is tested across that range.`);
+  if (mean.C0 < 0.005) warn.push(`The cartridge feed concentration (${sig(mean.C0, 2)} g/L) may be below your analytical range: consider a higher element feed concentration or velocity.`);
+  if (ymode === "recovery" && (mod.Lp_lmhbar > 50 || mod.Lp_lmhbar < 0.05)) warn.push(`The permeance needed for this recovery (${sig(mod.Lp_lmhbar, 2)} LMH/bar) is unusual — check flow, area and recovery.`);
+  const wb = $("warn"); wb.innerHTML = warn.map(w => "• " + w).join("<br/>"); wb.classList.toggle("show", warn.length > 0);
+
+  last = { mod, runs, warn, multi, ratio, inputs: { module, mk, spacer, spk, nEl, Q, dPin, T, ymode, sol, sk, M, rhoS, D, beta, C0, Rint, iVH, cartName: c.name, rot, V0, Vp } };
+  $("btn-protocol").disabled = false;
 
   // big card
   const big = $("big");
@@ -583,14 +778,6 @@ function update() {
   setText("v-vp", f(Vp, 1)); setText("v-time", f(mean.tRun_min, 0)); setText("v-jv", f(mean.J_lmh, 1));
   setText("v-cm", sig(mean.cm, 3)); setText("v-cp", sig(mean.cp, 3));
   if (mean.over) big.classList.add("warn");
-
-  // warnings
-  for (const w of mod.flags) warn.push(w);
-  for (const w of mean.flags) warn.push(w);
-  if (multi) warn.push(`c<sub>m</sub> varies by a factor ${f(ratio, 1)} from inlet to outlet: the programme adds inlet, mid-length and outlet runs so the membrane is tested across that range.`);
-  if (mean.C0 < 0.005) warn.push(`The cartridge feed concentration (${sig(mean.C0, 2)} g/L) may be below your analytical range: consider a higher element feed concentration or velocity.`);
-  if (ymode === "recovery" && (mod.Lp_lmhbar > 50 || mod.Lp_lmhbar < 0.05)) warn.push(`The permeance needed for this recovery (${sig(mod.Lp_lmhbar, 2)} LMH/bar) is unusual — check flow, area and recovery.`);
-  const wb = $("warn"); wb.innerHTML = warn.map(w => "• " + w).join("<br/>"); wb.classList.toggle("show", warn.length > 0);
 
   // programme table
   setText("prog-hint", multi ? `Four runs: one at the element-mean c<sub>m</sub>, three across the element. All at V<sub>0</sub> = ${f(V0, 1)} mL, ${f(T, 0)} °C, in ${sol.name}.`
@@ -620,6 +807,42 @@ function showStop(msg) {
   document.querySelector("#tbl-prog tbody").innerHTML = ""; document.querySelector("#tbl-mod tbody").innerHTML = "";
   for (const id of ["m-jv", "m-dpch", "m-cm", "m-cret", "m-robs"]) setText(id, "—");
   const el = $("chart"); el.getContext("2d").clearRect(0, 0, el.width, el.height);
+  last = null; $("btn-protocol").disabled = true;
+}
+
+// ── protocol sheet (from the last calculation; the planner inputs are untouched) ──
+function fillProtocol() {
+  const { mod, runs, warn, inputs: I } = last;
+  const modLabel = I.mk === "custom" ? `custom element, ${sig(I.module.area, 3)} m², ${sig(I.module.W, 3)} m` : PLANNER.MODULES[I.mk].label;
+  const spLabel = I.spk === "custom" ? `custom spacer h ${sig(I.spacer.h * 1e3, 3)} mm, d_h ${sig(I.spacer.dh * 1e3, 3)} mm, ε ${I.spacer.eps}` : PLANNER.SPACERS[I.spk].label;
+  setText("proto-meta", `Prepared ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · ${I.cartName} · ${I.rot.label}`);
+  setText("proto-element", [
+    `<span><em>Element</em> ${modLabel}${I.nEl > 1 ? ` × ${I.nEl} in series` : ""}</span>`,
+    `<span><em>Feed spacer</em> ${spLabel}</span>`,
+    `<span><em>Feed flow</em> ${sig(I.Q, 3)} m³/h (${f(mod.uIn, 3)} m/s at the inlet)</span>`,
+    `<span><em>Recovery</em> ${f(100 * mod.Y, 1)} % (permeance ${sig(mod.Lp_lmhbar, 3)} LMH/bar)</span>`,
+    `<span><em>Feed pressure</em> ${sig(I.dPin, 3)} bar (mean ΔP ${f(mod.dPmean / 1e5, 1)} bar, channel Δp ${f(mod.dpChannel / 1e5, 2)} bar)</span>`,
+    `<span><em>Temperature</em> ${f(I.T, 0)} °C</span>`,
+    `<span><em>Mean flux</em> ${f(mod.Jmean_lmh, 1)} LMH</span>`,
+    `<span><em>c<sub>m</sub> in the element</em> ${sig(mod.cmIn, 3)} → ${sig(mod.cmOut, 3)} g/L (area mean ${sig(mod.cmMeanA, 3)})</span>`
+  ].join(""));
+  setText("proto-system", [
+    `<span><em>Solvent</em> ${I.sol.name} (ρ ${f(I.sol.rho, 0)} kg/m³, μ ${f(I.sol.mu * 1e3, 3)} mPa·s)</span>`,
+    `<span><em>Solute</em> M ${sig(I.M, 4)} g/mol, ρ ${sig(I.rhoS / 1000, 3)} g/mL</span>`,
+    `<span><em>Element feed concentration</em> ${sig(I.C0, 3)} g/L</span>`,
+    `<span><em>Intrinsic rejection assumed</em> ${f(100 * I.Rint, 1)} %</span>`,
+    `<span><em>D</em> ${f(I.D * 1e10, 2)} ×10⁻¹⁰ m²/s · <em>β</em> ${f(I.beta * 1e4, 2)} ×10⁻⁴ (g/L)⁻¹</span>`,
+    `<span><em>Cartridge feed volume</em> ${f(I.V0, 1)} mL</span>`
+  ].join(""));
+  document.querySelector("#proto-runs tbody").innerHTML = runs.map(r => {
+    const p = r.plan;
+    return `<tr class="${p.over ? "over" : ""}"><td>${r.label}</td><td class="hl">${fr(p.rpm)}${p.over ? " ▲ above rotor limit" : ""}</td><td class="hl">${sig(p.C0, 3)}</td><td>${f(I.V0, 1)}</td><td>${f(I.Vp, 1)}</td><td>${f(p.tRun_min, 0)}</td><td>${sig(p.cp, 3)}</td><td>${sig(r.cmTarget, 3)}</td></tr>`;
+  }).join("");
+  const pw = $("proto-warn"); pw.innerHTML = warn.map(w => "• " + w).join("<br/>"); pw.style.display = warn.length ? "" : "none";
+  for (const el of document.querySelectorAll(".proto-solvent")) el.textContent = I.sol.name;
+  for (const el of document.querySelectorAll(".proto-T")) el.textContent = f(I.T, 0);
+  for (const el of document.querySelectorAll(".proto-c0el")) el.textContent = sig(I.C0, 3);
+  for (const el of document.querySelectorAll(".proto-R")) el.textContent = f(100 * I.Rint, 1);
 }
 
 // ── chart: c_b and c_m along the channel ──
@@ -634,7 +857,6 @@ function drawChart(mod, nEl) {
   const ymax = cmMax + 0.45 * (cmMax - cbMin) + 1e-9, ymin = Math.max(0, cbMin - 0.15 * (cmMax - cbMin));
   const X = x => pad.l + w * x / L, Y = y => pad.t + h * (1 - (y - ymin) / (ymax - ymin));
   ctx.font = "11px system-ui, sans-serif"; ctx.fillStyle = "#5e7c96"; ctx.strokeStyle = "#d9e1ec"; ctx.lineWidth = 1;
-  // grid + axes
   const nt = 4;
   for (let i = 0; i <= nt; i++) {
     const yv = ymin + (ymax - ymin) * i / nt, yy = Y(yv);
@@ -654,9 +876,7 @@ function drawChart(mod, nEl) {
     ctx.stroke(); ctx.setLineDash([]);
   };
   line("cb", "#5e7c96", [6, 4]); line("cm", "#0066cc");
-  // mean c_m marker
   ctx.strokeStyle = "#38b6ff"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(pad.l, Y(mod.cmMeanA)); ctx.lineTo(pad.l + w, Y(mod.cmMeanA)); ctx.stroke(); ctx.setLineDash([]);
-  // legend
   const items = [["#0066cc", "c_m at the membrane", []], ["#5e7c96", "c_b bulk", [6, 4]], ["#38b6ff", "c_m mean (reproduced in the cartridge)", [2, 3]]];
   let lx = pad.l + 8; const ly = pad.t + 12;
   ctx.textAlign = "left";
