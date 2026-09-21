@@ -461,10 +461,7 @@
             <p><strong>Properties.</strong> Solvent density and viscosity from handbook data (Andrade fit, 10–50 °C). Solute diffusivity by Stokes–Einstein
               with the molecular radius from molar mass and solute density; density contrast β = (1 − ρ<sub>solvent</sub>/ρ<sub>solute</sub>)/ρ<sub>solvent</sub>
               (volume-additive mixture). Both can be overridden by measured values.</p>
-            <p><strong>Validity.</strong> The O-CMF correlation was validated with aqueous salts (Sc 700–2200, J<sub>v</sub>/k ≤ 1.5). In organic solvents it is an
-              extrapolation, flagged as such: confirm it in your system with two runs at the same speed and feed concentrations differing by a factor of 3 —
-              the observed rejection should rise with C<sub>0</sub> as k ∝ C<sub>0</sub><sup>1/4</sup> predicts. Solvents denser than the solute (DCM, chloroform, DMSO with most
-              solutes) give β ≤ 0: the retained layer is stably stratified, the buoyancy model does not apply and the planner stops.</p>
+            <p><strong>Validity.</strong> The O-CMF correlation is dimensionless: it applies to any Newtonian solvent whenever the buoyancy parameter 𝒢, the Schmidt number and J<sub>v</sub>/k lie in the ranges over which it was established (𝒢 7×10<sup>−9</sup>–5×10<sup>−6</sup>, Sc 700–2200, J<sub>v</sub>/k ≤ 1.5). The planner checks each run and flags any group outside its range; Sc enters only as Sc<sup>−1/4</sup>, so a modest excursion in Sc is a short extrapolation. The property inputs — β (volume-additive mixture) and D (Stokes–Einstein) — are estimates: replace them by measured values when you have them. A quick in-system check: two runs at the same speed with feed concentrations differing by a factor of 3 should show the observed rejection rising with C<sub>0</sub> as k ∝ C<sub>0</sub><sup>1/4</sup> predicts. Solvents denser than the solute (DCM, chloroform, DMSO with most solutes) give β ≤ 0: the retained layer is stably stratified, the buoyancy model does not apply and the planner stops.</p>
             <p><strong>Rejection.</strong> A membrane's intrinsic rejection can depend on c<sub>m</sub>. That is why the planner reproduces c<sub>m</sub> instead of
               transferring a rejection measured elsewhere. When the element spans a wide range of c<sub>m</sub> (high recovery, several elements in series), the
               programme adds inlet, mid-length and outlet runs so the membrane is tested across that range.</p>
@@ -521,7 +518,7 @@
 
   <h3 id="g-validity">Checking the model in your solvent</h3>
   <ul>
-    <li>Run twice at the same speed with feed concentrations differing by a factor of three. The observed rejection should rise with concentration as the cartridge mass-transfer model predicts (k ∝ C<sub>0</sub><sup>1/4</sup>). If it does not, tell us — the model was validated with aqueous salts and organic solvents are an extrapolation.</li>
+    <li>Run twice at the same speed with feed concentrations differing by a factor of three. The observed rejection should rise with concentration as the cartridge mass-transfer model predicts (k ∝ C<sub>0</sub><sup>1/4</sup>). If it does not, tell us. The correlation is dimensionless; the planner flags any run whose 𝒢, Sc or J<sub>v</sub>/k falls outside the range over which it was established.</li>
   </ul>
 </aside>
 

@@ -213,8 +213,8 @@
     res.flags = [];
     if (res.over) res.flags.push(`Required speed ${Math.round(rpm)} rpm exceeds the rotor limit (${inp.maxRpm} rpm).`);
     if (res.phi > 1.5) res.flags.push("J_v/k > 1.5 in the tube: beyond the validated range of the O-CMF correlation.");
-    if (res.G < 7e-9 || res.G > 5e-6) res.flags.push("Buoyancy parameter G outside the range where the O-CMF correlation was validated (aqueous salts): treat the cartridge prediction as an extrapolation.");
-    if (res.Sc < 700 || res.Sc > 2200) res.flags.push("Sc outside the validated range 700–2200 (aqueous salts): treat the O-CMF prediction as an extrapolation.");
+    if (res.G < 7e-9 || res.G > 5e-6) res.flags.push("Buoyancy parameter G outside the range over which the O-CMF correlation was established (7e-9 to 5e-6): the cartridge prediction is an extrapolation — usually a very dilute feed.");
+    if (res.Sc < 700 || res.Sc > 2200) res.flags.push("Sc outside the range over which the O-CMF correlation was established (700–2200); k depends on Sc only as Sc^(-1/4), so the extrapolation is short.");
     return res;
   }
 
