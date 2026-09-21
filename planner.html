@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Planner — CentrivaLab</title>
+  <link rel="icon" href="favicon.ico" />
+  <meta name="description" content="Plan a CentrivaLab run that reproduces the membrane-surface conditions of a spiral-wound element: pick the element, feed flow, recovery and pressure — get the rotor speed and feed concentration to use." />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .sim-layout { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
+    .sim-panel {
+      background: white; border: 1px solid var(--line); border-radius: 18px;
+      padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 16px;
+    }
+    .sim-panel h3 {
+      margin: 0 0 14px; font-size: 11px; font-weight: 700; color: var(--navy);
+      text-transform: uppercase; letter-spacing: .07em;
+    }
+    .field-group { margin-bottom: 13px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label { display: block; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .field-hint strong { color: var(--navy); }
+    .field-group select, .field-group input[type="number"] {
+      width: 100%; padding: 8px 11px; font-size: 14px; font-family: inherit; color: var(--navy);
+      background: var(--light); border: 1px solid var(--line); border-radius: 10px;
+      appearance: none; -webkit-appearance: none; box-sizing: border-box;
+    }
+    .field-group select:focus, .field-group input[type="number"]:focus { border-color: var(--blue); background: white; outline: none; }
+    .field-group input[type="number"]:disabled { color: var(--muted); }
+    .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e7c96' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .radio-row { display: flex; gap: 16px; font-size: 13px; color: var(--navy); margin-bottom: 6px; flex-wrap: wrap; }
+    .radio-row label { font-weight: 400; display: inline-flex; align-items: center; gap: 5px; margin: 0; }
+    .check-row { font-size: 12px; color: var(--navy); display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+    .readout {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; margin-top: 12px; padding-top: 11px;
+      border-top: 1px solid var(--line); font-size: 12.5px; color: var(--navy);
+    }
+    .readout strong { font-weight: 700; }
+    .readout strong.out { color: #b4232a; }
+
+    .big-card {
+      background: white; border: 2px solid var(--blue); border-radius: 18px; padding: 22px 24px; box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .big-card.warn { border-color: #f0a500; background: #fff8e6; }
+    .big-card.stop { border-color: #b4232a; background: #fff3f3; }
+    .big-grid { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 10px 24px; align-items: start; }
+    .big-card .big-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; }
+    .big-card .big-value { font-size: 46px; font-weight: 700; color: var(--navy); line-height: 1; margin: 6px 0 2px; white-space: nowrap; }
+    .big-card .big-value small { font-size: 18px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+    .big-card.warn .big-value { color: #c47a00; }
+    .big-card .big-sub { font-size: 12px; color: var(--muted); }
+    .big-card .side { font-size: 13.5px; color: var(--navy); line-height: 1.75; }
+    .big-card .side em { color: var(--muted); font-style: normal; }
+    .big-card .side strong { font-weight: 700; }
+    .big-card .stop-msg { font-size: 15px; color: #b4232a; font-weight: 600; line-height: 1.5; }
+
+    table.res { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: none; border: none; border-radius: 0; }
+    table.res th, table.res td { padding: 6px 7px; text-align: right; border-bottom: 1px solid var(--line); }
+    table.res th { background: var(--light); color: var(--navy); font-size: 12px; font-weight: 700; border-bottom: 2px solid var(--line); white-space: nowrap; }
+    table.res th sub, table.res td sub { font-size: 9px; }
+    table.res td:first-child, table.res th:first-child { text-align: left; }
+    table.res td.hl { font-weight: 700; color: var(--navy); }
+    table.res tr.main td { background: #f2fbff; }
+    table.res tr.over td.hl { color: #b4232a; }
+    .table-wrap { overflow-x: auto; }
+    .warning-box {
+      display: none; background: #fff8e6; border: 1px solid #f6c85f; border-left: 5px solid #f0a500;
+      border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00; margin-bottom: 14px; line-height: 1.5;
+    }
+    .warning-box.show { display: block; }
+    .howto {
+      background: var(--light); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 13px;
+      color: var(--navy); line-height: 1.6; margin-top: 14px;
+    }
+    .howto ol { margin: 6px 0 0 18px; padding: 0; }
+    .howto li { margin-bottom: 3px; }
+    .preprint-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 4px; }
+    .preprint-note a { color: var(--muted); }
+    .btn-print { font-size: 13px; padding: 7px 14px; border-radius: 9px; border: 1px solid var(--line); background: white; color: var(--navy); cursor: pointer; font-family: inherit; }
+    .btn-print:hover { border-color: var(--blue); color: var(--blue); }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .panel-head h3 { margin: 0; }
+    details.model { font-size: 13px; color: var(--navy); line-height: 1.6; }
+    details.model summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+    details.model p { margin: 0 0 8px; }
+    @media (max-width: 1000px) {
+      .sim-layout { grid-template-columns: 1fr; }
+      .big-grid { grid-template-columns: 1fr; }
+      .big-card .big-value { font-size: 40px; }
+    }
+    @media print {
+      .site-header, .footer, .btn-print, .sim-layout > div:first-child, details.model { display: none !important; }
+      .sim-layout { grid-template-columns: 1fr; }
+      .sim-panel, .big-card { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container topbar">
+    <a class="brand" href="index.html">
+      <img class="brand-mark" src="assets/logo.svg" alt="CentrivaLab logo" />
+      <span class="brand-name">CentrivaLab™</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" onclick="this.nextElementSibling.classList.toggle('open')">
+      <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+        <rect width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="7" width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="14" width="22" height="2" rx="1" fill="currentColor"/>
+      </svg>
+    </button>
+    <nav class="nav">
+      <a href="technology.html">Technology</a>
+      <a href="products.html">Products</a>
+      <a href="specifications.html">Specifications</a>
+      <a href="applications.html">Applications</a>
+      <a href="publications.html">Publications</a>
+      <a href="gamma.html">CP Calculator</a>
+      <a href="speed.html">Rotor Speed</a>
+      <a href="planner.html" style="color:white;font-weight:700;">Test Planner</a>
+      <a href="support.html">Support</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+  <div class="container page-hero">
+    <div class="breadcrumbs"><a href="index.html">Home</a> › Test Planner</div>
+    <h1>Spiral-Wound Test Planner</h1>
+    <p>
+      A membrane only responds to two things: the flux through it and the solute concentration at its surface.
+      Describe the spiral-wound element you want to reproduce — size, feed flow, recovery, pressure, solvent and
+      solute — and the planner returns the <strong>rotor speed</strong> and the <strong>feed concentration</strong>
+      that expose the membrane in a CentrivaLab cartridge to the same conditions. The permeate you then measure
+      is the permeate the element would give.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="simulator.html">Want to see how Γ compares across devices? Open the device comparison →</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container" style="margin-top:36px; margin-bottom:56px;">
+    <div class="sim-layout">
+
+      <!-- ── LEFT: Inputs ── -->
+      <div>
+        <div class="sim-panel">
+          <h3>1 · Spiral-wound element</h3>
+          <div class="field-group">
+            <label for="sel-module">Element size</label>
+            <select id="sel-module" onchange="onModuleChange()"></select>
+          </div>
+          <div class="two-col" id="group-module-custom" style="display:none;">
+            <div class="field-group">
+              <label for="inp-area">Active area (m²)</label>
+              <input type="number" id="inp-area" min="0.05" max="60" step="any" value="7.9" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-W">Element length (m)</label>
+              <input type="number" id="inp-W" min="0.1" max="2" step="any" value="0.96" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="sel-spacer">Feed spacer</label>
+            <select id="sel-spacer" onchange="onSpacerChange()"></select>
+          </div>
+          <div class="three-col" id="group-spacer-custom" style="display:none;">
+            <div class="field-group">
+              <label for="inp-h">h (mm)</label>
+              <input type="number" id="inp-h" min="0.2" max="3" step="any" value="0.71" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-dh">d<sub>h</sub> (mm)</label>
+              <input type="number" id="inp-dh" min="0.2" max="4" step="any" value="0.95" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-eps">ε</label>
+              <input type="number" id="inp-eps" min="0.5" max="0.98" step="any" value="0.89" oninput="update()" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-nel">Elements in series</label>
+              <input type="number" id="inp-nel" min="1" max="8" step="1" value="1" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-q">Feed flow (m³/h)</label>
+              <input type="number" id="inp-q" min="0.01" max="50" step="any" value="2" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" id="hint-vel" style="margin:-6px 0 12px;">—</div>
+          <div class="radio-row">
+            <label><input type="radio" name="ymode" value="recovery" checked onchange="update()" /> set recovery</label>
+            <label><input type="radio" name="ymode" value="permeance" onchange="update()" /> set permeance</label>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-y">Recovery (%)</label>
+              <input type="number" id="inp-y" min="0.5" max="90" step="any" value="10" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-lp">Permeance (LMH/bar)</label>
+              <input type="number" id="inp-lp" min="0.01" max="200" step="any" value="1" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" style="margin:-6px 0 12px;">Recovery is a process specification; the permeance the membrane must have to reach it is shown in the results. Or set the permeance from the datasheet and read the recovery.</div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-dp">Feed pressure (bar)</label>
+              <input type="number" id="inp-dp" min="1" max="80" step="any" value="20" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-T">Temperature (°C)</label>
+              <input type="number" id="inp-T" min="5" max="60" step="any" value="25" oninput="update()" />
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>2 · Solvent &amp; solute</h3>
+          <div class="field-group">
+            <label for="sel-solvent">Solvent</label>
+            <select id="sel-solvent" onchange="onSolventChange()"></select>
+          </div>
+          <div class="two-col" id="group-solvent-custom" style="display:none;">
+            <div class="field-group">
+              <label for="inp-rho">Density (kg/m³)</label>
+              <input type="number" id="inp-rho" min="500" max="2000" step="any" value="862" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-mu">Viscosity (mPa·s)</label>
+              <input type="number" id="inp-mu" min="0.1" max="50" step="any" value="0.56" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" id="hint-solvent" style="margin:-6px 0 12px;">—</div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-M">Solute molar mass (g/mol)</label>
+              <input type="number" id="inp-M" min="50" max="20000" step="any" value="500" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-rhos">Solute density (g/mL)</label>
+              <input type="number" id="inp-rhos" min="0.5" max="3" step="any" value="1.3" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" style="margin:-6px 0 12px;">Density of the pure (solid or liquid) solute: it sets the density contrast β of the retained layer, which drives mass transfer in the O-CMF. Typical: dyes and oligomers 1.2–1.5, PEG 1.1–1.2, triglycerides 0.9.</div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-D">Diffusivity (10⁻¹⁰ m²/s)</label>
+              <input type="number" id="inp-D" min="0.1" max="100" step="any" value="7.3" oninput="update()" disabled />
+              <div class="check-row"><input type="checkbox" id="chk-D" onchange="update()" /><label for="chk-D" style="display:inline;font-weight:400;font-size:12px;">enter my own value</label></div>
+            </div>
+            <div class="field-group">
+              <label for="inp-c0">Feed concentration (g/L)</label>
+              <input type="number" id="inp-c0" min="0.001" max="500" step="any" value="0.1" oninput="update()" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-R">Expected rejection (%)</label>
+              <input type="number" id="inp-R" min="0" max="100" step="any" value="95" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-i">van't Hoff factor</label>
+              <input type="number" id="inp-i" min="1" max="4" step="any" value="1" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" style="margin:-6px 0 0;">Intrinsic rejection of the membrane (from the datasheet, or your best guess). It sets the wall concentration; refine it after the first run. van't Hoff factor 1 for neutral solutes, 2 for a 1:1 salt.</div>
+          <div class="readout">
+            <span>ρ<sub>solvent</sub> = <strong id="lbl-rho">—</strong> kg/m³</span>
+            <span>μ = <strong id="lbl-mu">—</strong> mPa·s</span>
+            <span>D = <strong id="lbl-D">—</strong> ×10⁻¹⁰ m²/s</span>
+            <span>β = <strong id="lbl-beta">—</strong> ×10⁻⁴ (g/L)⁻¹</span>
+            <span>Sc = <strong id="lbl-Sc">—</strong></span>
+            <span>π<sub>feed</sub> = <strong id="lbl-pi">—</strong> bar</span>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>3 · CentrivaLab cartridge</h3>
+          <div class="field-group">
+            <label for="sel-cartridge">Cartridge</label>
+            <select id="sel-cartridge" onchange="onCartridgeChange()">
+              <option value="94-25" selected>CentrivaLab 94/25</option>
+              <option value="50-34">CentrivaLab 50/34</option>
+            </select>
+          </div>
+          <div class="field-group" id="group-rotor">
+            <label for="sel-rotor">Rotor</label>
+            <select id="sel-rotor" onchange="onRotorChange()"></select>
+          </div>
+          <div class="two-col" id="group-rotor-custom" style="display:none;">
+            <div class="field-group">
+              <label for="inp-rmax">r<sub>max</sub> (mm)</label>
+              <input type="number" id="inp-rmax" min="60" max="200" step="0.5" value="98" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-maxrpm">Max speed (rpm)</label>
+              <input type="number" id="inp-maxrpm" min="1000" max="30000" step="100" value="15000" oninput="update()" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-vol">Feed volume V<sub>0</sub> (mL)</label>
+              <input type="number" id="inp-vol" min="7.4" max="22.8" step="any" value="22.5" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-vp">Permeate to collect (mL)</label>
+              <input type="number" id="inp-vp" min="0.1" max="2" step="any" value="0.5" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-hint" id="vol-range-hint">—</div>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Results ── -->
+      <div>
+        <div class="warning-box" id="warn"></div>
+
+        <div class="big-card" id="big">
+          <div class="big-grid" id="big-ok">
+            <div>
+              <div class="big-label">Rotor speed</div>
+              <div class="big-value"><span id="v-rpm">—</span><small>rpm</small></div>
+              <div class="big-sub">mean ΔP <strong id="v-dp">—</strong> bar · <span id="v-ag">—</span> g at the membrane</div>
+            </div>
+            <div>
+              <div class="big-label">Feed concentration</div>
+              <div class="big-value"><span id="v-c0">—</span><small>g/L</small></div>
+              <div class="big-sub">module feed is <strong id="v-c0mod">—</strong> g/L</div>
+            </div>
+            <div class="side">
+              <em>collect</em> <strong id="v-vp">—</strong> mL <em>in about</em> <strong id="v-time">—</strong> min<br/>
+              <em>expected flux</em> <strong id="v-jv">—</strong> LMH<br/>
+              <em>c<sub>m</sub> reproduced</em> <strong id="v-cm">—</strong> g/L <em>(module mean)</em><br/>
+              <em>expected c<sub>p</sub></em> <strong id="v-cp">—</strong> g/L
+            </div>
+          </div>
+          <div class="stop-msg" id="big-stop" style="display:none;"></div>
+        </div>
+
+        <div class="sim-panel">
+          <div class="panel-head">
+            <h3>Test programme</h3>
+            <button class="btn-print" type="button" onclick="window.print()">Print programme</button>
+          </div>
+          <p class="field-hint" id="prog-hint" style="margin:-8px 0 10px;">—</p>
+          <div class="table-wrap">
+            <table class="res" id="tbl-prog">
+              <thead><tr>
+                <th>Run</th><th>target c<sub>m</sub> (g/L)</th><th>ΔP (bar)</th><th>rpm</th><th>feed C<sub>0</sub> (g/L)</th>
+                <th>J<sub>v</sub> (LMH)</th><th>V<sub>p</sub> (mL)</th><th>time (min)</th><th>expected c<sub>p</sub> (g/L)</th><th>R<sub>obs</sub> in cartridge</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="howto">
+            <strong>How to read the result.</strong>
+            <ol>
+              <li>Prepare the feed at the concentration in the table (same solvent, same temperature as the element).</li>
+              <li>Fill the cartridge with V<sub>0</sub>, spin at the speed in the table, stop at the permeate volume in the table.</li>
+              <li>Measure the permeate concentration c<sub>p</sub>. The <strong>element</strong> rejection is 1 − c<sub>p</sub> / C<sub>0,element</sub> — divide by the element's feed concentration, not by the cartridge feed.</li>
+              <li>If the measured rejection differs from the "expected rejection" you entered, enter the new value and re-plan: c<sub>m</sub> moves a little with rejection.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Inside the element</h3>
+          <div class="table-wrap">
+            <table class="res" id="tbl-mod">
+              <thead><tr>
+                <th>Position</th><th>u (m/s)</th><th>Re</th><th>k (LMH)</th><th>c<sub>b</sub> (g/L)</th><th>Γ</th><th>c<sub>m</sub> (g/L)</th><th>J<sub>v</sub> (LMH)</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="readout" style="grid-template-columns:1fr 1fr 1fr;">
+            <span>mean flux <strong id="m-jv">—</strong> LMH</span>
+            <span id="m-lp-wrap">permeance needed <strong id="m-lp">—</strong> LMH/bar</span>
+            <span>channel Δp <strong id="m-dpch">—</strong> bar</span>
+            <span>c<sub>m</sub> mean <strong id="m-cm">—</strong> g/L</span>
+            <span>retentate <strong id="m-cret">—</strong> g/L</span>
+            <span>observed rejection <strong id="m-robs">—</strong></span>
+          </div>
+          <canvas id="chart" height="220" style="width:100%;margin-top:14px;" role="img" aria-label="Chart: bulk and membrane-surface concentration along the feed channel"></canvas>
+        </div>
+
+        <div class="sim-panel">
+          <details class="model">
+            <summary>Model and validity</summary>
+            <p><strong>Element.</strong> 1-D plug flow along the feed channel, discretised in 60 cells per element. Mass transfer from
+              Schock &amp; Miquel (1987), Sh = 0.065 Re<sup>0.875</sup> Sc<sup>0.25</sup> with Re on the interstitial velocity and the
+              spacer hydraulic diameter; channel friction λ = 6.23 Re<sup>−0.3</sup>. Film model c<sub>m</sub> = c<sub>p</sub> + (c<sub>b</sub> − c<sub>p</sub>) e<sup>J<sub>v</sub>/k</sup>
+              with c<sub>p</sub> = (1 − R<sub>int</sub>) c<sub>m</sub>. Osmotic pressure by van't Hoff (dilute solutions; for concentrated aqueous electrolytes
+              use the Pitzer-based <a href="gamma.html">CP Calculator</a>). The feed-channel cross-section is derived from the active area, the element
+              length and the spacer thickness (A<sub>ch</sub> = A·h / 2L).</p>
+            <p><strong>Cartridge.</strong> Concentration polarisation from the buoyancy-driven model of
+              <a href="https://doi.org/10.2139/ssrn.6528979" target="_blank" rel="noopener">Geraldes et al. (2026)</a>,
+              k = 0.28 U* 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>, at the run-mean pressure and bulk concentration. The planner solves for the feed
+              concentration whose run-mean c<sub>m</sub> equals the area-mean c<sub>m</sub> of the element at the same ΔP. Because the same membrane at
+              the same ΔP and the same c<sub>m</sub> gives the same flux, the cartridge flux is taken equal to the element mean flux.</p>
+            <p><strong>Properties.</strong> Solvent density and viscosity from handbook data (Andrade fit, 10–50 °C). Solute diffusivity by Stokes–Einstein
+              with the molecular radius from molar mass and solute density; density contrast β = (1 − ρ<sub>solvent</sub>/ρ<sub>solute</sub>)/ρ<sub>solvent</sub>
+              (volume-additive mixture). Both can be overridden or replaced by measured values.</p>
+            <p><strong>Validity.</strong> The O-CMF correlation was validated with aqueous salts (Sc 700–2200, J<sub>v</sub>/k ≤ 1.5). In organic solvents it is an
+              extrapolation, flagged as such: confirm it in your system with two runs at the same speed and feed concentrations differing by a factor of 3 —
+              the observed rejection should rise with C<sub>0</sub> as k ∝ C<sub>0</sub><sup>1/4</sup> predicts. Solvents denser than the solute (DCM, chloroform, DMSO with most
+              solutes) give β ≤ 0: the retained layer is stably stratified, the buoyancy model does not apply and the planner stops.</p>
+            <p><strong>Rejection.</strong> A membrane's intrinsic rejection can depend on c<sub>m</sub>. That is exactly why the planner reproduces c<sub>m</sub> instead of
+              transferring a rejection measured elsewhere. When the element spans a wide range of c<sub>m</sub> (high recovery, several elements in series), the
+              programme adds inlet, mid-length and outlet runs so the membrane is tested across that range.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>CentrivaLab™</h4>
+      <p>CentrivaLab is a commercial brand of Talentground Lda.</p>
+      <p>CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+    </div>
+    <div>
+      <h4>Pages</h4>
+      <p>
+        <a href="technology.html">Technology</a><br>
+        <a href="products.html">Products</a><br>
+        <a href="specifications.html">Specifications</a><br>
+        <a href="applications.html">Applications</a><br>
+        <a href="publications.html">Publications</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="speed.html">Speed Calculator</a><br><a href="simulator.html">Device comparison</a><br><a href="planner.html">Test Planner</a><br>
+        <a href="support.html">Support</a><br>
+        <a href="contact.html">Contact</a>
+      </p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p><a href="mailto:info@centrivalab.com">info@centrivalab.com</a><br>
+         <a href="mailto:commercial@centrivalab.com">commercial@centrivalab.com</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/ocmf-geometry.js"></script>
+<script src="assets/solvents.js"></script>
+<script src="assets/planner-engine.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const val = id => parseFloat($(id).value);
+const setText = (id, t) => { $(id).innerHTML = t; };
+const f = (x, d) => (isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
+const fr = x => (isFinite(x) ? (Math.round(x / 10) * 10).toLocaleString("en-US") : "—");
+const sig = (x, n = 3) => (isFinite(x) && x !== 0 ? Number(x.toPrecision(n)).toString() : "—");
+const CM_RATIO_MULTI = 1.5;      // element c_m,out / c_m,in above which the programme adds inlet/mid/outlet runs
+
+// ── selects ──
+function fillSelects() {
+  const sm = $("sel-module"); for (const k in PLANNER.MODULES) sm.add(new Option(PLANNER.MODULES[k].label, k)); sm.value = "4040";
+  const ss = $("sel-spacer"); for (const k in PLANNER.SPACERS) ss.add(new Option(PLANNER.SPACERS[k].label, k)); ss.value = "28mil";
+  const sv = $("sel-solvent"); for (const s of SOLV.list) sv.add(new Option(s.name, s.id)); sv.add(new Option("Custom solvent", "custom")); sv.value = "toluene";
+}
+function onModuleChange() {
+  const k = $("sel-module").value, m = PLANNER.MODULES[k];
+  $("group-module-custom").style.display = k === "custom" ? "" : "none";
+  if (k !== "custom") { $("inp-area").value = m.area; $("inp-W").value = m.W; $("inp-q").value = m.qTyp; }
+  update();
+}
+function onSpacerChange() {
+  const k = $("sel-spacer").value, s = PLANNER.SPACERS[k];
+  $("group-spacer-custom").style.display = k === "custom" ? "" : "none";
+  if (k !== "custom") { $("inp-h").value = s.h * 1e3; $("inp-dh").value = s.dh * 1e3; $("inp-eps").value = s.eps; }
+  update();
+}
+function onSolventChange() {
+  const k = $("sel-solvent").value;
+  $("group-solvent-custom").style.display = k === "custom" ? "" : "none";
+  update();
+}
+function cart() { return $("sel-cartridge").value; }
+function onCartridgeChange() {
+  const c = OCMF.CARTRIDGES[cart()];
+  $("group-rotor").style.display = c.rotorSelect ? "" : "none";
+  OCMF.fillRotorSelect($("sel-rotor"), cart());
+  if (c.rotorSelect) $("sel-rotor").add(new Option("Other rotor (enter r_max and max speed)", "custom"));
+  $("inp-vol").value = c.vol.nom; $("inp-vol").min = c.vol.min; $("inp-vol").max = c.vol.max;
+  onRotorChange();
+}
+function onRotorChange() {
+  const custom = $("sel-rotor").value === "custom";
+  $("group-rotor-custom").style.display = custom ? "" : "none";
+  update();
+}
+function rotorSel() {
+  if ($("sel-rotor").value === "custom") return { rmax: val("inp-rmax") / 1000, maxRpm: val("inp-maxrpm"), label: "custom rotor" };
+  return OCMF.rotor(cart(), $("sel-rotor").value);
+}
+
+// ── main ──
+let last = null;
+function update() {
+  const warn = [], stopMsgs = [];
+  const stop = m => stopMsgs.push(m);
+
+  // solvent
+  const T = val("inp-T");
+  const sk = $("sel-solvent").value;
+  let sol;
+  if (sk === "custom") { const rho = val("inp-rho"), mu = val("inp-mu") * 1e-3; sol = { rho, mu, nu: mu / rho, M: 100, name: "custom solvent", dense: false }; }
+  else sol = SOLV.props(sk, T);
+  setText("lbl-rho", f(sol.rho, 0)); setText("lbl-mu", f(sol.mu * 1e3, 3));
+  setText("hint-solvent", sk === "custom" ? "Enter the density and viscosity at the test temperature." :
+    `${sol.name} at ${f(T, 0)} °C: ρ = ${f(sol.rho, 0)} kg/m³, μ = ${f(sol.mu * 1e3, 3)} mPa·s.` + (sol.dense ? " <strong>Dense solvent:</strong> most solutes are lighter than it — see the warning." : ""));
+
+  // solute
+  const M = val("inp-M"), rhoS = val("inp-rhos") * 1000;
+  const sp = PLANNER.soluteProps(sol, M, rhoS, T);
+  const useOwnD = $("chk-D").checked; $("inp-D").disabled = !useOwnD;
+  if (!useOwnD) $("inp-D").value = +(sp.D * 1e10).toPrecision(3);
+  const D = val("inp-D") * 1e-10, beta = sp.beta;
+  setText("lbl-D", f(D * 1e10, 2)); setText("lbl-beta", f(beta * 1e4, 2)); setText("lbl-Sc", f(sol.nu / D, 0));
+  $("lbl-beta").classList.toggle("out", beta <= 0);
+  const C0 = val("inp-c0"), Rint = Math.min(1, Math.max(0, val("inp-R") / 100)), iVH = val("inp-i") || 1;
+  setText("lbl-pi", f(PLANNER.piVH(C0, iVH, M, T) / 1e5, 3));
+
+  // element
+  const mk = $("sel-module").value, module = mk === "custom" ? { area: val("inp-area"), W: val("inp-W") } : PLANNER.MODULES[mk];
+  const spk = $("sel-spacer").value, spacer = spk === "custom" ? { h: val("inp-h") * 1e-3, dh: val("inp-dh") * 1e-3, eps: val("inp-eps") } : PLANNER.SPACERS[spk];
+  const nEl = Math.max(1, Math.round(val("inp-nel") || 1));
+  const Q = val("inp-q"), dPin = val("inp-dp");
+  const ymode = document.querySelector('input[name="ymode"]:checked').value;
+  $("inp-y").disabled = ymode !== "recovery"; $("inp-lp").disabled = ymode !== "permeance";
+  const Ach = module.area * spacer.h / (2 * module.W);
+  const uIn = Q / 3600 / (spacer.eps * Ach);
+  setText("hint-vel", `Interstitial velocity at the inlet <strong>${f(uIn, 3)} m/s</strong> (channel cross-section ${sig(Ach * 1e4, 3)} cm²). Typical elements run at 0.1–0.25 m/s.`);
+  if (!(Q > 0) || !(module.area > 0) || !(dPin > 0) || !(C0 > 0)) { stop("Enter positive values for flow, area, pressure and concentration."); }
+
+  const inp = { module, spacer, nElements: nEl, Q_m3h: Q, dPin_bar: dPin, T, solvent: sol, solute: { D, beta, M, i: iVH }, C0, Rint,
+                mode: ymode, Y: val("inp-y") / 100, Lp_lmhbar: val("inp-lp") };
+  if (ymode === "recovery" && !(inp.Y > 0 && inp.Y < 0.95)) stop("Recovery must be between 0.5 and 95 %.");
+
+  // cartridge
+  const c = OCMF.CARTRIDGES[cart()], rot = rotorSel();
+  const V0 = val("inp-vol"), Vp = val("inp-vp");
+  setText("vol-range-hint", `Calibrated fill range ${c.vol.min}–${c.vol.max} mL (nominal ${c.vol.nom} mL). Membrane area 1.45 cm².`);
+  if (!(V0 >= c.vol.min && V0 <= c.vol.max)) stop(`Feed volume outside the calibrated range ${c.vol.min}–${c.vol.max} mL.`);
+  if (!(Vp > 0 && Vp <= 2)) stop("Permeate volume: 0.1–2 mL per run (collect more in steps).");
+  if (beta <= 0) stop("The solute is lighter than the solvent (β ≤ 0): the retained layer is stably stratified and the O-CMF buoyancy model does not apply. The planner cannot set an equivalent run for this system.");
+
+  if (stopMsgs.length) { showStop(stopMsgs.join(" ")); return; }
+
+  let mod;
+  try { mod = PLANNER.simulateModule(inp); } catch (e) { showStop("Calculation failed: " + e.message); return; }
+  if (!(mod.Jmean > 0)) { showStop("No permeation: the osmotic pressure exceeds the applied pressure."); return; }
+  if (ymode === "permeance") $("inp-y").value = +(100 * mod.Y).toPrecision(3); else $("inp-lp").value = +mod.Lp_lmhbar.toPrecision(3);
+
+  const planInp = t => PLANNER.planCentrivaLab({ cart: cart(), rmax: rot.rmax, maxRpm: rot.maxRpm, V0, Vp, T, solvent: sol, solute: { D, beta }, Rint, target: t });
+  const mean = planInp({ dPh: mod.dPmean, J: mod.Jmean, cm: mod.cmMeanA });
+  const ratio = mod.cmOut / mod.cmIn;
+  const multi = ratio > CM_RATIO_MULTI;
+  const runs = [{ label: "Element mean", plan: mean, cmTarget: mod.cmMeanA, J: mod.Jmean, main: true }];
+  if (multi) for (const p of mod.points) runs.push({ label: p.label, plan: planInp({ dPh: p.dPh, J: p.J, cm: p.cm }), cmTarget: p.cm, J: p.J });
+  last = { mod, runs };
+
+  // big card
+  const big = $("big");
+  big.classList.remove("warn", "stop"); $("big-ok").style.display = ""; $("big-stop").style.display = "none";
+  setText("v-rpm", fr(mean.rpm)); setText("v-dp", f(mean.dP_bar, 1)); setText("v-ag", f(mean.ag, 0));
+  setText("v-c0", sig(mean.C0, 3)); setText("v-c0mod", sig(C0, 3));
+  setText("v-vp", f(Vp, 1)); setText("v-time", f(mean.tRun_min, 0)); setText("v-jv", f(mean.J_lmh, 1));
+  setText("v-cm", sig(mean.cm, 3)); setText("v-cp", sig(mean.cp, 3));
+  if (mean.over) big.classList.add("warn");
+
+  // warnings
+  for (const w of mod.flags) warn.push(w);
+  for (const w of mean.flags) warn.push(w);
+  if (multi) warn.push(`c<sub>m</sub> varies by a factor ${f(ratio, 1)} from inlet to outlet: the programme adds inlet, mid-length and outlet runs so the membrane is tested across that range.`);
+  if (mean.C0 < 0.005) warn.push(`The cartridge feed concentration (${sig(mean.C0, 2)} g/L) may be below your analytical range: consider a higher element feed concentration or velocity.`);
+  if (ymode === "recovery" && (mod.Lp_lmhbar > 50 || mod.Lp_lmhbar < 0.05)) warn.push(`The permeance needed for this recovery (${sig(mod.Lp_lmhbar, 2)} LMH/bar) is unusual — check flow, area and recovery.`);
+  const wb = $("warn"); wb.innerHTML = warn.map(w => "• " + w).join("<br/>"); wb.classList.toggle("show", warn.length > 0);
+
+  // programme table
+  setText("prog-hint", multi ? `Four runs: one at the element-mean c<sub>m</sub>, three across the element. All at V<sub>0</sub> = ${f(V0, 1)} mL, ${f(T, 0)} °C, in ${sol.name}.`
+                             : `One run reproduces the element (c<sub>m</sub> varies by only a factor ${f(ratio, 2)} along the channel). V<sub>0</sub> = ${f(V0, 1)} mL, ${f(T, 0)} °C, in ${sol.name}.`);
+  document.querySelector("#tbl-prog tbody").innerHTML = runs.map(r => {
+    const p = r.plan;
+    return `<tr class="${r.main ? "main" : ""}${p.over ? " over" : ""}"><td>${r.label}</td><td>${sig(r.cmTarget, 3)}</td><td>${f(p.dP_bar, 1)}</td>` +
+           `<td class="hl">${fr(p.rpm)}${p.over ? " ▲" : ""}</td><td class="hl">${sig(p.C0, 3)}</td><td>${f(p.J_lmh, 1)}</td><td>${f(Vp, 1)}</td>` +
+           `<td>${f(p.tRun_min, 0)}</td><td>${sig(p.cp, 3)}</td><td>${f(100 * p.Robs, 1)} %</td></tr>`;
+  }).join("");
+
+  // element table
+  const rows = [mod.prof[0], mod.prof[Math.floor(mod.prof.length / 2)], mod.prof[mod.prof.length - 1]];
+  const labels = ["Inlet", "Mid-length", "Outlet"];
+  document.querySelector("#tbl-mod tbody").innerHTML = rows.map((q, i) =>
+    `<tr><td>${labels[i]}</td><td>${f(q.u, 3)}</td><td>${f(q.Re, 0)}</td><td>${f(q.k * PLANNER.LMH, 0)}</td><td>${sig(q.cb, 3)}</td><td>${f(q.Gamma, 2)}</td><td>${sig(q.cm, 3)}</td><td>${f(q.J * PLANNER.LMH, 1)}</td></tr>`).join("");
+  setText("m-jv", f(mod.Jmean_lmh, 1));
+  setText("m-lp-wrap", ymode === "recovery" ? `permeance needed <strong>${sig(mod.Lp_lmhbar, 3)}</strong> LMH/bar` : `recovery <strong>${f(100 * mod.Y, 1)}</strong> %`);
+  setText("m-dpch", f(mod.dpChannel / 1e5, 2)); setText("m-cm", sig(mod.cmMeanA, 3)); setText("m-cret", sig(mod.cbOut, 3)); setText("m-robs", f(100 * mod.Robs, 1) + " %");
+  drawChart(mod, nEl);
+}
+
+function showStop(msg) {
+  const big = $("big"); big.classList.remove("warn"); big.classList.add("stop");
+  $("big-ok").style.display = "none"; const s = $("big-stop"); s.style.display = ""; s.innerHTML = msg;
+  $("warn").classList.remove("show");
+  document.querySelector("#tbl-prog tbody").innerHTML = ""; document.querySelector("#tbl-mod tbody").innerHTML = "";
+  for (const id of ["m-jv", "m-dpch", "m-cm", "m-cret", "m-robs"]) setText(id, "—");
+  const el = $("chart"); el.getContext("2d").clearRect(0, 0, el.width, el.height);
+}
+
+// ── chart: c_b and c_m along the channel ──
+function drawChart(mod, nEl) {
+  const el = $("chart"), dpr = window.devicePixelRatio || 1;
+  const Wc = el.clientWidth || 600, Hc = 220;
+  el.width = Wc * dpr; el.height = Hc * dpr;
+  const ctx = el.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, Wc, Hc);
+  const pad = { l: 52, r: 14, t: 14, b: 32 }, w = Wc - pad.l - pad.r, h = Hc - pad.t - pad.b;
+  const xs = mod.prof.map(q => q.x), L = mod.Ltot;
+  const cmMax = Math.max(...mod.prof.map(q => q.cm)), cbMin = Math.min(...mod.prof.map(q => q.cb));
+  const ymax = cmMax + 0.45 * (cmMax - cbMin) + 1e-9, ymin = Math.max(0, cbMin - 0.15 * (cmMax - cbMin));
+  const X = x => pad.l + w * x / L, Y = y => pad.t + h * (1 - (y - ymin) / (ymax - ymin));
+  ctx.font = "11px system-ui, sans-serif"; ctx.fillStyle = "#5e7c96"; ctx.strokeStyle = "#d9e1ec"; ctx.lineWidth = 1;
+  // grid + axes
+  const nt = 4;
+  for (let i = 0; i <= nt; i++) {
+    const yv = ymin + (ymax - ymin) * i / nt, yy = Y(yv);
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(pad.l + w, yy); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(sig(yv, 2), pad.l - 6, yy + 4);
+  }
+  for (let e = 0; e <= nEl; e++) {
+    const xx = X(e * L / nEl);
+    ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + h); ctx.stroke();
+    ctx.textAlign = "center"; if (e < nEl) ctx.fillText(nEl > 1 ? `element ${e + 1}` : "", X((e + 0.5) * L / nEl), pad.t + h + 14);
+  }
+  ctx.textAlign = "center"; ctx.fillText("position along the feed channel →", pad.l + w / 2, Hc - 6);
+  ctx.save(); ctx.translate(12, pad.t + h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText("concentration (g/L)", 0, 0); ctx.restore();
+  const line = (key, color, dash) => {
+    ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash || []);
+    mod.prof.forEach((q, i) => { const xx = X(xs[i]), yy = Y(q[key]); i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); });
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  line("cb", "#5e7c96", [6, 4]); line("cm", "#0066cc");
+  // mean c_m marker
+  ctx.strokeStyle = "#38b6ff"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(pad.l, Y(mod.cmMeanA)); ctx.lineTo(pad.l + w, Y(mod.cmMeanA)); ctx.stroke(); ctx.setLineDash([]);
+  // legend
+  const items = [["#0066cc", "c_m at the membrane", []], ["#5e7c96", "c_b bulk", [6, 4]], ["#38b6ff", "c_m mean (reproduced in the cartridge)", [2, 3]]];
+  let lx = pad.l + 8; const ly = pad.t + 12;
+  ctx.textAlign = "left";
+  for (const [col, lab, dash] of items) {
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 22, ly); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#08203a"; ctx.fillText(lab, lx + 27, ly + 4); lx += 27 + ctx.measureText(lab).width + 18;
+  }
+}
+
+fillSelects();
+window.addEventListener("DOMContentLoaded", () => { onModuleChange(); onSpacerChange(); onCartridgeChange(); });
+window.addEventListener("resize", () => { if (last) drawChart(last.mod, Math.max(1, Math.round(val("inp-nel") || 1))); });
+</script>
+</body>
+</html>

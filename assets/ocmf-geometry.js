@@ -1,7 +1,7 @@
 /* ──────────────────────────────────────────────────────────────────────────────
    CentrivaLab O-CMF cartridge geometry and ΔP–rpm model
    Single source of truth shared by gamma.html, speed.html and simulator.html.
-   Exposes a global `OCMF`. Plain script, no build step.
+   Exposes a global `OCMF` in the browser (module.exports in node). Plain script, no build step.
 
    Pressure at the membrane:  ΔP = ½ ρ ω² (r_m² − r_s²)
      r_m = r_max − δ_m                     (δ_m intrinsic to the cartridge)
@@ -9,7 +9,8 @@
    Over a run from V0 to V0 − Vp at constant speed, the mean of ΔP(V0) and ΔP(V0 − Vp) equals
    ½ ρ ω² [r_m² − ½(r_s0² + r_s1²)], so one "effective" term serves both conversions.
    ────────────────────────────────────────────────────────────────────────────── */
-window.OCMF = (() => {
+(function (root) {
+const OCMF = (() => {
   "use strict";
 
   const CARTRIDGES = {
@@ -81,3 +82,5 @@ window.OCMF = (() => {
 
   return { CARTRIDGES, rotor, deltaS, v94FromDs, rm, rs, geomRun, omega, dpFromRpm, rpmFromDp, amOf, waterRho, fillRotorSelect, G: 9.81 };
 })();
+if (typeof module !== "undefined" && module.exports) module.exports = OCMF; else root.OCMF = OCMF;
+})(typeof window !== "undefined" ? window : globalThis);
