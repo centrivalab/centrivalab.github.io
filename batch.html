@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batch Planner — CentrivaLab</title>
+  <link rel="icon" href="favicon.ico" />
+  <meta name="description" content="Plan a six-tube CentrivaLab run that reproduces a batch concentration, diafiltration or solvent-exchange process on a spiral-wound module: feed concentrations per tube, rotor speed, C·J diafiltration optimum, product yield." />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .sim-layout { display: grid; grid-template-columns: 350px 1fr; gap: 28px; align-items: start; }
+    .sim-panel { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .sim-panel h3 { margin: 0 0 14px; font-size: 11px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .07em; }
+    .field-group { margin-bottom: 13px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label { display: flex; align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .field-hint strong { color: var(--navy); }
+    .field-group select, .field-group input[type="number"], .stage-row select, .stage-row input[type="number"], .res-in input[type="number"] {
+      width: 100%; padding: 8px 11px; font-size: 14px; font-family: inherit; color: var(--navy);
+      background: var(--light); border: 1px solid var(--line); border-radius: 10px; appearance: none; -webkit-appearance: none; box-sizing: border-box;
+    }
+    .field-group select:focus, .field-group input:focus, .stage-row select:focus, .stage-row input:focus, .res-in input:focus { border-color: var(--blue); background: white; outline: none; }
+    .field-group input:disabled { color: var(--muted); }
+    .field-group select, .stage-row select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e7c96' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .radio-row { display: flex; gap: 14px; font-size: 13px; color: var(--navy); margin-bottom: 6px; flex-wrap: wrap; align-items: center; }
+    .radio-row label { font-weight: 400; display: inline-flex; align-items: center; gap: 5px; margin: 0; }
+    .check-row { font-size: 12px; color: var(--navy); display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+    .check-row label { display: inline; font-weight: 400; font-size: 12px; margin: 0; }
+    .readout { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--navy); }
+    .readout strong { font-weight: 700; }
+    .readout strong.out { color: #b4232a; }
+    /* stage editor */
+    .stage-row { display: grid; grid-template-columns: 1.15fr 1.35fr 0.75fr 26px; gap: 5px; align-items: center; margin-bottom: 6px; }
+    .stage-row select, .stage-row input { padding: 7px 6px; font-size: 12.5px; }
+    .stage-row select { padding-right: 22px; background-position: right 7px center; }
+    .stage-row .rm { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: white; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; font-family: inherit; }
+    .stage-row .rm:hover { color: #b4232a; border-color: #b4232a; }
+    .stage-num { font-size: 11px; color: var(--muted); }
+    .btn-add { font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 1px dashed var(--muted); background: white; color: var(--navy); cursor: pointer; font-family: inherit; margin-top: 4px; }
+    .btn-add:hover { border-color: var(--blue); color: var(--blue); }
+    /* help */
+    .help-btn { width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--muted); background: white; color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1; cursor: pointer; padding: 0; font-family: inherit; flex: none; margin-left: 6px; display: inline-flex; align-items: center; justify-content: center; }
+    .help-btn:hover, .help-btn:focus-visible, .help-btn[aria-expanded="true"] { border-color: var(--blue); color: var(--blue); outline: none; }
+    .help-btn:focus-visible { box-shadow: 0 0 0 3px rgba(56,182,255,.35); }
+    #help-pop { display: none; position: absolute; z-index: 40; max-width: 300px; background: var(--navy); color: white; font-size: 12.5px; line-height: 1.5; padding: 10px 13px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-weight: 400; }
+    #help-pop.show { display: block; }
+    #help-pop a { color: var(--blue-light); }
+    /* results */
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .btn-tool { font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: white; color: var(--navy); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-tool:hover, .btn-tool:focus-visible { border-color: var(--blue); color: var(--blue); outline: none; }
+    .btn-tool.primary { background: var(--navy); color: white; border-color: var(--navy); }
+    .btn-tool.primary:hover { background: var(--navy-2); color: white; }
+    .btn-tool:disabled { opacity: .5; cursor: default; }
+    .big-card { background: white; border: 2px solid var(--blue); border-radius: 18px; padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .big-card.warn { border-color: #f0a500; background: #fff8e6; }
+    .big-card.stop { border-color: #b4232a; background: #fff3f3; }
+    .big-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 24px; align-items: start; }
+    .big-card .big-label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+    .big-card .big-value { font-size: 42px; font-weight: 700; color: var(--navy); line-height: 1; margin: 6px 0 2px; white-space: nowrap; }
+    .big-card .big-value small { font-size: 17px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+    .big-card.warn .big-value { color: #c47a00; }
+    .big-card .big-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .big-card .big-sub strong { color: var(--navy); }
+    .big-card .stop-msg { font-size: 15px; color: #b4232a; font-weight: 600; line-height: 1.5; }
+    table.res { width: 100%; border-collapse: collapse; font-size: 12.5px; box-shadow: none; border: none; border-radius: 0; }
+    table.res th, table.res td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); }
+    table.res th { background: var(--light); color: var(--navy); font-size: 11.5px; font-weight: 700; border-bottom: 2px solid var(--line); white-space: nowrap; }
+    table.res th sub, table.res td sub { font-size: 9px; }
+    table.res td:first-child, table.res th:first-child { text-align: left; }
+    table.res td.hl { font-weight: 700; color: var(--navy); }
+    table.res tr.over td.hl { color: #b4232a; }
+    table.res td.sol-old { border-left: 3px solid #f0a500; }
+    .table-wrap { overflow-x: auto; }
+    .warning-box { display: none; background: #fff8e6; border: 1px solid #f6c85f; border-left: 5px solid #f0a500; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00; margin-bottom: 14px; line-height: 1.5; }
+    .warning-box.show { display: block; }
+    .note-line { font-size: 12.5px; color: var(--navy); margin: 10px 0 0; line-height: 1.5; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-title { font-size: 12px; font-weight: 700; color: var(--navy); margin: 0 0 4px; }
+    details.model { font-size: 13px; color: var(--navy); line-height: 1.6; }
+    details.model summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+    details.model p { margin: 0 0 8px; }
+    .res-in input[type="number"] { padding: 5px 7px; font-size: 12.5px; width: 78px; }
+    .compare { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 16px; font-size: 13px; color: var(--navy); margin-top: 12px; }
+    .compare .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .compare strong { font-size: 16px; }
+    /* drawer + protocol (as in the Test Planner) */
+    #guide { position: fixed; top: 0; right: 0; height: 100%; width: 420px; max-width: 100%; background: white; z-index: 60; box-shadow: -8px 0 30px rgba(8,32,58,.18); transform: translateX(105%); transition: transform .25s ease; overflow-y: auto; padding: 22px 26px 40px; box-sizing: border-box; font-size: 13.5px; line-height: 1.6; color: var(--navy); }
+    #guide.open { transform: translateX(0); }
+    #guide h2 { font-size: 18px; margin: 0 0 4px; }
+    #guide h3 { font-size: 13px; margin: 18px 0 4px; }
+    #guide p { margin: 0 0 8px; }
+    #guide ul { margin: 0 0 8px 18px; padding: 0; }
+    #guide li { margin-bottom: 4px; }
+    .drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .btn-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: white; color: var(--navy); font-size: 18px; line-height: 1; cursor: pointer; font-family: inherit; flex: none; }
+    .btn-close:hover, .btn-close:focus-visible { border-color: var(--blue); color: var(--blue); outline: none; }
+    .guide-lead { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+    #protocol { display: none; position: fixed; inset: 0; z-index: 70; background: rgba(8,32,58,.45); overflow-y: auto; padding: 30px 16px; }
+    #protocol.open { display: block; }
+    .proto-sheet { background: white; max-width: 900px; margin: 0 auto; border-radius: 18px; padding: 30px 36px 36px; box-shadow: 0 20px 60px rgba(0,0,0,.3); color: var(--navy); font-size: 13.5px; line-height: 1.55; }
+    .proto-sheet h2 { font-size: 22px; margin: 0 0 2px; }
+    .proto-sheet .meta { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+    .proto-sheet h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; margin: 18px 0 8px; }
+    .proto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: 13px; }
+    .proto-grid span em { color: var(--muted); font-style: normal; }
+    .proto-sheet ol { margin: 0 0 0 20px; padding: 0; }
+    .proto-sheet li { margin-bottom: 5px; }
+    .proto-sheet .proto-warn { font-size: 12px; color: #6b4c00; background: #fff8e6; border-left: 4px solid #f0a500; padding: 8px 12px; border-radius: 8px; margin-top: 10px; }
+    .proto-actions { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 14px; }
+    .field-list { font-size: 12px; color: var(--muted); }
+    @media (max-width: 1000px) {
+      .sim-layout { grid-template-columns: 1fr; }
+      .big-grid { grid-template-columns: 1fr; }
+      .big-card .big-value { font-size: 36px; }
+      .charts { grid-template-columns: 1fr; }
+      .compare { grid-template-columns: 1fr 1fr; }
+      #guide { width: 100%; }
+      .proto-sheet { padding: 22px 18px 28px; }
+      .proto-grid { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body.print-protocol > *:not(#protocol) { display: none !important; }
+      body.print-protocol #protocol { display: block; position: static; background: none; padding: 0; overflow: visible; }
+      body.print-protocol .proto-sheet { box-shadow: none; max-width: none; padding: 0; border-radius: 0; }
+      body.print-protocol .proto-actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container topbar">
+    <a class="brand" href="index.html">
+      <img class="brand-mark" src="assets/logo.svg" alt="CentrivaLab logo" />
+      <span class="brand-name">CentrivaLab™</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" onclick="this.nextElementSibling.classList.toggle('open')">
+      <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+        <rect width="22" height="2" rx="1" fill="currentColor"/><rect y="7" width="22" height="2" rx="1" fill="currentColor"/><rect y="14" width="22" height="2" rx="1" fill="currentColor"/>
+      </svg>
+    </button>
+    <nav class="nav">
+      <a href="technology.html">Technology</a>
+      <a href="products.html">Products</a>
+      <a href="specifications.html">Specifications</a>
+      <a href="applications.html">Applications</a>
+      <a href="publications.html">Publications</a>
+      <a href="gamma.html">CP Calculator</a>
+      <a href="speed.html">Rotor Speed</a>
+      <a href="planner.html">Test Planner</a>
+      <a href="batch.html" style="color:white;font-weight:700;">Batch Planner</a>
+      <a href="support.html">Support</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+  <div class="container page-hero">
+    <div class="breadcrumbs"><a href="index.html">Home</a> › Batch Planner</div>
+    <h1>Batch Planner</h1>
+    <p>
+      A batch process — concentration, diafiltration, solvent exchange, or a sequence of them — sweeps the
+      product concentration from start to finish. The six tubes of one CentrivaLab run are six instants of that
+      batch: each reproduces the flux and the membrane-surface concentrations the module sees at that point.
+      Describe the batch and the module, get the six feeds to prepare and the speed to run; enter the results
+      and the batch is re-integrated with the membrane's measured response — time, yield, diafiltration optimum.
+    </p>
+  </div>
+</header>
+
+<main>
+  <div class="container" style="margin-top:36px; margin-bottom:56px;">
+    <div class="sim-layout">
+
+      <!-- ── LEFT: Inputs ── -->
+      <div>
+        <div class="sim-panel">
+          <h3>1 · Batch</h3>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-v0">Batch volume (L)</label>
+              <input type="number" id="inp-v0" min="0.1" max="100000" step="any" value="100" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-cp0">Product conc. (g/L)</label>
+              <input type="number" id="inp-cp0" min="0.01" max="500" step="any" value="5" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Stages <button type="button" class="help-btn" data-help="stages" aria-label="Help: stages" aria-expanded="false">?</button></label>
+            <div id="stages"></div>
+            <button type="button" class="btn-add" id="btn-add-stage" onclick="addStage()">+ add stage</button>
+          </div>
+          <div class="field-group">
+            <label for="inp-csat">Product solubility (g/L, optional) <button type="button" class="help-btn" data-help="csat" aria-label="Help: solubility" aria-expanded="false">?</button></label>
+            <input type="number" id="inp-csat" min="0" max="2000" step="any" value="" placeholder="leave empty if unknown" oninput="update()" />
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>2 · Product &amp; second species</h3>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-M">Product molar mass (g/mol)</label>
+              <input type="number" id="inp-M" min="50" max="20000" step="any" value="500" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-rhos">Product density (g/mL) <button type="button" class="help-btn" data-help="rhos" aria-label="Help: solute density" aria-expanded="false">?</button></label>
+              <input type="number" id="inp-rhos" min="0.5" max="3" step="any" value="1.3" oninput="update()" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-R">Intrinsic rejection (%) <button type="button" class="help-btn" data-help="R" aria-label="Help: rejection" aria-expanded="false">?</button></label>
+              <input type="number" id="inp-R" min="0" max="100" step="any" value="98" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-i">van't Hoff factor</label>
+              <input type="number" id="inp-i" min="1" max="4" step="any" value="1" oninput="update()" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field-group">
+              <label for="inp-kmu">Viscosity rise (%/(g/L)) <button type="button" class="help-btn" data-help="kmu" aria-label="Help: viscosity rise" aria-expanded="false">?</button></label>
+              <input type="number" id="inp-kmu" min="0" max="10" step="any" value="0" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-pif">Osmotic factor <button type="button" class="help-btn" data-help="pif" aria-label="Help: osmotic factor" aria-expanded="false">?</button></label>
+              <input type="number" id="inp-pif" min="0.1" max="20" step="any" value="1" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="sel-second">Second species <button type="button" class="help-btn" data-help="second" aria-label="Help: second species" aria-expanded="false">?</button></label>
+            <select id="sel-second" onchange="onSecondChange()">
+              <option value="none">None (product only)</option>
+              <option value="solute" selected>Impurity to wash out (solute)</option>
+              <option value="solvent">Solvent exchange (old solvent)</option>
+            </select>
+          </div>
+          <div id="group-imp">
+            <div class="three-col">
+              <div class="field-group">
+                <label for="inp-ci0">Impurity (g/L)</label>
+                <input type="number" id="inp-ci0" min="0" max="500" step="any" value="1" oninput="update()" />
+              </div>
+              <div class="field-group">
+                <label for="inp-MI">M (g/mol)</label>
+                <input type="number" id="inp-MI" min="20" max="20000" step="any" value="150" oninput="update()" />
+              </div>
+              <div class="field-group">
+                <label for="inp-RI">Rejection (%)</label>
+                <input type="number" id="inp-RI" min="0" max="100" step="any" value="20" oninput="update()" />
+              </div>
+            </div>
+          </div>
+          <div id="group-old" style="display:none;">
+            <div class="field-group">
+              <label for="sel-oldsolvent">Initial solvent (to be exchanged)</label>
+              <select id="sel-oldsolvent" onchange="update()"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>3 · Solvent &amp; temperature</h3>
+          <div class="field-group">
+            <label for="sel-solvent"><span id="lbl-solvent-name">Process solvent</span> <button type="button" class="help-btn" data-help="solvent" aria-label="Help: solvent" aria-expanded="false">?</button></label>
+            <select id="sel-solvent" onchange="onSolventChange()"></select>
+          </div>
+          <div class="two-col" id="group-solvent-custom" style="display:none;">
+            <div class="field-group">
+              <label for="inp-rho">Density (kg/m³)</label>
+              <input type="number" id="inp-rho" min="500" max="2000" step="any" value="862" oninput="update()" />
+            </div>
+            <div class="field-group">
+              <label for="inp-mu">Viscosity (mPa·s)</label>
+              <input type="number" id="inp-mu" min="0.1" max="50" step="any" value="0.56" oninput="update()" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="inp-T">Temperature (°C)</label>
+            <input type="number" id="inp-T" min="5" max="60" step="any" value="25" oninput="update()" />
+          </div>
+          <div class="readout">
+            <span>ρ = <strong id="lbl-rho">—</strong> kg/m³</span>
+            <span>μ = <strong id="lbl-mu">—</strong> mPa·s</span>
+            <span>D<sub>P</sub> = <strong id="lbl-D">—</strong> ×10⁻¹⁰ m²/s</span>
+            <span>β<sub>P</sub> = <strong id="lbl-beta">—</strong> ×10⁻⁴ (g/L)⁻¹</span>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>4 · Spiral-wound module</h3>
+          <div class="field-group">
+            <label for="sel-module">Element size <button type="button" class="help-btn" data-help="module" aria-label="Help: element size" aria-expanded="false">?</button></label>
+            <select id="sel-module" onchange="onModuleChange()"></select>
+          </div>
+          <div class="two-col" id="group-module-custom" style="display:none;">
+            <div class="field-group"><label for="inp-area">Active area (m²)</label><input type="number" id="inp-area" min="0.05" max="60" step="any" value="7.9" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-W">Element length (m)</label><input type="number" id="inp-W" min="0.1" max="2" step="any" value="0.96" oninput="update()" /></div>
+          </div>
+          <div class="field-group">
+            <label for="sel-spacer">Feed spacer <button type="button" class="help-btn" data-help="spacer" aria-label="Help: feed spacer" aria-expanded="false">?</button></label>
+            <select id="sel-spacer" onchange="onSpacerChange()"></select>
+          </div>
+          <div class="three-col" id="group-spacer-custom" style="display:none;">
+            <div class="field-group"><label for="inp-h">h (mm)</label><input type="number" id="inp-h" min="0.2" max="3" step="any" value="0.71" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-dh">d<sub>h</sub> (mm)</label><input type="number" id="inp-dh" min="0.2" max="4" step="any" value="0.95" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-eps">ε</label><input type="number" id="inp-eps" min="0.5" max="0.98" step="any" value="0.89" oninput="update()" /></div>
+          </div>
+          <div class="three-col">
+            <div class="field-group"><label for="inp-nel">Elements</label><input type="number" id="inp-nel" min="1" max="8" step="1" value="1" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-q">Feed flow (m³/h)</label><input type="number" id="inp-q" min="0.01" max="50" step="any" value="2" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-dp">ΔP (bar)</label><input type="number" id="inp-dp" min="1" max="80" step="any" value="20" oninput="update()" /></div>
+          </div>
+          <div class="field-hint" id="hint-vel" style="margin:-6px 0 12px;">—</div>
+          <div class="field-group">
+            <label for="inp-lp">Membrane permeance (LMH/bar) <button type="button" class="help-btn" data-help="lp" aria-label="Help: permeance" aria-expanded="false">?</button></label>
+            <input type="number" id="inp-lp" min="0.01" max="200" step="any" value="1.5" oninput="update()" />
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>5 · CentrivaLab run</h3>
+          <div class="field-group">
+            <label for="sel-cartridge">Cartridge</label>
+            <select id="sel-cartridge" onchange="onCartridgeChange()">
+              <option value="94-25" selected>CentrivaLab 94/25</option>
+              <option value="50-34">CentrivaLab 50/34</option>
+            </select>
+          </div>
+          <div class="field-group" id="group-rotor">
+            <label for="sel-rotor">Rotor</label>
+            <select id="sel-rotor" onchange="onRotorChange()"></select>
+          </div>
+          <div class="two-col" id="group-rotor-custom" style="display:none;">
+            <div class="field-group"><label for="inp-rmax">r<sub>max</sub> (mm)</label><input type="number" id="inp-rmax" min="60" max="200" step="0.5" value="98" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-maxrpm">Max speed (rpm)</label><input type="number" id="inp-maxrpm" min="1000" max="30000" step="100" value="15000" oninput="update()" /></div>
+          </div>
+          <div class="two-col">
+            <div class="field-group"><label for="inp-vol">Feed volume V<sub>0</sub> (mL)</label><input type="number" id="inp-vol" min="7.4" max="22.8" step="any" value="22.5" oninput="update()" /></div>
+            <div class="field-group"><label for="inp-vp">Permeate to collect (mL)</label><input type="number" id="inp-vp" min="0.1" max="2" step="any" value="0.5" oninput="update()" /></div>
+          </div>
+          <div class="field-group">
+            <label>Tube programme <button type="button" class="help-btn" data-help="prog" aria-label="Help: tube programme" aria-expanded="false">?</button></label>
+            <div class="radio-row">
+              <label><input type="radio" name="prog" value="traj" checked onchange="update()" /> batch trajectory</label>
+              <label><input type="radio" name="prog" value="cj" onchange="update()" /> C·J curve (DF optimisation)</label>
+            </div>
+            <div class="radio-row">
+              <label><input type="radio" name="rep" value="1" checked onchange="update()" /> 6 conditions</label>
+              <label><input type="radio" name="rep" value="2" onchange="update()" /> 3 conditions × 2 replicates</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Results ── -->
+      <div>
+        <div class="toolbar">
+          <button type="button" class="btn-tool primary" id="btn-protocol" onclick="openProtocol()">Scale-Down Batch Protocol · view / print</button>
+          <button type="button" class="btn-tool" id="btn-guide" onclick="toggleGuide()" aria-expanded="false" aria-controls="guide">Experimental guide</button>
+          <button type="button" class="btn-tool" onclick="document.getElementById('results-panel').open = true; document.getElementById('results-panel').scrollIntoView({behavior:'smooth'});">Enter results</button>
+        </div>
+
+        <div class="warning-box" id="warn"></div>
+
+        <div class="big-card" id="big">
+          <div class="big-grid" id="big-ok">
+            <div>
+              <div class="big-label">Rotor speed</div>
+              <div class="big-value"><span id="v-rpm">—</span><small>rpm</small></div>
+              <div class="big-sub">mean ΔP <strong id="v-dp">—</strong> bar · one run, six tubes</div>
+            </div>
+            <div>
+              <div class="big-label">Batch (predicted)</div>
+              <div class="big-value"><span id="v-time">—</span><small>h</small></div>
+              <div class="big-sub">product yield <strong id="v-yield">—</strong> · final <strong id="v-cfinal">—</strong> g/L in <strong id="v-vfinal">—</strong> L<br/><span id="v-second">—</span></div>
+            </div>
+            <div>
+              <div class="big-label">DF optimum (C·J) <button type="button" class="help-btn" data-help="cj" aria-label="Help: C·J optimum" aria-expanded="false">?</button></div>
+              <div class="big-value"><span id="v-copt">—</span><small>g/L</small></div>
+              <div class="big-sub" id="v-copt-sub">—</div>
+            </div>
+          </div>
+          <div class="stop-msg" id="big-stop" style="display:none;"></div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Six-tube run sheet</h3>
+          <p class="field-hint" id="prog-hint" style="margin:-8px 0 10px;">—</p>
+          <div class="table-wrap">
+            <table class="res" id="tbl-tubes">
+              <thead><tr>
+                <th>Pos.</th><th>Batch state</th><th>c<sub>P</sub> batch (g/L)</th><th id="th-second">second</th>
+                <th>feed C<sub>0,P</sub> (g/L)</th><th id="th-c0i">feed C<sub>0,I</sub> (g/L)</th><th>ΔP (bar)</th><th>mass (g)</th><th>J<sub>v</sub> (LMH)</th><th>time (min)</th><th>exp. c<sub>p,P</sub> (g/L)</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="note-line">Feed concentrations are the cartridge feeds that reproduce the module's wall concentrations at each batch state — they are not the batch concentrations. Positions pair adjacent masses opposite each other (1↔4, 2↔5, 3↔6).</p>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Batch trajectory</h3>
+          <div class="charts">
+            <div><p class="chart-title">Product and second species vs time</p><canvas id="chart-traj" height="210" style="width:100%;"></canvas></div>
+            <div><p class="chart-title">C·J diafiltration optimisation parameter</p><canvas id="chart-cj" height="210" style="width:100%;"></canvas></div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;">
+            <table class="res" id="tbl-stages">
+              <thead><tr><th>Stage</th><th>duration (h)</th><th>V (L)</th><th>c<sub>P</sub> (g/L)</th><th>second species</th><th>product lost (%)</th><th>c<sub>m,P</sub> max (g/L)</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="note-line" id="analytic-line">—</p>
+        </div>
+
+        <div class="sim-panel">
+          <details class="model" id="results-panel">
+            <summary>Enter measured results and re-integrate the batch</summary>
+            <p class="field-hint" style="margin:0 0 10px;">Per tube: permeate collected, collection time and permeate concentrations. The tool converts them to the membrane's flux and intrinsic rejection at each wall concentration, redraws the C·J curve with the measured points and re-integrates the batch with the measured response.</p>
+            <div class="table-wrap">
+              <table class="res res-in" id="tbl-results">
+                <thead><tr><th>Pos.</th><th>c<sub>P</sub> batch</th><th>V<sub>p</sub> (mL)</th><th>time (min)</th><th>c<sub>p,P</sub> (g/L)</th><th id="th-cpi">c<sub>p,I</sub> (g/L)</th><th>→ J (LMH)</th><th>→ c<sub>m</sub> (g/L)</th><th>→ L<sub>p</sub> (LMH/bar)</th><th>→ R<sub>int</sub></th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div style="margin-top:10px;"><button type="button" class="btn-tool primary" onclick="reintegrate()">Re-integrate with measured response</button> <button type="button" class="btn-tool" onclick="clearResults()">Clear</button></div>
+            <div class="compare" id="compare" style="display:none;">
+              <div><div class="lbl">Batch time</div><strong id="c-time">—</strong> <span id="c-time0" class="field-hint"></span></div>
+              <div><div class="lbl">Product yield</div><strong id="c-yield">—</strong> <span id="c-yield0" class="field-hint"></span></div>
+              <div><div class="lbl">DF optimum (measured C·J)</div><strong id="c-copt">—</strong> <span id="c-copt0" class="field-hint"></span></div>
+              <div><div class="lbl">Second species, final</div><strong id="c-second">—</strong> <span id="c-second0" class="field-hint"></span></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="sim-panel">
+          <details class="model">
+            <summary>Model &amp; validity</summary>
+            <p><strong>Batch.</strong> Well-mixed tank recirculated through the module; the tank state is integrated in permeate-volume steps (1/400 of the batch volume). Concentration removes permeate; diafiltration adds fresh solvent at the permeate rate (constant volume). Product loss is the integral of the permeate concentration.</p>
+            <p><strong>Module.</strong> 1-D plug flow along the feed channel as in the <a href="planner.html">Test Planner</a>: Schock &amp; Miquel (1987) mass transfer per species, film model, van't Hoff osmotic pressure of both species (× the osmotic factor), channel friction. Feed viscosity rises linearly with product concentration by the entered coefficient; diffusivities follow Stokes–Einstein at that viscosity.</p>
+            <p><strong>Second species.</strong> An impurity is a second solute with its own rejection and mass transfer. In a solvent exchange the old solvent permeates freely (its fraction decays as e<sup>−N</sup>), and the mixture density is linear, ln μ linear, in the volume fraction — a first approximation; the tubes measure what the mixture actually does.</p>
+            <p><strong>Cartridge.</strong> Buoyancy-driven polarisation model of <a href="https://doi.org/10.2139/ssrn.6528979" target="_blank" rel="noopener">Geraldes et al. (2026)</a>; the product drives the buoyancy, the impurity is treated as a dilute tracer with its own diffusivity. Each tube's feed is solved so that the run-mean wall concentrations of product (and impurity) equal the module's at that batch state; one speed is shared, set from the mean ΔP and mean feed density, and the ΔP of each tube at its own density is reported.</p>
+            <p><strong>Diafiltration optimum.</strong> The diafiltration time for N diavolumes is N·m<sub>P</sub>/(A·J(c)·c): it is shortest where J·c is largest (Ng, Lundblad &amp; Mitra, <em>Sep. Sci. Technol.</em> 11 (1976) 499; the "DF optimisation parameter C·J<sub>f</sub>" of the Millipore TFF brief). Under gel polarisation this is c<sub>lim</sub>/e; here J(c) comes from the module model and, after the run, from the tubes. In a solvent exchange the curve is measured in both solvents. The analytical checks shown use constant observed rejection: product loss = 1 − e<sup>(R−1)(ln VCF + N)</sup>, contaminant remaining = e<sup>(R−1)N</sup>.</p>
+            <p><strong>Validity.</strong> Van't Hoff underestimates the osmotic pressure of concentrated solutions: use the osmotic factor from a measured value. The O-CMF correlation was validated with aqueous salts; in organic solvents it is an extrapolation — the two-concentration signature test in the <a href="planner.html">Test Planner</a> guide checks it. Solvents denser than the product (β ≤ 0) are outside the model.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="help-pop" role="tooltip"></div>
+
+<aside id="guide" aria-labelledby="guide-title" aria-hidden="true">
+  <div class="drawer-head">
+    <h2 id="guide-title">Experimental guide — batch runs</h2>
+    <button type="button" class="btn-close" onclick="closeGuide()" aria-label="Close guide">×</button>
+  </div>
+  <p class="guide-lead">How to run six tubes as six instants of a batch. Preparation times and speeds depend on your membrane and solvent — they are not calculated here.</p>
+  <h3>Six feeds from one stock</h3>
+  <ul>
+    <li>Prepare a product stock at or above the highest cartridge feed concentration in the run sheet and dilute gravimetrically to each tube's concentration; with an impurity, add it from a separate stock to each tube's value.</li>
+    <li>Measure the actual concentration of each feed — it is the C<sub>0</sub> used when reading the results.</li>
+    <li>In a solvent exchange, feeds in the initial and final solvents have different densities: if the opposite-tube mass difference exceeds the centrifuge tolerance, run each solvent as its own run with dummy tubes, or trim fill volumes.</li>
+  </ul>
+  <h3>Loading and balancing</h3>
+  <ul>
+    <li>Use the rotor positions of the run sheet: adjacent masses face each other. Weigh every loaded tube; the sheet gives the expected mass.</li>
+    <li>Concentrated feeds are denser: the ΔP of each tube at the shared speed is listed — the spread is normally &lt; 3 %.</li>
+  </ul>
+  <h3>Membrane, temperature, stabilisation</h3>
+  <ul>
+    <li>Six coupons from the same validated set (see the coupon-screening step of the Test Planner guide). Precondition in the process solvent as the module would be.</li>
+    <li>Bring feeds, cartridges and rotor to the batch temperature; viscosity and diffusivity change quickly with T, and at high concentration the feed viscosity matters.</li>
+    <li>Discard an initial permeate fraction (compaction, polarisation build-up), then collect the volume in the sheet. Keep the permeate small relative to the feed so that each tube stays at its batch state.</li>
+  </ul>
+  <h3 id="g-read">Reading the results</h3>
+  <ul>
+    <li>Weigh the permeate and record the time → flux. Measure c<sub>p</sub> of product (and impurity).</li>
+    <li>Enter them in "Enter measured results": the tool converts each tube to the module's flux and intrinsic rejection at that batch state and re-integrates the batch. Yield and time are then based on your membrane, not on the assumed rejection.</li>
+    <li>Compare the measured C·J curve with the predicted one: the concentration at its maximum is where to diafilter. If the maximum is at the highest concentration tested, the practical limit (solubility, viscosity, minimum tank volume) decides.</li>
+    <li>Watch the wall concentration column against solubility: precipitation on the membrane appears first at c<sub>m</sub>, not in the tank.</li>
+  </ul>
+  <h3>Replicates</h3>
+  <ul>
+    <li>Use "6 conditions" to see the shape of the response, "3 × 2" to confirm the critical points (start, knee, end) with replicates in opposite positions.</li>
+  </ul>
+</aside>
+
+<div id="protocol" role="dialog" aria-modal="true" aria-labelledby="proto-title" aria-hidden="true">
+  <div class="proto-sheet">
+    <div class="proto-actions">
+      <button type="button" class="btn-tool" onclick="printProtocol()">Print</button>
+      <button type="button" class="btn-tool" onclick="closeProtocol()">Back to planner</button>
+    </div>
+    <h2 id="proto-title">Scale-Down Batch Protocol</h2>
+    <div class="meta" id="proto-meta">—</div>
+    <h3>Batch and module</h3>
+    <div class="proto-grid" id="proto-batch"></div>
+    <h3>System</h3>
+    <div class="proto-grid" id="proto-system"></div>
+    <h3>Six-tube run — <span id="proto-rpm">—</span> rpm</h3>
+    <div class="table-wrap">
+      <table class="res" id="proto-tubes">
+        <thead><tr><th>Pos.</th><th>Batch state</th><th>Solvent</th><th>feed C<sub>0,P</sub> (g/L)</th><th>feed C<sub>0,I</sub> (g/L)</th><th>V<sub>0</sub> (mL)</th><th>mass (g)</th><th>collect V<sub>p</sub> (mL)</th><th>est. time (min)</th><th>exp. c<sub>p,P</sub> (g/L)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="proto-warn" id="proto-warn" style="display:none;"></div>
+    <h3>Procedure</h3>
+    <ol>
+      <li>Precondition six coupons from the same validated set in <span class="proto-solvent">the solvent</span>; check cartridge compatibility.</li>
+      <li>Prepare the six feeds by gravimetric dilution from a stock; measure and record each concentration.</li>
+      <li>Set the centrifuge to <span class="proto-T">—</span> °C; bring feeds, cartridges and rotor to temperature.</li>
+      <li>Fill each cartridge with V<sub>0</sub>, weigh it, load it in the position listed (opposite tubes balanced), spin at the speed above.</li>
+      <li>Discard an initial permeate fraction, then collect the permeate volume listed; weigh it and record the time.</li>
+      <li>Measure the permeate concentration of the product (and of the impurity).</li>
+      <li>Enter volume, time and concentrations in the Batch Planner ("Enter measured results") to obtain the membrane's flux and rejection along the batch, the measured C·J optimum, and the re-integrated batch time and yield.</li>
+    </ol>
+    <p class="field-list" style="margin-top:14px;">Generated by the CentrivaLab Batch Planner — centrivalab.com/batch.html. Module: Schock &amp; Miquel (1987); cartridge: Geraldes et al. (2026); DF optimum: Ng, Lundblad &amp; Mitra (1976).</p>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>CentrivaLab™</h4>
+      <p>CentrivaLab is a commercial brand of Talentground Lda.</p>
+      <p>CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+    </div>
+    <div>
+      <h4>Pages</h4>
+      <p>
+        <a href="technology.html">Technology</a><br>
+        <a href="products.html">Products</a><br>
+        <a href="specifications.html">Specifications</a><br>
+        <a href="applications.html">Applications</a><br>
+        <a href="publications.html">Publications</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="speed.html">Speed Calculator</a><br><a href="simulator.html">Device comparison</a><br><a href="planner.html">Test Planner</a><br><a href="batch.html">Batch Planner</a><br>
+        <a href="support.html">Support</a><br>
+        <a href="contact.html">Contact</a>
+      </p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p><a href="mailto:info@centrivalab.com">info@centrivalab.com</a><br>
+         <a href="mailto:commercial@centrivalab.com">commercial@centrivalab.com</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/ocmf-geometry.js"></script>
+<script src="assets/solvents.js"></script>
+<script src="assets/planner-engine.js"></script>
+<script src="assets/batch-engine.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const val = id => parseFloat($(id).value);
+const setText = (id, t) => { $(id).innerHTML = t; };
+const f = (x, d) => (isFinite(x) ? x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
+const fr = x => (isFinite(x) ? (Math.round(x / 10) * 10).toLocaleString("en-US") : "—");
+const sig = (x, n = 3) => (isFinite(x) && x !== 0 ? Number(x.toPrecision(n)).toString() : (x === 0 ? "0" : "—"));
+const N_TUBES = 6;
+
+// ── contextual help ──
+const HELP = {
+  stages: "Up to four stages in the order they run. <b>Concentrate</b> to a concentration factor, a final concentration or a final volume; <b>diafilter</b> at constant volume for a number of diavolumes or until the second species reaches a target. A typical sequence: concentrate → diafilter → concentrate.",
+  csat: "Solubility of the product in the process solvent. The wall concentration exceeds the tank concentration; the tool flags when c<sub>m</sub> passes the solubility — precipitation appears on the membrane first.",
+  rhos: "Density of the pure product. With the solvent density it gives the density contrast β of the retained layer, which drives mass transfer in the cartridge, and the molecular size for the diffusivity.",
+  R: "<b>Intrinsic</b> rejection of the product, 1 − c<sub>p</sub>/c<sub>m</sub>. Product loss over the batch is very sensitive to it: 98 % vs 99.5 % is a factor of four in loss. It is what the tubes measure.",
+  kmu: "Relative viscosity increase of the feed per g/L of product, in %. Concentrated API or oligomer solutions can be several times more viscous than the solvent; that lowers flux and mass transfer. Leave 0 if unknown, or measure at two concentrations.",
+  pif: "Multiplier on the van't Hoff osmotic pressure. Van't Hoff underestimates the osmotic pressure of concentrated or associating solutes. If you have a measured osmotic pressure at some concentration, enter the ratio measured / van't Hoff.",
+  second: "<b>Impurity</b>: a second solute to wash out, with its own rejection (low). <b>Solvent exchange</b>: the batch starts in the initial solvent and diafiltration replaces it by the process solvent; the old solvent permeates freely and the mixture properties change along the way.",
+  solvent: "The process solvent — in a solvent exchange, the final solvent used as diafiltration medium. Density and viscosity from handbook data at the entered temperature.",
+  module: "Standard 40-inch elements with typical active areas; choose Custom for a datasheet element. The batch tank is recirculated through this module at the feed flow entered.",
+  spacer: "Feed-spacer net: sets the channel height and mass transfer (Schock &amp; Miquel).",
+  lp: "Membrane permeance in the process solvent (pure-solvent flux / pressure). It sets the flux level; the tubes measure it along the batch.",
+  prog: "<b>Batch trajectory</b>: six instants along the batch (log-spaced in product concentration during concentration, even in diavolumes during diafiltration). <b>C·J curve</b>: six concentrations spanning the batch for the diafiltration optimisation parameter; in a solvent exchange, three in each solvent, as the TFF practice requires.",
+  cj: "The diafiltration time for N diavolumes is N·m/(A·J·c): shortest where the product J·c is largest (Ng, Lundblad &amp; Mitra 1976; the C·J<sub>f</sub> parameter of the Millipore TFF brief). Predicted here from the module model; measured after the run from the tubes."
+};
+const pop = $("help-pop"); let popBtn = null;
+function closeHelp() { if (!popBtn) return; pop.classList.remove("show"); popBtn.setAttribute("aria-expanded", "false"); popBtn = null; }
+function openHelp(btn) {
+  if (popBtn === btn) { closeHelp(); return; }
+  closeHelp(); pop.innerHTML = HELP[btn.dataset.help] || ""; pop.classList.add("show");
+  const r = btn.getBoundingClientRect(), pw = pop.offsetWidth;
+  let left = r.left + window.scrollX - 8; if (left + pw > window.scrollX + window.innerWidth - 8) left = window.scrollX + window.innerWidth - pw - 8;
+  pop.style.left = Math.max(8, left) + "px"; pop.style.top = (r.bottom + window.scrollY + 6) + "px";
+  btn.setAttribute("aria-expanded", "true"); popBtn = btn;
+}
+document.addEventListener("click", e => { const b = e.target.closest(".help-btn"); if (b) { e.preventDefault(); openHelp(b); return; } if (!e.target.closest("#help-pop")) closeHelp(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeHelp(); if ($("protocol").classList.contains("open")) closeProtocol(); else if ($("guide").classList.contains("open")) closeGuide(); } });
+function openGuide(anchor) { const g = $("guide"); g.classList.add("open"); g.setAttribute("aria-hidden", "false"); $("btn-guide").setAttribute("aria-expanded", "true"); if (anchor && $(anchor)) $(anchor).scrollIntoView({ block: "start" }); else g.scrollTop = 0; }
+function closeGuide() { const g = $("guide"); g.classList.remove("open"); g.setAttribute("aria-hidden", "true"); $("btn-guide").setAttribute("aria-expanded", "false"); }
+function toggleGuide() { $("guide").classList.contains("open") ? closeGuide() : openGuide(); }
+function openProtocol() { if (!last) return; fillProtocol(); const p = $("protocol"); p.classList.add("open"); p.setAttribute("aria-hidden", "false"); p.scrollTop = 0; document.body.style.overflow = "hidden"; }
+function closeProtocol() { const p = $("protocol"); p.classList.remove("open"); p.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; }
+function printProtocol() { document.body.classList.add("print-protocol"); window.print(); setTimeout(() => document.body.classList.remove("print-protocol"), 500); }
+window.addEventListener("afterprint", () => document.body.classList.remove("print-protocol"));
+
+// ── stage editor ──
+const STAGE_TARGETS = {
+  conc: [["cf", "× factor"], ["cFinal", "→ conc. (g/L)"], ["VfinalL", "→ volume (L)"]],
+  df:   [["dv", "diavolumes"], ["cIfinal", "→ 2nd species (g/L)"]]
+};
+let stageDefs = [{ type: "conc", tkey: "cf", value: 4 }, { type: "df", tkey: "dv", value: 4 }, { type: "conc", tkey: "cf", value: 2 }];
+function renderStages() {
+  const box = $("stages"); box.innerHTML = "";
+  stageDefs.forEach((sd, i) => {
+    const row = document.createElement("div"); row.className = "stage-row";
+    const st = document.createElement("select");
+    st.add(new Option("Concentrate", "conc")); st.add(new Option("Diafilter", "df")); st.value = sd.type;
+    st.setAttribute("aria-label", `Stage ${i + 1} type`);
+    st.onchange = () => { sd.type = st.value; sd.tkey = STAGE_TARGETS[sd.type][0][0]; sd.value = sd.type === "conc" ? 2 : 3; renderStages(); update(); };
+    const tt = document.createElement("select"); tt.setAttribute("aria-label", `Stage ${i + 1} target`);
+    for (const [k, l] of STAGE_TARGETS[sd.type]) tt.add(new Option(l, k)); tt.value = sd.tkey;
+    tt.onchange = () => { sd.tkey = tt.value; update(); };
+    const inp = document.createElement("input"); inp.type = "number"; inp.min = "0"; inp.step = "any"; inp.value = sd.value; inp.setAttribute("aria-label", `Stage ${i + 1} value`);
+    inp.oninput = () => { sd.value = parseFloat(inp.value); update(); };
+    const rm = document.createElement("button"); rm.type = "button"; rm.className = "rm"; rm.textContent = "×"; rm.setAttribute("aria-label", `Remove stage ${i + 1}`);
+    rm.onclick = () => { stageDefs.splice(i, 1); renderStages(); update(); };
+    row.append(st, tt, inp, rm); box.appendChild(row);
+  });
+  $("btn-add-stage").style.display = stageDefs.length >= 4 ? "none" : "";
+}
+function addStage() { if (stageDefs.length >= 4) return; const lastT = stageDefs.length ? stageDefs[stageDefs.length - 1].type : "df"; stageDefs.push(lastT === "conc" ? { type: "df", tkey: "dv", value: 3 } : { type: "conc", tkey: "cf", value: 2 }); renderStages(); update(); }
+
+// ── selects ──
+function fillSelects() {
+  const sm = $("sel-module"); for (const k in PLANNER.MODULES) sm.add(new Option(PLANNER.MODULES[k].label, k)); sm.value = "4040";
+  const ss = $("sel-spacer"); for (const k in PLANNER.SPACERS) ss.add(new Option(PLANNER.SPACERS[k].label, k)); ss.value = "28mil";
+  for (const id of ["sel-solvent", "sel-oldsolvent"]) { const sv = $(id); for (const s of SOLV.list) sv.add(new Option(s.name, s.id)); }
+  $("sel-solvent").add(new Option("Custom solvent", "custom")); $("sel-solvent").value = "toluene"; $("sel-oldsolvent").value = "dmf";
+}
+function onModuleChange() { const k = $("sel-module").value, m = PLANNER.MODULES[k]; $("group-module-custom").style.display = k === "custom" ? "" : "none"; if (k !== "custom") { $("inp-area").value = m.area; $("inp-W").value = m.W; $("inp-q").value = m.qTyp; } update(); }
+function onSpacerChange() { const k = $("sel-spacer").value, s = PLANNER.SPACERS[k]; $("group-spacer-custom").style.display = k === "custom" ? "" : "none"; if (k !== "custom") { $("inp-h").value = s.h * 1e3; $("inp-dh").value = s.dh * 1e3; $("inp-eps").value = s.eps; } update(); }
+function onSolventChange() { $("group-solvent-custom").style.display = $("sel-solvent").value === "custom" ? "" : "none"; update(); }
+function onSecondChange() {
+  const k = $("sel-second").value;
+  $("group-imp").style.display = k === "solute" ? "" : "none"; $("group-old").style.display = k === "solvent" ? "" : "none";
+  setText("lbl-solvent-name", k === "solvent" ? "Final solvent (diafiltration medium)" : "Process solvent");
+  update();
+}
+function cart() { return $("sel-cartridge").value; }
+function onCartridgeChange() { const c = OCMF.CARTRIDGES[cart()]; $("group-rotor").style.display = c.rotorSelect ? "" : "none"; OCMF.fillRotorSelect($("sel-rotor"), cart()); if (c.rotorSelect) $("sel-rotor").add(new Option("Other rotor (enter r_max and max speed)", "custom")); $("inp-vol").value = c.vol.nom; $("inp-vol").min = c.vol.min; $("inp-vol").max = c.vol.max; onRotorChange(); }
+function onRotorChange() { $("group-rotor-custom").style.display = $("sel-rotor").value === "custom" ? "" : "none"; update(); }
+function rotorSel() { if ($("sel-rotor").value === "custom") return { rmax: val("inp-rmax") / 1000, maxRpm: val("inp-maxrpm"), label: "custom rotor" }; return OCMF.rotor(cart(), $("sel-rotor").value); }
+
+// ── main ──
+let last = null, measured = null;
+function update() {
+  const warn = [], stopMsgs = []; const stop = m => stopMsgs.push(m);
+  const T = val("inp-T");
+  const sk = $("sel-solvent").value;
+  let sol;
+  if (sk === "custom") { const rho = val("inp-rho"), mu = val("inp-mu") * 1e-3; sol = { rho, mu, nu: mu / rho, M: 100, name: "custom solvent", dense: false }; }
+  else sol = SOLV.props(sk, T);
+  const second = $("sel-second").value;
+  const oldSol = second === "solvent" ? SOLV.props($("sel-oldsolvent").value, T) : null;
+  setText("lbl-rho", f(sol.rho, 0)); setText("lbl-mu", f(sol.mu * 1e3, 3));
+
+  const M = val("inp-M"), rhoS = val("inp-rhos") * 1000, Rint = Math.min(1, Math.max(0, val("inp-R") / 100)), iVH = val("inp-i") || 1;
+  const kmu = (val("inp-kmu") || 0) / 100, piFactor = val("inp-pif") || 1;
+  const spP = { M, rhoS, i: iVH };
+  const sys = { solvent: sol, oldSolvent: oldSol, kmu };
+  const feed0 = BATCH.feedProps(sys, { cP: val("inp-cp0"), phi: second === "solvent" ? 1 : 0 });
+  const pP0 = BATCH.speciesProps(spP, feed0, T);
+  setText("lbl-D", f(pP0.D * 1e10, 2)); setText("lbl-beta", f(pP0.beta * 1e4, 2)); $("lbl-beta").classList.toggle("out", pP0.beta <= 0);
+  let spI = null, cI0 = 0, RI = 0;
+  if (second === "solute") { spI = { kind: "solute", M: val("inp-MI"), rhoS: 1200, i: 1 }; cI0 = val("inp-ci0"); RI = Math.min(1, Math.max(0, val("inp-RI") / 100)); }
+  if (second === "solvent") { spI = { kind: "solvent" }; }
+
+  const mk = $("sel-module").value, module = mk === "custom" ? { area: val("inp-area"), W: val("inp-W") } : PLANNER.MODULES[mk];
+  const spk = $("sel-spacer").value, spacer = spk === "custom" ? { h: val("inp-h") * 1e-3, dh: val("inp-dh") * 1e-3, eps: val("inp-eps") } : PLANNER.SPACERS[spk];
+  const nEl = Math.max(1, Math.round(val("inp-nel") || 1)), Q = val("inp-q"), dPin = val("inp-dp"), Lp = val("inp-lp");
+  const Ach = module.area * spacer.h / (2 * module.W), uIn = Q / 3600 / (spacer.eps * Ach);
+  setText("hint-vel", `Interstitial velocity <strong>${f(uIn, 3)} m/s</strong>; membrane area ${sig(module.area * nEl, 3)} m².`);
+  const cfg = { module, spacer, nElements: nEl, Q_m3h: Q, dPin_bar: dPin, T, Lp: Lp / PLANNER.LMH / 1e5, RP: Rint, RI, sys, spP, spI, piFactor };
+
+  const V0L = val("inp-v0"), cP0 = val("inp-cp0"), cSat = val("inp-csat") || 0;
+  const stages = stageDefs.map(sd => ({ type: sd.type, [sd.tkey]: sd.value }));
+  if (!(V0L > 0) || !(cP0 > 0) || !(Q > 0) || !(dPin > 0) || !(Lp > 0)) stop("Enter positive values for batch volume, product concentration, feed flow, pressure and permeance.");
+  if (!stages.length) stop("Add at least one stage.");
+  if (stages.some(s => !(Object.values(s)[1] > 0))) stop("Every stage needs a positive target.");
+  if (stages.some(s => s.cf && s.cf <= 1)) stop("A concentration factor must be greater than 1.");
+  if (stages.some(s => s.type === "df" && s.cIfinal !== undefined && second === "none")) stop("A diafiltration target on the second species needs a second species.");
+  if (pP0.beta <= 0) stop("The product is lighter than the solvent (β ≤ 0): the cartridge buoyancy model does not apply.");
+  const c = OCMF.CARTRIDGES[cart()], rot = rotorSel(), V0 = val("inp-vol"), Vp = val("inp-vp");
+  if (!(V0 >= c.vol.min && V0 <= c.vol.max)) stop(`Feed volume outside the calibrated range ${c.vol.min}–${c.vol.max} mL.`);
+  if (!(Vp > 0 && Vp <= 2)) stop("Permeate volume: 0.1–2 mL per run.");
+  if (stopMsgs.length) { showStop(stopMsgs.join(" ")); return; }
+
+  let res;
+  try { res = BATCH.simulateBatch({ V0_L: V0L, cP0, cI0, phi0: second === "solvent" ? 1 : 0, stages, cfg, cSat: cSat || undefined }); }
+  catch (e) { showStop("Calculation failed: " + e.message); return; }
+  if (res.status !== "ok") { showStop("The osmotic pressure stops permeation before the batch completes. Raise the pressure, lower the target concentration or check the osmotic factor."); return; }
+  if (res.stages.some(s => s.incomplete)) warn.push("A stage did not reach its target within the integration limit (very slow flux at the end): the results are truncated.");
+
+  // C·J curve over the batch range (predicted)
+  const cMin = Math.min(...res.traj.map(q => q.cP)), cMax = Math.max(...res.traj.map(q => q.cP)) * 1.5;
+  const jc = BATCH.jcCurve(cfg, cMin, cMax, 30, { cI: cI0, phi: 0 });
+  const jcOld = second === "solvent" ? BATCH.jcCurve(cfg, cMin, cMax, 30, { cI: 0, phi: 1 }) : null;
+
+  // tube programme
+  const prog = document.querySelector('input[name="prog"]:checked').value, rep = +document.querySelector('input[name="rep"]:checked').value;
+  const nCond = N_TUBES / rep;
+  let states;
+  const cjExchange = prog === "cj" && second === "solvent";        // 3 concentrations × 2 solvents: the second solvent takes the replicate slot
+  if (prog === "traj") states = BATCH.sampleStates(res, nCond);
+  else states = BATCH.cjStates(cMin, cMax / 1.5, cjExchange ? N_TUBES : nCond, second === "solvent", cI0);
+  if (rep === 2 && !cjExchange) states = states.flatMap(s => [s, Object.assign({}, s, { replicate: true })]);
+  let plan;
+  try { plan = BATCH.planTubes({ cart: cart(), rmax: rot.rmax, maxRpm: rot.maxRpm, V0, Vp, cfg, states }); }
+  catch (e) { showStop("Tube planning failed: " + e.message); return; }
+  for (const w of plan.flags) warn.push(w);
+  if (res.satExceeded) warn.push(`The wall concentration reaches ${sig(res.cmPmax, 3)} g/L, above the solubility (${sig(cSat, 3)} g/L), from t ≈ ${f(res.tSat / 3600, 2)} h: risk of precipitation on the membrane.`);
+  if (jc.atEdge) warn.push("The predicted C·J parameter keeps rising over the whole range: no interior optimum — diafilter at the highest practical concentration. The measured curve may differ.");
+  const wb = $("warn"); wb.innerHTML = warn.map(w => "• " + w).join("<br/>"); wb.classList.toggle("show", warn.length > 0);
+
+  last = { res, plan, jc, jcOld, cfg, states, inputs: { V0L, cP0, cI0, second, oldSol, sol, sk, T, M, rhoS, Rint, iVH, kmu, piFactor, spI, RI, module, mk, spacer, spk, nEl, Q, dPin, Lp, cartName: c.name, rot, V0, Vp, stages, cSat, prog, rep } };
+  $("btn-protocol").disabled = false;
+
+  // big card
+  const big = $("big"); big.classList.remove("warn", "stop"); $("big-ok").style.display = ""; $("big-stop").style.display = "none";
+  if (plan.rpm > rot.maxRpm) big.classList.add("warn");
+  setText("v-rpm", fr(plan.rpm)); setText("v-dp", f(plan.dPmean_bar, 1));
+  setText("v-time", f(res.tTotal / 3600, 2)); setText("v-yield", f(100 * res.yieldP, 1) + " %"); setText("v-cfinal", sig(res.cPfinal, 3)); setText("v-vfinal", sig(res.Vfinal * 1e3, 3));
+  setText("v-second", second === "solute" ? `impurity ${sig(cI0, 3)} → ${sig(res.cIfinal, 3)} g/L (${sig(100 * res.cIfinal / cI0, 2)} % remaining)` : second === "solvent" ? `old solvent ${f(100 * res.phiFinal, 2)} % by volume remaining` : "single solute");
+  setText("v-copt", jc.cOpt ? sig(jc.cOpt, 3) : "—");
+  setText("v-copt-sub", jc.atEdge ? "no interior maximum in range (see warning)" : `J·c max ${f(jc.JcMax, 0)} g m⁻² h⁻¹` + (jcOld ? ` · in ${oldSol.name}: ${sig(jcOld.cOpt, 3)} g/L` : ""));
+
+  // run sheet
+  setText("th-second", second === "solute" ? "c<sub>I</sub> batch (g/L)" : second === "solvent" ? "old solvent (vol %)" : "—");
+  setText("th-c0i", second === "solute" ? "feed C<sub>0,I</sub> (g/L)" : second === "solvent" ? "solvent" : "—");
+  setText("prog-hint", (prog === "traj" ? `Six instants of the batch (${rep === 2 ? "three, in duplicate" : "six"}), each at the module's wall state.` : `C·J curve: ${cjExchange ? "three concentrations, each in the initial and in the final solvent (replicates not available in exchange mode)" : (rep === 2 ? "three concentrations in duplicate" : "six concentrations")}.`) + ` V<sub>0</sub> = ${f(V0, 1)} mL, ${f(T, 0)} °C.`);
+  const tubesSorted = [...plan.tubes].sort((a, b) => a.position - b.position);
+  document.querySelector("#tbl-tubes tbody").innerHTML = tubesSorted.map(tb => {
+    const st = tb.state, lab = stateLabel(st);
+    const secondCell = second === "solute" ? sig(st.cI, 3) : second === "solvent" ? f(100 * st.phi, 0) : "—";
+    const c0i = second === "solute" ? sig(tb.C0I, 3) : second === "solvent" ? (st.phi > 0.5 ? oldSol.name : sol.name) : "—";
+    return `<tr class="${tb.over ? "over" : ""}"><td>${tb.position}</td><td>${lab}</td><td>${sig(st.cP, 3)}</td><td>${secondCell}</td><td class="hl">${sig(tb.C0, 3)}</td><td class="${st.phi > 0.5 ? "sol-old" : ""}">${c0i}</td><td>${f(tb.dP_bar, 1)}</td><td>${f(tb.massG, 2)}</td><td>${f(tb.J_lmh, 1)}</td><td>${f(tb.tRun_min, 0)}</td><td>${sig(tb.cp, 3)}</td></tr>`;
+  }).join("");
+
+  // stages table + analytical checks
+  document.querySelector("#tbl-stages tbody").innerHTML = res.stages.map((s, i) => {
+    const secondTxt = second === "solute" ? `${sig(s.cIstart, 3)} → ${sig(s.cIend, 3)} g/L` : second === "solvent" ? (s.type === "df" ? `${s.dv.toFixed(1)} DV` : "—") : "—";
+    const cmMax = Math.max(...res.traj.filter(q => q.stage === i).map(q => q.cmPmax));
+    return `<tr><td>${i + 1} · ${s.type === "conc" ? "Concentrate" : "Diafilter"}</td><td>${f((s.tEnd - s.tStart) / 3600, 2)}</td><td>${sig(s.Vstart * 1e3, 3)} → ${sig(s.Vend * 1e3, 3)}</td><td>${sig(s.cPstart, 3)} → ${sig(s.cPend, 3)}</td><td>${secondTxt}</td><td>${f(100 * s.lostP / res.mP0, 2)}</td><td>${sig(cmMax, 3)}</td></tr>`;
+  }).join("");
+  const VCF = V0L * 1e-3 / res.Vfinal, Ntot = res.stages.filter(s => s.type === "df").reduce((a, s) => a + s.dv, 0);
+  const Robs = 1 - res.traj[0].cpP / cP0;
+  setText("analytic-line", `Analytical check at constant observed rejection ${f(100 * Robs, 1)} %: product loss 1 − e<sup>(R−1)(ln VCF + N)</sup> = <strong>${f(100 * BATCH.analyticLoss(Robs, VCF, Ntot), 2)} %</strong> (simulated ${f(100 * (1 - res.yieldP), 2)} %), VCF = ${f(VCF, 1)}, N = ${f(Ntot, 1)}` + (second === "solute" ? `; contaminant remaining e<sup>(R−1)N</sup> = <strong>${f(100 * BATCH.analyticRemaining(1 - res.traj[0].cpI / cI0, Ntot), 2)} %</strong> (simulated ${f(100 * res.cIfinal / cI0, 2)} %).` : "."));
+
+  drawTraj(res, second); drawCJ(jc, jcOld, res, measured ? measured.cj : null, cSat);
+  renderResultsTable();
+}
+function stateLabel(st) {
+  if (st.stageType === "cj") return "C·J point";
+  const s = st.stageType === "conc" ? "Conc." : "DF";
+  return `${s} ${st.stageIndex + 1}` + (st.stageType === "df" ? ` · ${f(st.dv, 1)} DV` : "") + (st.replicate ? " (rep.)" : "");
+}
+function showStop(msg) {
+  const big = $("big"); big.classList.remove("warn"); big.classList.add("stop"); $("big-ok").style.display = "none"; const s = $("big-stop"); s.style.display = ""; s.innerHTML = msg;
+  $("warn").classList.remove("show"); document.querySelector("#tbl-tubes tbody").innerHTML = ""; document.querySelector("#tbl-stages tbody").innerHTML = ""; setText("analytic-line", "—");
+  for (const id of ["chart-traj", "chart-cj"]) { const el = $(id); el.getContext("2d").clearRect(0, 0, el.width, el.height); }
+  last = null; $("btn-protocol").disabled = true;
+}
+
+// ── results entry ──
+function renderResultsTable() {
+  if (!last) return;
+  const tubes = [...last.plan.tubes].sort((a, b) => a.position - b.position);
+  const hasI = last.inputs.second === "solute";
+  $("th-cpi").style.display = hasI ? "" : "none";
+  const tb = document.querySelector("#tbl-results tbody");
+  const prev = {}; for (const tr of tb.querySelectorAll("tr")) { const p = tr.dataset.pos; prev[p] = [...tr.querySelectorAll("input")].map(i => i.value); }
+  tb.innerHTML = tubes.map(t => {
+    const v = prev[t.position] || ["", "", "", ""];
+    return `<tr data-pos="${t.position}" data-index="${t.index}"><td>${t.position}</td><td>${sig(t.state.cP, 3)}</td>` +
+      `<td><input type="number" step="any" min="0" value="${v[0]}" aria-label="permeate volume tube ${t.position}" /></td><td><input type="number" step="any" min="0" value="${v[1]}" aria-label="time tube ${t.position}" /></td>` +
+      `<td><input type="number" step="any" min="0" value="${v[2]}" aria-label="permeate product concentration tube ${t.position}" /></td><td style="display:${hasI ? "" : "none"}"><input type="number" step="any" min="0" value="${v[3] || ""}" aria-label="permeate impurity concentration tube ${t.position}" /></td>` +
+      `<td class="r-j">—</td><td class="r-cm">—</td><td class="r-lp">—</td><td class="r-r">—</td></tr>`;
+  }).join("");
+}
+function reintegrate() {
+  if (!last) return;
+  const rows = [...document.querySelectorAll("#tbl-results tbody tr")];
+  const meas = new Array(last.plan.tubes.length).fill(null);
+  for (const tr of rows) {
+    const [vp, t, cpP, cpI] = [...tr.querySelectorAll("input")].map(i => parseFloat(i.value));
+    if (vp > 0 && t > 0) meas[+tr.dataset.index] = { Vp_mL: vp, t_min: t, cpP: isFinite(cpP) ? cpP : undefined, cpI: isFinite(cpI) ? cpI : undefined };
+  }
+  const mr = BATCH.measuredResponse(last.plan.tubes, meas, last.cfg);
+  if (!mr.pts.length) { alert("Enter at least one tube with permeate volume and time."); return; }
+  for (const tr of rows) {
+    const p = mr.pts.find(q => q.index === +tr.dataset.index);
+    tr.querySelector(".r-j").textContent = p ? f(p.J_lmh, 1) : "—"; tr.querySelector(".r-cm").textContent = p ? sig(p.cm, 3) : "—";
+    tr.querySelector(".r-lp").textContent = p ? sig(p.Lp_lmhbar, 3) : "—"; tr.querySelector(".r-r").textContent = p ? f(100 * p.Rint, 1) + " %" : "—";
+  }
+  const I = last.inputs;
+  const res2 = BATCH.simulateBatch({ V0_L: I.V0L, cP0: I.cP0, cI0: I.cI0, phi0: I.second === "solvent" ? 1 : 0, stages: I.stages, cfg: last.cfg, cSat: I.cSat || undefined, lpOf: mr.lpOf, rpOf: mr.rpOf });
+  // measured C·J points: the tube reproduces the module at that batch state, so its flux is the module's flux there
+  const cjPts = mr.pts.map(q => { const tb = last.plan.tubes[q.index]; return { c: tb.state.cP, Jc: q.J_lmh * tb.state.cP, phi: tb.state.phi }; }).sort((a, b) => a.c - b.c);
+  const bestNew = cjPts.filter(q => q.phi < 0.5).reduce((b, q) => (q.Jc > (b ? b.Jc : -1) ? q : b), null);
+  measured = { mr, res2, cj: cjPts };
+  $("compare").style.display = "";
+  setText("c-time", f(res2.tTotal / 3600, 2) + " h"); setText("c-time0", `predicted ${f(last.res.tTotal / 3600, 2)} h`);
+  setText("c-yield", f(100 * res2.yieldP, 1) + " %"); setText("c-yield0", `predicted ${f(100 * last.res.yieldP, 1)} %`);
+  setText("c-copt", bestNew ? sig(bestNew.c, 3) + " g/L" : "—"); setText("c-copt0", `predicted ${last.jc.cOpt ? sig(last.jc.cOpt, 3) : "—"} g/L`);
+  setText("c-second", I.second === "solute" ? sig(res2.cIfinal, 3) + " g/L" : I.second === "solvent" ? f(100 * res2.phiFinal, 2) + " %" : "—");
+  setText("c-second0", I.second === "solute" ? `predicted ${sig(last.res.cIfinal, 3)} g/L` : I.second === "solvent" ? `predicted ${f(100 * last.res.phiFinal, 2)} %` : "");
+  drawCJ(last.jc, last.jcOld, last.res, cjPts, I.cSat);
+}
+function clearResults() { measured = null; for (const i of document.querySelectorAll("#tbl-results input")) i.value = ""; for (const td of document.querySelectorAll("#tbl-results td[class^='r-']")) td.textContent = "—"; $("compare").style.display = "none"; if (last) drawCJ(last.jc, last.jcOld, last.res, null, last.inputs.cSat); }
+
+// ── protocol sheet ──
+function fillProtocol() {
+  const { res, plan, inputs: I } = last;
+  const modLabel = I.mk === "custom" ? `custom element, ${sig(I.module.area, 3)} m², ${sig(I.module.W, 3)} m` : PLANNER.MODULES[I.mk].label;
+  setText("proto-meta", `Prepared ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · ${I.cartName} · ${I.rot.label}`);
+  setText("proto-batch", [
+    `<span><em>Batch</em> ${sig(I.V0L, 4)} L at ${sig(I.cP0, 3)} g/L product</span>`,
+    `<span><em>Stages</em> ${I.stages.map((s, i) => `${i + 1}. ${s.type === "conc" ? "concentrate" : "diafilter"} ${Object.entries(s).filter(([k]) => k !== "type").map(([k, v]) => `${k} ${v}`).join("")}`).join("; ")}</span>`,
+    `<span><em>Module</em> ${modLabel}${I.nEl > 1 ? ` × ${I.nEl}` : ""}, ${I.spk === "custom" ? "custom spacer" : PLANNER.SPACERS[I.spk].label}</span>`,
+    `<span><em>Feed flow / ΔP / T</em> ${sig(I.Q, 3)} m³/h · ${sig(I.dPin, 3)} bar · ${f(I.T, 0)} °C</span>`,
+    `<span><em>Predicted</em> ${f(res.tTotal / 3600, 2)} h, yield ${f(100 * res.yieldP, 1)} %, final ${sig(res.cPfinal, 3)} g/L in ${sig(res.Vfinal * 1e3, 3)} L</span>`,
+    `<span><em>Predicted DF optimum</em> ${last.jc.cOpt ? sig(last.jc.cOpt, 3) : "—"} g/L (C·J)</span>`
+  ].join(""));
+  setText("proto-system", [
+    `<span><em>Process solvent</em> ${I.sol.name}${I.oldSol ? ` · initial solvent ${I.oldSol.name}` : ""}</span>`,
+    `<span><em>Product</em> M ${sig(I.M, 4)} g/mol, ρ ${sig(I.rhoS / 1000, 3)} g/mL, R<sub>int</sub> assumed ${f(100 * I.Rint, 1)} %</span>`,
+    `<span><em>Second species</em> ${I.second === "solute" ? `impurity ${sig(I.cI0, 3)} g/L, M ${sig(I.spI.M, 4)}, R ${f(100 * I.RI, 0)} %` : I.second === "solvent" ? "solvent exchange" : "none"}</span>`,
+    `<span><em>Cartridge feed volume</em> ${f(I.V0, 1)} mL · permeance assumed ${sig(I.Lp, 3)} LMH/bar</span>`
+  ].join(""));
+  const tubes = [...plan.tubes].sort((a, b) => a.position - b.position);
+  document.querySelector("#proto-tubes tbody").innerHTML = tubes.map(tb => {
+    const st = tb.state, solv = st.phi > 0.5 && I.oldSol ? I.oldSol.name : I.sol.name;
+    return `<tr class="${tb.over ? "over" : ""}"><td>${tb.position}</td><td>${stateLabel(st)} · c<sub>P</sub> ${sig(st.cP, 3)}${I.second === "solute" ? `, c<sub>I</sub> ${sig(st.cI, 3)}` : ""}</td><td>${solv}</td><td class="hl">${sig(tb.C0, 3)}</td><td>${I.second === "solute" ? sig(tb.C0I, 3) : "—"}</td><td>${f(I.V0, 1)}</td><td>${f(tb.massG, 2)}</td><td>${f(I.Vp, 1)}</td><td>${f(tb.tRun_min, 0)}</td><td>${sig(tb.cp, 3)}</td></tr>`;
+  }).join("");
+  setText("proto-rpm", fr(plan.rpm));
+  const warnHtml = $("warn").innerHTML; const pw = $("proto-warn"); pw.innerHTML = warnHtml; pw.style.display = warnHtml ? "" : "none";
+  for (const el of document.querySelectorAll(".proto-solvent")) el.textContent = I.sol.name;
+  for (const el of document.querySelectorAll(".proto-T")) el.textContent = f(I.T, 0);
+}
+
+// ── charts ──
+function chartBase(id) {
+  const el = $(id), dpr = window.devicePixelRatio || 1, Wc = el.clientWidth || 400, Hc = 210;
+  el.width = Wc * dpr; el.height = Hc * dpr;
+  const ctx = el.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, Wc, Hc);
+  ctx.font = "11px system-ui, sans-serif";
+  return { ctx, Wc, Hc, pad: { l: 48, r: 48, t: 12, b: 30 } };
+}
+function axes(ctx, pad, w, h, xt, yt, xl, yl) {
+  ctx.strokeStyle = "#d9e1ec"; ctx.lineWidth = 1; ctx.fillStyle = "#5e7c96";
+  for (const [x, lab] of xt) { ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + h); ctx.stroke(); ctx.textAlign = "center"; ctx.fillText(lab, x, pad.t + h + 13); }
+  for (const [y, lab] of yt) { ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + w, y); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(lab, pad.l - 5, y + 4); }
+  ctx.textAlign = "center"; ctx.fillText(xl, pad.l + w / 2, pad.t + h + 26);
+  ctx.save(); ctx.translate(11, pad.t + h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yl, 0, 0); ctx.restore();
+}
+function polyline(ctx, pts, color, dash) { ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash || []); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.setLineDash([]); }
+function legend(ctx, x, y, items) {
+  const wTot = items.reduce((a, [, lab]) => a + 23 + ctx.measureText(lab).width + 14, 0);
+  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(x - 4, y - 8, wTot, 16);
+  ctx.textAlign = "left"; for (const [col, lab, dash] of items) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash(dash || []); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 18, y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#08203a"; ctx.fillText(lab, x + 23, y + 4); x += 23 + ctx.measureText(lab).width + 14; } }
+function drawTraj(res, second) {
+  const { ctx, Wc, Hc, pad } = chartBase("chart-traj"), w = Wc - pad.l - pad.r, h = Hc - pad.t - pad.b;
+  const tr = res.traj, tT = res.tTotal / 3600 || 1;
+  const cmax = Math.max(...tr.map(q => q.cP)) * 1.1, X = t => pad.l + w * t / tT, Y = c => pad.t + h * (1 - c / cmax);
+  const xt = [0, 0.25, 0.5, 0.75, 1].map(fr => [X(fr * tT), f(fr * tT, 1)]), yt = [0, 0.25, 0.5, 0.75, 1].map(fr => [Y(fr * cmax), sig(fr * cmax, 2)]);
+  axes(ctx, pad, w, h, xt, yt, "time (h)", "product (g/L)");
+  // stage boundaries
+  ctx.strokeStyle = "#f0a500"; ctx.setLineDash([3, 3]); for (const s of res.stages) { const x = X(s.tEnd / 3600); ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + h); ctx.stroke(); } ctx.setLineDash([]);
+  polyline(ctx, tr.map(q => [X(q.t / 3600), Y(q.cP)]), "#0066cc");
+  polyline(ctx, tr.map(q => [X(q.t / 3600), Y(q.cmPmax)]), "#0066cc", [4, 3]);
+  const items = [["#0066cc", "product c_P"], ["#0066cc", "c_m,P max", [4, 3]]];
+  if (second !== "none") {
+    const s2 = second === "solute" ? tr.map(q => q.cI) : tr.map(q => 100 * q.phi);
+    const smax = Math.max(...s2) * 1.1 || 1, Y2 = v => pad.t + h * (1 - v / smax);
+    polyline(ctx, tr.map((q, i) => [X(q.t / 3600), Y2(s2[i])]), "#b4232a");
+    ctx.fillStyle = "#b4232a"; ctx.textAlign = "left"; for (const fr of [0.25, 0.5, 0.75]) ctx.fillText(sig(fr * smax, 2), pad.l + w + 5, Y2(fr * smax) + 4);
+    items.push(["#b4232a", second === "solute" ? "impurity c_I (right axis)" : "old solvent vol % (right)"]);
+  }
+  legend(ctx, pad.l + 6, pad.t + 10, items);
+}
+function drawCJ(jc, jcOld, res, measPts, cSat) {
+  const { ctx, Wc, Hc, pad } = chartBase("chart-cj"), w = Wc - pad.l - pad.r, h = Hc - pad.t - pad.b;
+  const all = jc.pts.concat(jcOld ? jcOld.pts : []).filter(q => q.J_lmh > 0);
+  const cMin = jc.pts[0].c, cMax = jc.pts[jc.pts.length - 1].c;
+  let ymax = Math.max(...all.map(q => q.Jc), ...(measPts || []).map(q => q.Jc)) * 1.15 || 1;
+  const X = c => pad.l + w * (Math.log(c) - Math.log(cMin)) / (Math.log(cMax) - Math.log(cMin)), Y = v => pad.t + h * (1 - v / ymax);
+  const xt = []; for (let d = Math.floor(Math.log10(cMin)); d <= Math.ceil(Math.log10(cMax)); d++) for (const m of [1, 2, 5]) { const c = m * 10 ** d; if (c >= cMin && c <= cMax) xt.push([X(c), sig(c, 2)]); }
+  axes(ctx, pad, w, h, xt, [0, 0.5, 1].map(fr => [Y(fr * ymax), f(fr * ymax, 0)]), "product concentration (g/L)", "C·J (g m⁻² h⁻¹)");
+  polyline(ctx, jc.pts.filter(q => q.J_lmh > 0).map(q => [X(q.c), Y(q.Jc)]), "#0066cc");
+  if (jcOld) polyline(ctx, jcOld.pts.filter(q => q.J_lmh > 0).map(q => [X(q.c), Y(q.Jc)]), "#f0a500");
+  if (jc.cOpt) { ctx.strokeStyle = "#38b6ff"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(jc.cOpt), pad.t); ctx.lineTo(X(jc.cOpt), pad.t + h); ctx.stroke(); ctx.setLineDash([]); }
+  if (cSat > cMin && cSat < cMax) { ctx.strokeStyle = "#b4232a"; ctx.setLineDash([6, 3]); ctx.beginPath(); ctx.moveTo(X(cSat), pad.t); ctx.lineTo(X(cSat), pad.t + h); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#b4232a"; ctx.textAlign = "left"; ctx.fillText("solubility", X(cSat) + 3, pad.t + 10); }
+  // batch range shading
+  const bMin = Math.min(...res.traj.map(q => q.cP)), bMax = Math.max(...res.traj.map(q => q.cP));
+  ctx.fillStyle = "rgba(52,199,89,0.10)"; ctx.fillRect(X(bMin), pad.t, X(bMax) - X(bMin), h);
+  if (measPts) for (const q of measPts) { ctx.fillStyle = q.phi > 0.5 ? "#f0a500" : "#0066cc"; ctx.beginPath(); ctx.arc(X(q.c), Y(q.Jc), 4.5, 0, 2 * Math.PI); ctx.fill(); ctx.strokeStyle = "white"; ctx.lineWidth = 1.5; ctx.stroke(); }
+  const items = [["#0066cc", "predicted" + (jcOld ? " (final solvent)" : "")]]; if (jcOld) items.push(["#f0a500", "initial solvent"]); items.push(["#38b6ff", "optimum", [2, 3]]); if (measPts) items.push(["#08203a", "● measured"]);
+  legend(ctx, pad.l + 6, pad.t + 10, items);
+}
+
+fillSelects(); renderStages();
+window.addEventListener("DOMContentLoaded", () => { onModuleChange(); onSpacerChange(); onSecondChange(); onCartridgeChange(); });
+window.addEventListener("resize", () => { if (last) { drawTraj(last.res, last.inputs.second); drawCJ(last.jc, last.jcOld, last.res, measured ? measured.cj : null, last.inputs.cSat); } });
+</script>
+</body>
+</html>

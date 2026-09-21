@@ -154,21 +154,21 @@
   }
 
   /* planCentrivaLab
-     Finds the CentrivaLab feed concentration and speed that reproduce the wall state (J, c_m) of a target.
+     Finds the CentrivaLab feed concentration (and speed) that reproduce the wall state (J, c_m) of a target.
      inp = { cart, rmax, maxRpm, V0, Vp, T, solvent: {rho, nu}, solute: {D, beta}, Rint,
-             target: {dPh [Pa], J [m/s], cm [kg/m³]} }                                             */
+             target: {dPh [Pa], J [m/s], cm [kg/m³]},
+             rpm?     — fixed rotor speed (shared run): the tube ΔP then follows from rpm and feed density,
+             tracer?: {D, Rint, cm} — second, dilute solute whose wall concentration must also be reproduced }
+     Feed density ρ_solv (1 + β C0) enters the ΔP–rpm relation; solved in two passes.                */
   function planCentrivaLab(inp) {
     const g = OCMF.geomRun(inp.cart, inp.rmax, inp.V0, inp.Vp);
-    const rhoFeed = inp.solvent.rho;                    // dilute: the β·c term is < 0.1 %
-    const dP_bar = inp.target.dPh / 1e5;
-    const rpm = OCMF.rpmFromDp(dP_bar, rhoFeed, g.sqEff);
-    const a_m = OCMF.amOf(rpm, g.r_m);
     const { D, beta } = inp.solute, nu = inp.solvent.nu, J = inp.target.J, Rint = inp.Rint;
-    const y = inp.Vp / inp.V0;
-    const Ustar = Math.cbrt(a_m * D), Sc = nu / D;
+    const y = inp.Vp / inp.V0, Sc = nu / D;
+    const rhoOf = C0 => inp.solvent.rho * (1 + beta * C0);
+    if (!(beta > 0)) return { rpm: inp.rpm || OCMF.rpmFromDp(inp.target.dPh / 1e5, inp.solvent.rho, g.sqEff), error: "beta" };
 
     // wall state of a tube run starting at feed concentration C0 (run-mean bulk concentration)
-    function tube(C0) {
+    function tube(C0, Ustar) {
       let Robs = Rint, out = null;
       for (let it = 0; it < 100; it++) {
         const cbMean = 0.5 * C0 * (1 + (1 - y * (1 - Robs)) / (1 - y));
@@ -182,19 +182,34 @@
       }
       return out;
     }
-    if (!(beta > 0)) return { rpm, a_m, error: "beta" };
-    // c_m is monotonic in C0: bisection in log C0
-    let lo = Math.log(1e-5), hi = Math.log(1e4), t = null;
-    for (let it = 0; it < 80; it++) {
-      const mid = 0.5 * (lo + hi); t = tube(Math.exp(mid));
-      if (t.cm < inp.target.cm) lo = mid; else hi = mid;
+    let rhoFeed = inp.solvent.rho, rpm, a_m, t = null;
+    for (let pass = 0; pass < 2; pass++) {
+      rpm = inp.rpm || OCMF.rpmFromDp(inp.target.dPh / 1e5, rhoFeed, g.sqEff);
+      a_m = OCMF.amOf(rpm, g.r_m);
+      const Ustar = Math.cbrt(a_m * D);
+      let lo = Math.log(1e-5), hi = Math.log(1e4);            // c_m is monotonic in C0: bisection in log C0
+      for (let it = 0; it < 80; it++) {
+        const mid = 0.5 * (lo + hi); t = tube(Math.exp(mid), Ustar);
+        if (t.cm < inp.target.cm) lo = mid; else hi = mid;
+      }
+      t = tube(Math.exp(0.5 * (lo + hi)), Ustar);
+      rhoFeed = rhoOf(t.C0);
     }
-    t = tube(Math.exp(0.5 * (lo + hi)));
+    const dP_bar = OCMF.dpFromRpm(rpm, rhoFeed, g.sqEff);
     const res = Object.assign({
-      rpm, a_m, ag: a_m / OCMF.G, dP_bar, over: rpm > inp.maxRpm, maxRpm: inp.maxRpm,
+      rpm, a_m, ag: a_m / OCMF.G, dP_bar, dPdev: dP_bar / (inp.target.dPh / 1e5) - 1, rhoFeed,
+      over: rpm > inp.maxRpm, maxRpm: inp.maxRpm,
       dP0: OCMF.dpFromRpm(rpm, rhoFeed, g.sq0), dP1: OCMF.dpFromRpm(rpm, rhoFeed, g.sq1),
-      Ustar, Sc, J_lmh: J * LMH, tRun_min: inp.Vp * 1e-6 / (J * A_CARTRIDGE) / 60, y, geom: g
+      Ustar: Math.cbrt(a_m * D), Sc, J_lmh: J * LMH, tRun_min: inp.Vp * 1e-6 / (J * A_CARTRIDGE) / 60, y, geom: g
     }, t);
+    if (inp.tracer && inp.tracer.cm > 0) {
+      const tr = inp.tracer, UB = Math.cbrt(a_m * tr.D), ScB = nu / tr.D;
+      const kB = K2 * UB * Math.pow(Math.max(res.G, 1e-30), 0.25) * Math.pow(ScB, -0.25);
+      const GammaB = gammaFilm(J / kB, tr.Rint), RobsB = 1 - (1 - tr.Rint) * (1 + GammaB);
+      const meanFac = 0.5 * (1 + (1 - y * (1 - RobsB)) / (1 - y));
+      const C0B = tr.cm / (1 + GammaB) / meanFac;
+      res.tracer = { C0: C0B, k: kB, Gamma: GammaB, Robs: RobsB, cm: tr.cm, cp: (1 - tr.Rint) * tr.cm, phi: J / kB };
+    }
     res.flags = [];
     if (res.over) res.flags.push(`Required speed ${Math.round(rpm)} rpm exceeds the rotor limit (${inp.maxRpm} rpm).`);
     if (res.phi > 1.5) res.flags.push("J_v/k > 1.5 in the tube: beyond the validated range of the O-CMF correlation.");
