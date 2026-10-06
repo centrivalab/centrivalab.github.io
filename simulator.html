@@ -281,8 +281,17 @@
               <option value="NaCl">NaCl</option>
               <option value="MgSO4">MgSO₄</option>
               <option value="Lactose">Lactose</option>
+              <option value="PEG35k">PEG 35 kDa (ultrafiltration)</option>
             </select>
-            <div class="field-hint">Physical properties at 20 °C auto-filled from Table 1 (Geraldes et al. 2026)</div>
+            <div class="field-hint" id="solute-hint">Physical properties at 20 °C auto-filled from Table 1 (Geraldes et al. 2026)</div>
+          </div>
+          <div class="field-group">
+            <label for="sel-model">Polarisation model</label>
+            <select id="sel-model" onchange="onModelChange()">
+              <option value="nf">NF/RO — film theory, properties at the feed</option>
+              <option value="uf">UF / macromolecules — Ξ(φ) closure, properties at the film concentration</option>
+            </select>
+            <div class="field-hint" id="model-hint">—</div>
           </div>
           <div class="field-group">
             <label>Feed concentration C<sub>A0</sub></label>
@@ -389,7 +398,7 @@
           </div>
           <!-- Log-scale tick labels: updated dynamically by updateDpScale() -->
           <div id="dp-scale" class="dp-scale"></div>
-          <p class="chart-sub">Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
+          <p class="chart-sub" id="gamma-chart-sub">Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
           <canvas id="chart-gamma" role="img" aria-label="Chart: Concentration polarization factor Γ versus volumetric flux Jv. Five O-CMF membrane classes (SWRO, BWRO, LPRO, NF, Loose NF) plus the selected comparison technology (stirred cell or spiral-wound module). Green band indicates reliable window (Γ less than 0.20)." height="230"></canvas>
         </div>
 
@@ -414,6 +423,14 @@
           Correlation k<sub>c</sub>/U* = 0.28 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>,
           validated for Sc ∈ [700, 2200] and 𝒢 ∈ [7×10⁻⁹, 5×10⁻⁶].
           Mean relative deviation ~7%, maximum ~22% vs DNS data.
+          <strong>UF model</strong> (PEG 35 kDa): the same law with its prefactor re-extracted from the DNS with the finite-permeation
+          closure of Geraldes &amp; Afonso (2006), k<sub>c</sub>/U* = 0.261 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup> and
+          Γ = R<sub>int</sub> φX / (1 + (1 − R<sub>int</sub>) φX), X = (1 + 0.26 φ<sup>1.4</sup>)<sup>1.7</sup>, replacing film theory
+          (valid only for φ ≲ 1.5); ν and D evaluated at the film concentration ½(c<sub>m</sub> + c<sub>0</sub>) in all three devices.
+          Validated on twelve reconstructed PEG 35 kDa ultrafiltration experiments in the O-CMF (Pereira, MSc thesis, IST 2026;
+          Sc ≈ 3×10⁴, Γ 2–66, φ 1.4–7, within ±20 % in Γ). PEG 35 kDa property laws at 20 °C (Table A.1 of the same work; data of Pires et al.):
+          quartic ν(c) and D<sub>A</sub>(c), linear density, cubic osmotic pressure. The UF membrane classes are indicative permeabilities;
+          B defaults to the value backed out of the reconstructions (R<sub>int</sub> ≈ 0.96–0.996).
         </p>
 
       </div>
@@ -476,7 +493,9 @@ const DELTA_M      = OCMF.CARTRIDGES["94-25"].deltaM;   // m  (r_max − r_m)
 const DELTA_M_5034 = OCMF.CARTRIDGES["50-34"].deltaM;   // m  (r_max − r_m = 0.108 − 0.0762)
 const DELTA_S_5034 = OCMF.CARTRIDGES["50-34"].deltaS;   // m
 const ALPHA_5034   = OCMF.CARTRIDGES["50-34"].alpha;    // m/mL
-const K2         = 0.28;       // correlation constant (Eq. 26)
+const K2         = 0.28;       // correlation constant (Eq. 26) — NF/RO, film-theory extraction of the DNS
+const K2_XI      = 0.261;      // the same DNS re-extracted with the Ξ(φ) closure (Pereira 2026) — UF model
+const modelUF    = () => document.getElementById("sel-model").value === "uf";
 const NU_W       = 1.004e-6;   // m²/s  kinematic viscosity of water at 20 °C
 
 // Nominal feed volumes [mL]
@@ -492,7 +511,12 @@ const MEM_CLASSES = {
   BWRO:    { Lp: 3.5,  Jv_max: 35  },
   LPRO:    { Lp: 7.0,  Jv_max: 50  },
   NF:      { Lp: 12.0, Jv_max: 100 },
-  LooseNF: { Lp: 40.0, Jv_max: 120 }
+  LooseNF: { Lp: 40.0, Jv_max: 120 },
+  // UF classes (indicative pure-water permeabilities); UF10 ≈ the CA-30 membrane of the PEG experiments (≈32 LMH/bar)
+  UF5:     { Lp: 10.0,  Jv_max: 150 },
+  UF10:    { Lp: 32.0,  Jv_max: 200 },
+  UF30:    { Lp: 80.0,  Jv_max: 250 },
+  UF100:   { Lp: 200.0, Jv_max: 300 }
 };
 
 // Five reference membrane class curves
@@ -503,6 +527,13 @@ const CLASS_LINES = [
   { key: "NF",      label: "NF",       color: "#2d9e6a", title: "Nanofiltration" },
   { key: "LooseNF", label: "Loose NF", color: "#3a7fc1", title: "Loose NF — divalent salts" }
 ];
+const CLASS_LINES_UF = [
+  { key: "UF5",   label: "Tight UF (5 kDa)",  color: "#d44040", title: "Tight UF, ~10 LMH/bar" },
+  { key: "UF10",  label: "UF 10 kDa",         color: "#e08c20", title: "UF 10 kDa (CA-30 of the PEG experiments, ~32 LMH/bar)" },
+  { key: "UF30",  label: "UF 30 kDa",         color: "#2d9e6a", title: "UF 30 kDa, ~80 LMH/bar" },
+  { key: "UF100", label: "UF 100 kDa",        color: "#3a7fc1", title: "Open UF, ~200 LMH/bar" }
+];
+const activeClasses = () => modelUF() ? CLASS_LINES_UF : CLASS_LINES;
 const RINT_COLOR = "#1a3a6b";
 
 // 50/34 rotor: Beckman JA-20, r_max = 108.0 mm (r_m=76.2 mm, δ_m=31.8 mm)
@@ -555,41 +586,34 @@ const LINE_PATTERNS = {
   DASHED: [6, 4]
 };
 
-// Solute properties at 20 °C  (Table 1, Geraldes et al. 2026)
-// D_A(C) = D0 + a1·C + a2·C² + a3·C³ + a4·C⁴   [m²/s, C in kg/m³]
-// ν(C)   = NU_W + knu·C                           [m²/s]
-// π(C)   = k1·C + k2·C²                           [Pa,   C in kg/m³]
-// β      = concentration contraction coeff         [m³/kg]
+// Solute properties at 20 °C  (NaCl, MgSO₄, lactose: Table 1, Geraldes et al. 2026; PEG 35 kDa: Table A.1, Pereira 2026)
+// Every law is a polynomial in C [kg/m³ = g/L]:  D_A(C) = Σ D[k] C^k [m²/s],  ν(C) = Σ nu[k] C^k [m²/s],  π(C) = Σ pi[k] C^(k+1) [Pa]
+// β = concentration contraction coefficient [m³/kg];  uf: macromolecule — the UF model (Ξ closure, film properties) is the default
 const SOLUTES = {
-  NaCl: {
-    beta: 6.713e-4,
-    D0: 1.41e-9, a1: -2.661e-11, a2: 1.3507e-12, a3: -1.8741e-14, a4: 0,
-    knu: 1.61e-9,
-    k1: 77811, k2: 0,
-    B_default: 2.0   // typical NF value [LMH]
-  },
-  MgSO4: {
-    beta: 9.855e-4,
-    D0: 0.608e-9, a1: -2.0425e-11, a2: 1.3394e-12, a3: -4.1465e-14, a4: 4.4485e-16,
-    knu: 5.08e-9,
-    k1: 22910, k2: -13.85,
-    B_default: 0.3
-  },
-  Lactose: {
-    beta: 3.75e-4,
-    D0: 0.496e-9, a1: -0.1395e-11, a2: 0.02148e-12, a3: 0, a4: 0,
-    knu: 2.8e-9,
-    k1: 7314.5, k2: 8.253,
-    B_default: 0.5
-  }
+  NaCl:    { beta: 6.713e-4, D: [1.41e-9, -2.661e-11, 1.3507e-12, -1.8741e-14, 0], nu: [NU_W, 1.61e-9], pi: [77811, 0], B_default: 2.0 },
+  MgSO4:   { beta: 9.855e-4, D: [0.608e-9, -2.0425e-11, 1.3394e-12, -4.1465e-14, 4.4485e-16], nu: [NU_W, 5.08e-9], pi: [22910, -13.85], B_default: 0.3 },
+  Lactose: { beta: 3.75e-4,  D: [0.496e-9, -0.1395e-11, 0.02148e-12, 0, 0], nu: [NU_W, 2.8e-9], pi: [7314.5, 8.253], B_default: 0.5 },
+  // PEG 35 kDa in water, 20 °C — property laws of the CFD reconstructions (quartic ν and D_A fitted 0–200 g/L; D_A(0) estimated,
+  // no measurement for this polymer; cubic π from cryoscopy on the batch of the experiments; data compiled by Pires et al.)
+  PEG35k:  { beta: 1.66e-4,  D: [4.0000e-11, 2.4016e-13, 6.9523e-16, 1.0342e-18, 2.4533e-21],
+             nu: [1.0018e-6, 4.1249e-8, 7.3401e-10, 8.4041e-12, 4.5553e-15], pi: [207.8569, 1.519474, 0.08946217],
+             B_default: 0.5, uf: true, name: "PEG 35 kDa" }
 };
-
-function getDA(sol, C) {
-  const s = SOLUTES[sol];
-  return s.D0 + s.a1*C + s.a2*C*C + s.a3*C*C*C + s.a4*C*C*C*C;
+const poly = (c, x) => c.reduce((acc, a, i) => acc + a * Math.pow(x, i), 0);
+function getDA(sol, C) { return poly(SOLUTES[sol].D, C); }
+function getNu(sol, C) { return poly(SOLUTES[sol].nu, C); }
+function getPi(sol, C) { return C * poly(SOLUTES[sol].pi, C); }
+// Concentration at which the transport properties are evaluated: feed (NF model) or film ½(c_0 + c_m) (UF model)
+const propConc = (C0, C_Am) => modelUF() ? 0.5 * (C0 + C_Am) : C0;
+// Γ from the suction parameter φ = J_v/k_c and the intrinsic rejection R_int
+//   NF model : film theory as used in this tool, Γ = R (e^φ − 1)
+//   UF model : finite-permeation closure Ξ(φ) of Geraldes & Afonso (2006), exact in R_int:
+//              Γ = R_int φX / (1 + (1 − R_int) φX),  X = (1 + 0.26 φ^1.4)^1.7
+function gammaOf(phi, R) {
+  if (!modelUF()) return R * (Math.exp(Math.min(phi, SOLVER_CONFIG.PHI_MAX)) - 1);
+  const q = phi * Math.pow(1 + 0.26 * Math.pow(phi, 1.4), 1.7);
+  return R * q / (1 + (1 - R) * q);
 }
-function getNu(sol, C) { return NU_W + SOLUTES[sol].knu * C; }
-function getPi(sol, C) { const s = SOLUTES[sol]; return s.k1*C + s.k2*C*C; }
 
 // Sterlitech mass transfer coefficient via Colton-Smith correlation
 // Sh = 0.285 × Re^0.567 × Sc^0.33, where Re = ω·r²/ν, Sc = ν/D_A
@@ -682,6 +706,38 @@ function dpToRpm(dP_bar, r_m, r_s) {
   return Math.sqrt(2 * dP_Pa / denom) * 60 / (2 * Math.PI);
 }
 
+// ── UF model: steady wall concentration by bisection ──
+// With the osmotic feedback J_v = L_p(ΔP − π(c_m)), the balance F(c_m) = c_0[1 + Γ(c_m)] − c_m is positive at c_m = c_0
+// and negative at c_m = c_π (where π = ΔP and J_v = 0), so a root always exists in between: bisection is robust where
+// the relaxed fixed point of the NF path overshoots into π_wall > ΔP (limiting-flux regime of macromolecules).
+// kcOf(Cp, Jv, RA) returns { kc, ...extras } with the properties evaluated at Cp = ½(c_0 + c_m).
+function solveUF(dP_bar, sol, C0, Lp_SI, B_SI, kcOf) {
+  const dP_Pa = dP_bar * 1e5;
+  if (getPi(sol, C0) >= dP_Pa) return null;
+  let lo = C0, hi = C0 * 2;
+  while (getPi(sol, hi) < dP_Pa && hi < 1e5) hi *= 2;          // c_π bracket
+  for (let i = 0; i < 60; i++) { const m = 0.5 * (lo + hi); if (getPi(sol, m) < dP_Pa) lo = m; else hi = m; }
+  const Cpi = lo;
+  const evalAt = C_Am => {
+    const Jv = Lp_SI * (dP_Pa - getPi(sol, C_Am));
+    const RA = Jv / (Jv + B_SI);
+    const k = kcOf(propConc(C0, C_Am), Jv, RA);
+    const phi = Jv / k.kc, Gamma = gammaOf(phi, RA);
+    return { Jv, RA, phi, Gamma, k, F: C0 * (1 + Gamma) - C_Am };
+  };
+  lo = C0; hi = Cpi;
+  if (evalAt(hi).F > 0) return null;                              // no steady state below the osmotic limit (should not occur)
+  let r = null;
+  for (let i = 0; i < 80; i++) {
+    const m = 0.5 * (lo + hi); r = evalAt(m);
+    if (Math.abs(hi - lo) < 1e-9 * (1 + m)) break;
+    if (r.F > 0) lo = m; else hi = m;
+  }
+  const { Jv, RA, phi, Gamma, k } = r;
+  if (!(Jv > 0)) return null;
+  return { Gamma, RA, R_obs: Math.max(0, 1 - (1 + Gamma) * (1 - RA)), Jv_lmh: Jv * 3.6e6, phi, ...k };
+}
+
 // ── Iterative CP solver at a single ΔP ──
 // Returns null when no permeation (π_wall ≥ ΔP)
 function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
@@ -694,9 +750,21 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
   const { TOLERANCE: TOL, MAX_ITERATIONS: MAX_ITER, RELAXATION: RELAX, PHI_MAX } = SOLVER_CONFIG;
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0, G = 0, Ustar = 0;
 
+  const uf = modelUF(), Kc = uf ? K2_XI : K2;
+  if (uf) {
+    const Sc0 = getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12);
+    const res = solveUF(dP_bar, sol, C0, Lp_SI, B_SI, (Cp, Jv, RA) => {
+      const DA = Math.max(getDA(sol, Cp), 1e-12), nu = getNu(sol, Cp);
+      const Ustar = Math.pow(a_m * DA, 1/3), Sc = nu / DA, G = Math.max(RA, 1e-9) * SOLUTES[sol].beta * C0 * (Jv / Ustar);
+      return { kc: Kc * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25), Sc, G };
+    });
+    return res ? { ...res, rpm, Sc0 } : null;
+  }
+  let phi = 0;
   for (let iter = 0; iter < MAX_ITER; iter++) {
-    const DA   = Math.max(getDA(sol, C0), 1e-12);   // transport properties and 𝒢 at the bulk
-    const nu   = getNu(sol, C0);                      // concentration, as in Eq. (35) of the source paper
+    const Cp   = C0;                                  // NF: bulk, as in Eq. (35) of the source paper
+    const DA   = Math.max(getDA(sol, Cp), 1e-12);
+    const nu   = getNu(sol, Cp);
     const pi_w = getPi(sol, C_Am);                    // osmotic pressure at the wall sets the flux
 
     Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
@@ -708,9 +776,9 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
     G     = RA * SOLUTES[sol].beta * C0 * (Jv / Ustar);
     if (G <= 0) return null;
 
-    kc    = K2 * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25);
-    const phi = Jv / kc;
-    Gamma = RA * (Math.exp(Math.min(phi, PHI_MAX)) - 1);
+    kc    = Kc * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25);
+    phi   = Jv / kc;
+    Gamma = gammaOf(phi, RA);
 
     const C_new = C0 * (1 + Gamma);
     const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
@@ -720,7 +788,8 @@ function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
 
   const R_obs  = Math.max(0, 1 - (1 + Gamma) * (1 - RA));
   const Jv_lmh = Jv * 3.6e6;
-  return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc, G };
+  const Sc0    = getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12);   // bulk Sc: the validity ranges refer to it
+  return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc, Sc0, G, phi };
 }
 
 // ── Iterative CP solver for Sterlitech at single ΔP and RPM ──
@@ -731,9 +800,15 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0;
 
   // For Sterlitech: Jv depends only on applied ΔP (no centrifugal effects)
+  if (modelUF()) {
+    const res = solveUF(dP_bar, sol, C0, Lp_SI, B_SI, Cp => ({ kc: getSterlitechKc(rpm, sol, Cp), Sc: getNu(sol, Cp) / Math.max(getDA(sol, Cp), 1e-12) }));
+    return res ? { ...res, rpm } : null;
+  }
+  let phi = 0;
   for (let iter = 0; iter < MAX_ITER; iter++) {
-    const DA   = Math.max(getDA(sol, C_Am), 1e-12);
-    const nu   = getNu(sol, C_Am);
+    const Cp   = C_Am;                                // wall properties (as before)
+    const DA   = Math.max(getDA(sol, Cp), 1e-12);
+    const nu   = getNu(sol, Cp);
     const pi_w = getPi(sol, C_Am);
 
     Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
@@ -743,10 +818,10 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
     Sc = nu / DA;
 
     // k_c via Colton-Smith (Sterlitech-specific)
-    kc = getSterlitechKc(rpm, sol, C_Am);
+    kc = getSterlitechKc(rpm, sol, Cp);
 
-    const phi = Jv / kc;
-    Gamma = RA * (Math.exp(Math.min(phi, PHI_MAX)) - 1);
+    phi = Jv / kc;
+    Gamma = gammaOf(phi, RA);
 
     const C_new = C0 * (1 + Gamma);
     const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
@@ -756,7 +831,7 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
 
   const R_obs  = Math.max(0, 1 - (1 + Gamma) * (1 - RA));
   const Jv_lmh = Jv * 3.6e6;
-  return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc };
+  return { Gamma, RA, R_obs, Jv_lmh, rpm, Sc, phi };
 }
 
 // ── Iterative CP solver for spiral-wound (Schock & Miquel) at single ΔP ──
@@ -766,9 +841,14 @@ function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
   const { TOLERANCE: TOL, MAX_ITERATIONS: MAX_ITER, RELAXATION: RELAX, PHI_MAX } = SOLVER_CONFIG;
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0;
 
+  if (modelUF()) {
+    return solveUF(dP_bar, sol, C0, Lp_SI, B_SI, Cp => ({ kc: getSpiralWoundKc(v_eff, spacerKey, sol, Cp), Sc: getNu(sol, Cp) / Math.max(getDA(sol, Cp), 1e-12) }));
+  }
+  let phi = 0;
   for (let iter = 0; iter < MAX_ITER; iter++) {
-    const DA   = Math.max(getDA(sol, C_Am), 1e-12);
-    const nu   = getNu(sol, C_Am);
+    const Cp   = C_Am;                                // wall properties (as before)
+    const DA   = Math.max(getDA(sol, Cp), 1e-12);
+    const nu   = getNu(sol, Cp);
     const pi_w = getPi(sol, C_Am);
 
     Jv = Lp_SI * (dP_bar * 1e5 - pi_w);
@@ -778,10 +858,10 @@ function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
     Sc = nu / DA;
 
     // k_c via Schock & Miquel (spiral-wound spacer + channel velocity)
-    kc = getSpiralWoundKc(v_eff, spacerKey, sol, C_Am);
+    kc = getSpiralWoundKc(v_eff, spacerKey, sol, Cp);
 
-    const phi = Jv / kc;
-    Gamma = RA * (Math.exp(Math.min(phi, PHI_MAX)) - 1);
+    phi = Jv / kc;
+    Gamma = gammaOf(phi, RA);
 
     const C_new = C0 * (1 + Gamma);
     const err   = Math.abs(C_new - C_Am) / (C0 + 1e-12);
@@ -791,7 +871,7 @@ function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
 
   const R_obs  = Math.max(0, 1 - (1 + Gamma) * (1 - RA));
   const Jv_lmh = Jv * 3.6e6;
-  return { Gamma, RA, R_obs, Jv_lmh, Sc };
+  return { Gamma, RA, R_obs, Jv_lmh, Sc, phi };
 }
 
 // ── Slider handlers ──
@@ -892,6 +972,23 @@ function onSoluteChange() {
   const idx = closestLogIdx(B_VALS, SOLUTES[sol].B_default);
   document.getElementById("inp-B").value = idx;
   document.getElementById("lbl-B").textContent = fmtVal(B_VALS[idx]);
+  document.getElementById("sel-model").value = SOLUTES[sol].uf ? "uf" : "nf";
+  document.getElementById("solute-hint").textContent = SOLUTES[sol].uf
+    ? "PEG 35 kDa in water at 20 °C: ν(c), D_A(c) and π(c) from the CFD reconstructions (Pereira 2026, Table A.1; data of Pires et al.)"
+    : "Physical properties at 20 °C auto-filled from Table 1 (Geraldes et al. 2026)";
+  onModelChange();
+}
+function onModelChange() {
+  const sol = document.getElementById("sel-solute").value, uf = modelUF();
+  const hint = document.getElementById("model-hint");
+  hint.innerHTML = uf
+    ? `k<sub>c</sub>/U* = ${K2_XI} 𝒢<sup>¼</sup> Sc<sup>−¼</sup>, Ξ(φ) closure, ν and D<sub>A</sub> at ½(c<sub>0</sub> + c<sub>m</sub>) in all devices; UF membrane classes. Flags: φ &gt; 7 or Γ &gt; 100.` +
+      (SOLUTES[sol].uf ? "" : " <strong>Validated for PEG 35 kDa only</strong>; for this solute the film-concentration evaluation is a small correction.")
+    : `k<sub>c</sub>/U* = ${K2} 𝒢<sup>¼</sup> Sc<sup>−¼</sup>, film theory, properties at the feed; NF/RO membrane classes.` +
+      (SOLUTES[sol].uf ? " <strong>Not adequate for PEG 35 kDa</strong> (J<sub>v</sub>/k<sub>c</sub> ≫ 1.5, layer viscosity up to 40× the feed): select the UF model." : "");
+  document.getElementById("gamma-chart-sub").textContent = uf
+    ? "Log scale 0.01–100. Four indicative UF membrane classes (Lp 10–200 LMH/bar). Green band: Γ < 0.20. Dots: operating point at the specified ΔP."
+    : "Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ < 0.20). Dots: operating point at the specified ΔP.";
   update();
 }
 
@@ -919,6 +1016,9 @@ function update() {
   const dPs = [];
   for (let i = 0; i <= N; i++) dPs.push(dP_min + (dP_max - dP_min) * i / N);
 
+  const uf = modelUF();
+  const CLASSES = activeClasses();
+
   // Helper: compute Γ, R_int, R_obs arrays for a membrane (lp, B_SI in SI)
   // Optional solverFn for custom solvers (default: solveCP for O-CMF)
   function computeCurve(lp, b, jvMax, solverFn = solveCP) {
@@ -934,13 +1034,16 @@ function update() {
       Robss.push(res.R_obs);
       Jvs.push(res.Jv_lmh);
       // Check out-of-range only if G is present (O-CMF has it, Sterlitech doesn't)
-      if (res.G && (res.Sc < 700 || res.Sc > 2200 || res.G < 7e-9 || res.G > 5e-6)) oor = true;
+      if (res.G) {
+        if (uf ? (res.Sc0 < 700 || res.Sc0 > 3.6e4 || res.phi > 7 || res.Gamma > 100 || res.G < 7e-9 || res.G > 5e-6)
+               : (res.Sc < 700 || res.Sc > 2200 || res.G < 7e-9 || res.G > 5e-6)) oor = true;
+      }
     }
     return { gammas, Rints, Robss, Jvs, oor };
   }
 
-  // 5 class reference curves — all use the same B
-  const classCurves = CLASS_LINES.map(cl => {
+  // class reference curves — all use the same B
+  const classCurves = CLASSES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const computed = computeCurve(lp, B_SI, MEM_CLASSES[cl.key].Jv_max);
     return {
@@ -955,7 +1058,7 @@ function update() {
 
   // Operating point for each class at the specified ΔP
   const dP_clamped = Math.max(dP_min, Math.min(dP_op, dP_max));
-  const ops = CLASS_LINES.map(cl => {
+  const ops = CLASSES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const res = solveCP(dP_clamped, sol, C0, lp, B_SI);
     if (!res) return null;  // Explicit validation
@@ -966,7 +1069,8 @@ function update() {
   // Comparison technology curve (single intrinsic curve — all classes converge on it)
   // Use NF membrane as reference (curve shape is the same for all classes)
   const compareMode = document.getElementById("sel-compare").value;
-  const lp_ref = MEM_CLASSES.NF.Lp * 1e-3 / 3600 / 1e5;
+  const lp_ref = (uf ? MEM_CLASSES.UF10.Lp : MEM_CLASSES.NF.Lp) * 1e-3 / 3600 / 1e5;
+  const compJvMax = uf ? 300 : 150;
   let compSolver, compLabel, compColor;
   if (compareMode === "spiral") {
     const v_eff = VEL_VALS[parseInt(document.getElementById("inp-vel").value)];
@@ -988,15 +1092,15 @@ function update() {
     compColor  = "#ff0000";
   }
 
-  const compCurveData = computeCurve(lp_ref, B_SI, 150, compSolver);
+  const compCurveData = computeCurve(lp_ref, B_SI, compJvMax, compSolver);
   const compCurve = {
     label: compLabel, color: compColor, lineWidth: 2.5,
-    jvMax: 150,
+    jvMax: compJvMax,
     ...compCurveData
   };
 
   // Comparison operating points (5 classes, each with its own Lp, on the single curve)
-  const comp_ops = CLASS_LINES.map(cl => {
+  const comp_ops = CLASSES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const lp_dom = MEM_CLASSES[cl.key].Lp;  // LMH/bar for display
     const res = compSolver(dP_clamped, sol, C0, lp, B_SI);
@@ -1019,8 +1123,9 @@ function update() {
   // Alerts
   const warningBox = document.getElementById("warning-box");
   warningBox.classList.toggle("show", outOfRange);
-  if (outOfRange) document.getElementById("warning-text").textContent =
-    " Some points fall outside the validated range (Sc ∈ [700–2200], 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶]).";
+  if (outOfRange) document.getElementById("warning-text").textContent = uf
+    ? " Some O-CMF points fall outside the range covered by the UF reconstructions (Jv/kc ≤ 7, Γ ≤ 100, feed Sc ≤ 3.6×10⁴, 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶])."
+    : " Some points fall outside the validated range (Sc ∈ [700–2200], 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶]).";
 
   const hasData = classCurves.some(c => c.gammas.some(g => g !== null));
   const infoBox = document.getElementById("info-box");
@@ -1042,7 +1147,7 @@ function update() {
   for (let i = 0; i <= nVol; i++) vols.push(vr.min + (vr.max - vr.min) * i / nVol);
   const nMaxRpm = getMaxRpm();
 
-  const volCurves = CLASS_LINES.map(cl => {
+  const volCurves = CLASSES.map(cl => {
     const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
     const jvMax = MEM_CLASSES[cl.key].Jv_max;
     const gammas = vols.map(V => {
@@ -1172,8 +1277,8 @@ function drawGamma(dPs, curves, dP_op, ops) {
   const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
   const tx = x => pad.l + x / xMax * cw;
 
-  // Log y-axis: Γ from 0.01 to 10
-  const yMin_log = -2, yMax_log = 1, logRange = 3;
+  // Log y-axis: Γ from 0.01 to 10 (NF) or to 100 (UF)
+  const yMin_log = -2, yMax_log = modelUF() ? 2 : 1, logRange = yMax_log - yMin_log;
   const ty = g => {
     if (g <= 0) return pad.t + ch + 10;
     const l = Math.log10(g);
@@ -1187,7 +1292,7 @@ function drawGamma(dPs, curves, dP_op, ops) {
     const yp = ty(Math.pow(10, l));
     ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
     ctx.textAlign = "right";
-    const lbl = l === 1 ? "10" : l === 0 ? "1" : l === -1 ? "0.1" : "0.01";
+    const lbl = l === 2 ? "100" : l === 1 ? "10" : l === 0 ? "1" : l === -1 ? "0.1" : "0.01";
     ctx.fillText(lbl, pad.l - 5, yp + 4);
     // Minor ticks
     if (l < yMax_log) {
@@ -1457,7 +1562,7 @@ function drawRej(dPs, curves, dP_op, ops) {
   // Legend
   const legendItems = [
     { label: "R\u1D05\u207F\u1D1C (intrinsic)", color: RINT_COLOR, lw: 2.0 },
-    ...CLASS_LINES.map(cl => ({
+    ...activeClasses().map(cl => ({
       label: cl.label + ` (${MEM_CLASSES[cl.key].Lp} LMH/bar)`,
       color: cl.color,
       lw: 1.5
@@ -1589,7 +1694,7 @@ function onCartridgeChange() {
   update();
 }
 
-window.addEventListener("DOMContentLoaded", onCartridgeChange);
+window.addEventListener("DOMContentLoaded", () => { onCartridgeChange(); onModelChange(); });
 window.addEventListener("resize", () => {
   const sliderEl = document.getElementById("inp-dP");
   const maxIdx = parseInt(sliderEl.max);
