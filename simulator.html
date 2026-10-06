@@ -516,10 +516,11 @@ const MEM_CLASSES = {
   NF:      { Lp: 12.0, Jv_max: 100 },
   LooseNF: { Lp: 40.0, Jv_max: 120 },
   // UF classes (indicative pure-water permeabilities); UF10 ≈ the CA-30 membrane of the PEG experiments (≈32 LMH/bar)
-  UF5:     { Lp: 10.0,  Jv_max: 150 },
-  UF10:    { Lp: 32.0,  Jv_max: 200 },
-  UF30:    { Lp: 80.0,  Jv_max: 250 },
-  UF100:   { Lp: 200.0, Jv_max: 300 }
+  // Jv capped at the range of practical UF operation (≤ 150 LMH)
+  UF5:     { Lp: 10.0,  Jv_max: 100 },
+  UF10:    { Lp: 32.0,  Jv_max: 150 },
+  UF30:    { Lp: 60.0,  Jv_max: 150 },
+  UF100:   { Lp: 120.0, Jv_max: 150 }
 };
 
 // Five reference membrane class curves
@@ -533,8 +534,8 @@ const CLASS_LINES = [
 const CLASS_LINES_UF = [
   { key: "UF5",   label: "Tight UF (5 kDa)",  color: "#d44040", title: "Tight UF, ~10 LMH/bar" },
   { key: "UF10",  label: "UF 10 kDa",         color: "#e08c20", title: "UF 10 kDa (CA-30 of the PEG experiments, ~32 LMH/bar)" },
-  { key: "UF30",  label: "UF 30 kDa",         color: "#2d9e6a", title: "UF 30 kDa, ~80 LMH/bar" },
-  { key: "UF100", label: "UF 100 kDa",        color: "#3a7fc1", title: "Open UF, ~200 LMH/bar" }
+  { key: "UF30",  label: "UF 30 kDa",         color: "#2d9e6a", title: "UF 30 kDa, ~60 LMH/bar" },
+  { key: "UF100", label: "UF 100 kDa",        color: "#3a7fc1", title: "Open UF, ~120 LMH/bar" }
 ];
 const activeClasses = () => modelUF() ? CLASS_LINES_UF : CLASS_LINES;
 const RINT_COLOR = "#1a3a6b";
@@ -998,7 +999,7 @@ function onModelChange() {
     : `k<sub>c</sub>/U* = ${K2} 𝒢<sup>¼</sup> Sc<sup>−¼</sup>, film theory, properties at the feed; NF/RO membrane classes.` +
       (SOLUTES[sol].uf ? " <strong>Not adequate for PEG 35 kDa</strong> (J<sub>v</sub>/k<sub>c</sub> ≫ 1.5, layer viscosity up to 40× the feed): select the UF model." : "");
   document.getElementById("gamma-chart-sub").textContent = uf
-    ? "Log scale 0.01–100. Four indicative UF membrane classes (Lp 10–200 LMH/bar). Green band: Γ < 0.20. Dots: operating point at the specified ΔP."
+    ? "Log scale 0.01–100. Four indicative UF membrane classes (Lp 10–120 LMH/bar), Jv up to 150 LMH. Green band: Γ < 0.20. Dots: operating point at the specified ΔP."
     : "Log scale 0.01–10. Five reference membrane classes (SWRO → Loose NF). Green band: reliable window (Γ < 0.20). Dots: operating point at the specified ΔP.";
   update();
 }
@@ -1081,7 +1082,7 @@ function update() {
   // Use NF membrane as reference (curve shape is the same for all classes)
   const compareMode = document.getElementById("sel-compare").value;
   const lp_ref = (uf ? MEM_CLASSES.UF10.Lp : MEM_CLASSES.NF.Lp) * 1e-3 / 3600 / 1e5;
-  const compJvMax = uf ? 300 : 150;
+  const compJvMax = 150;
   let compSolver, compLabel, compColor;
   if (compareMode === "spiral") {
     const v_eff = VEL_VALS[parseInt(document.getElementById("inp-vel").value)];
