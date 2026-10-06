@@ -426,7 +426,10 @@
           <strong>UF model</strong> (PEG 35 kDa): the same law with its prefactor re-extracted from the DNS with the finite-permeation
           closure of Geraldes &amp; Afonso (2006), k<sub>c</sub>/U* = 0.261 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup> and
           Γ = R<sub>int</sub> φX / (1 + (1 − R<sub>int</sub>) φX), X = (1 + 0.26 φ<sup>1.4</sup>)<sup>1.7</sup>, replacing film theory
-          (valid only for φ ≲ 1.5); ν and D evaluated at the film concentration ½(c<sub>m</sub> + c<sub>0</sub>) in all three devices.
+          (valid only for φ ≲ 1.5); in the O-CMF, ν and D evaluated at the film concentration ½(c<sub>m</sub> + c<sub>0</sub>). In the
+          stirred cell and the spiral-wound module (forced convection) the correlations keep the bulk properties and k<sub>c</sub> is multiplied
+          by the weak viscosity correction (ν<sub>m</sub>/ν<sub>0</sub>)<sup>−0.075</sup> found in the reconstructed radial cross-flow cell
+          (36 runs); evaluating a Re<sup>0.875</sup>Sc<sup>0.25</sup> law at the film concentration would over-correct.
           Validated on twelve reconstructed PEG 35 kDa ultrafiltration experiments in the O-CMF (Pereira, MSc thesis, IST 2026;
           Sc ≈ 3×10⁴, Γ 2–66, φ 1.4–7, within ±20 % in Γ). PEG 35 kDa property laws at 20 °C (Table A.1 of the same work; data of Pires et al.):
           quartic ν(c) and D<sub>A</sub>(c), linear density, cubic osmotic pressure. The UF membrane classes are indicative permeabilities;
@@ -605,6 +608,11 @@ function getNu(sol, C) { return poly(SOLUTES[sol].nu, C); }
 function getPi(sol, C) { return C * poly(SOLUTES[sol].pi, C); }
 // Concentration at which the transport properties are evaluated: feed (NF model) or film ½(c_0 + c_m) (UF model)
 const propConc = (C0, C_Am) => modelUF() ? 0.5 * (C0 + C_Am) : C0;
+// Forced convection (stirred cell, spiral-wound) in the UF model: bulk properties times the weak viscosity correction
+// (ν_m/ν_0)^−0.075 found in the radial cross-flow reconstructions (Pereira 2026, §6.4). Evaluating a Re^0.875 Sc^0.25 law
+// at the film concentration would over-correct by far (Re falls below the validity of the correlation).
+const VISC_EXP_FORCED = -0.075;
+const forcedVisc = (sol, C0, C_Am) => Math.pow(getNu(sol, C_Am) / getNu(sol, C0), VISC_EXP_FORCED);
 // Γ from the suction parameter φ = J_v/k_c and the intrinsic rejection R_int
 //   NF model : film theory as used in this tool, Γ = R (e^φ − 1)
 //   UF model : finite-permeation closure Ξ(φ) of Geraldes & Afonso (2006), exact in R_int:
@@ -710,7 +718,8 @@ function dpToRpm(dP_bar, r_m, r_s) {
 // With the osmotic feedback J_v = L_p(ΔP − π(c_m)), the balance F(c_m) = c_0[1 + Γ(c_m)] − c_m is positive at c_m = c_0
 // and negative at c_m = c_π (where π = ΔP and J_v = 0), so a root always exists in between: bisection is robust where
 // the relaxed fixed point of the NF path overshoots into π_wall > ΔP (limiting-flux regime of macromolecules).
-// kcOf(Cp, Jv, RA) returns { kc, ...extras } with the properties evaluated at Cp = ½(c_0 + c_m).
+// kcOf(Cp, Jv, RA, C_Am) returns { kc, ...extras }; Cp = ½(c_0 + c_m) is the film concentration (used by the O-CMF law),
+// C_Am the wall concentration (used by the forced-convection devices for their weak viscosity correction).
 function solveUF(dP_bar, sol, C0, Lp_SI, B_SI, kcOf) {
   const dP_Pa = dP_bar * 1e5;
   if (getPi(sol, C0) >= dP_Pa) return null;
@@ -721,7 +730,7 @@ function solveUF(dP_bar, sol, C0, Lp_SI, B_SI, kcOf) {
   const evalAt = C_Am => {
     const Jv = Lp_SI * (dP_Pa - getPi(sol, C_Am));
     const RA = Jv / (Jv + B_SI);
-    const k = kcOf(propConc(C0, C_Am), Jv, RA);
+    const k = kcOf(propConc(C0, C_Am), Jv, RA, C_Am);
     const phi = Jv / k.kc, Gamma = gammaOf(phi, RA);
     return { Jv, RA, phi, Gamma, k, F: C0 * (1 + Gamma) - C_Am };
   };
@@ -801,7 +810,8 @@ function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
 
   // For Sterlitech: Jv depends only on applied ΔP (no centrifugal effects)
   if (modelUF()) {
-    const res = solveUF(dP_bar, sol, C0, Lp_SI, B_SI, Cp => ({ kc: getSterlitechKc(rpm, sol, Cp), Sc: getNu(sol, Cp) / Math.max(getDA(sol, Cp), 1e-12) }));
+    const res = solveUF(dP_bar, sol, C0, Lp_SI, B_SI, (Cp, Jv, RA, C_Am) =>
+      ({ kc: getSterlitechKc(rpm, sol, C0) * forcedVisc(sol, C0, C_Am), Sc: getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12) }));
     return res ? { ...res, rpm } : null;
   }
   let phi = 0;
@@ -842,7 +852,8 @@ function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
   let Jv = 0, RA = 0, Gamma = 0, kc = 0, Sc = 0;
 
   if (modelUF()) {
-    return solveUF(dP_bar, sol, C0, Lp_SI, B_SI, Cp => ({ kc: getSpiralWoundKc(v_eff, spacerKey, sol, Cp), Sc: getNu(sol, Cp) / Math.max(getDA(sol, Cp), 1e-12) }));
+    return solveUF(dP_bar, sol, C0, Lp_SI, B_SI, (Cp, Jv, RA, C_Am) =>
+      ({ kc: getSpiralWoundKc(v_eff, spacerKey, sol, C0) * forcedVisc(sol, C0, C_Am), Sc: getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12) }));
   }
   let phi = 0;
   for (let iter = 0; iter < MAX_ITER; iter++) {
@@ -982,7 +993,7 @@ function onModelChange() {
   const sol = document.getElementById("sel-solute").value, uf = modelUF();
   const hint = document.getElementById("model-hint");
   hint.innerHTML = uf
-    ? `k<sub>c</sub>/U* = ${K2_XI} 𝒢<sup>¼</sup> Sc<sup>−¼</sup>, Ξ(φ) closure, ν and D<sub>A</sub> at ½(c<sub>0</sub> + c<sub>m</sub>) in all devices; UF membrane classes. Flags: φ &gt; 7 or Γ &gt; 100.` +
+    ? `O-CMF: k<sub>c</sub>/U* = ${K2_XI} 𝒢<sup>¼</sup> Sc<sup>−¼</sup> with ν and D<sub>A</sub> at ½(c<sub>0</sub> + c<sub>m</sub>). Stirred cell and spiral: bulk properties × (ν<sub>m</sub>/ν<sub>0</sub>)<sup>−0.075</sup>. Ξ(φ) closure in all three; UF membrane classes. Flags: φ &gt; 7 or Γ &gt; 100.` +
       (SOLUTES[sol].uf ? "" : " <strong>Validated for PEG 35 kDa only</strong>; for this solute the film-concentration evaluation is a small correction.")
     : `k<sub>c</sub>/U* = ${K2} 𝒢<sup>¼</sup> Sc<sup>−¼</sup>, film theory, properties at the feed; NF/RO membrane classes.` +
       (SOLUTES[sol].uf ? " <strong>Not adequate for PEG 35 kDa</strong> (J<sub>v</sub>/k<sub>c</sub> ≫ 1.5, layer viscosity up to 40× the feed): select the UF model." : "");
