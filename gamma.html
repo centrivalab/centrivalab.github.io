@@ -229,6 +229,14 @@
               <option value="neutral">Neutral solute</option>
             </select>
           </div>
+          <div class="field-group">
+            <label for="sel-model">Polarisation model</label>
+            <select id="sel-model" onchange="update()">
+              <option value="nf">NF/RO — film theory, properties at the feed (Geraldes et al. 2026)</option>
+              <option value="uf">UF / macromolecules — finite-permeation closure Ξ(φ), properties at the film concentration</option>
+            </select>
+            <div class="field-hint" id="model-hint">—</div>
+          </div>
           <div class="two-col" id="a-salt">
             <div class="field-group">
               <label for="sel-cation">Cation</label>
@@ -357,7 +365,7 @@
             membrane with the same solute permeability B (solution–diffusion, R<sub>int</sub> = J<sub>v</sub>/(J<sub>v</sub>+B)) would show at that flux;
             the ◀ row reproduces your input. <span style="color:#c47a00;font-weight:700;">Orange rows</span>: outside the range over which the
             correlation was validated against DNS (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200), or J<sub>v</sub>/k<sub>c</sub> &gt; 1.5 where
-            film theory itself loses accuracy — values are extrapolated.
+            film theory itself loses accuracy — values are extrapolated. With the UF model the flags are J<sub>v</sub>/k<sub>c</sub> &gt; 7 or Γ &gt; 100.
           </div>
         </div>
 
@@ -417,6 +425,11 @@
           partial molar volumes. All data at 25 °C (CRC Handbook; Jenkins &amp; Marcus 1995), scaled to the set temperature.
           The framework was derived for neutral solutes; for electrolytes it is applied with the salt (Nernst–Hartley) diffusivity.
           For NaCl, MgSO₄ and lactose the <a href="simulator.html">device comparison</a> uses measured property fits instead.
+          <strong>UF model</strong> (macromolecules): the same law with its prefactor re-extracted from the DNS with the finite-permeation closure of
+          Geraldes &amp; Afonso (2006), Γ = R<sub>obs</sub> φ (1 + 0.26 φ<sup>1.4</sup>)<sup>1.7</sup>, replacing film theory (valid only for φ ≲ 1.5),
+          and with ν and D evaluated at the film concentration ½(c<sub>m</sub> + c<sub>0</sub>); validated on twelve reconstructed PEG 35 kDa
+          ultrafiltration experiments (Pereira, MSc thesis, IST 2026; Sc ≈ 3×10⁴, Γ 2–66, φ 1.4–7, within ±20 % in Γ). Properties of PEG 35 kDa
+          from measured fits at 20 °C (Pires et al.).
           Osmotic pressure π = φ ν m R T ρ<sub>w</sub> with the osmotic coefficient φ from the Pitzer ion-interaction model
           (β⁽⁰⁾, β⁽¹⁾, β⁽²⁾, C<sup>φ</sup> at 25 °C from Kim &amp; Frederick, <em>J. Chem. Eng. Data</em> 33 (1988) 177, for ~140 salts; class-average
           parameters, flagged, otherwise) and φ = 1 + b·m for neutral solutes; it is used only to bound the input (π<sub>feed</sub> ≤ 50 bar)
@@ -472,7 +485,9 @@
 const DP_DROP_WARN = 0.30;            // warn when ΔP falls by more than this fraction during the run
 const VP_MAX = 2.0;                   // mL, largest permeate volume the tool accepts
 const PI_MAX = 50;                    // bar, feed osmotic pressure above which the tool refuses the input (Pitzer)
-const K2 = 0.28;
+const K2 = 0.28;                      // NF/RO: film-theory extraction of the DNS (Geraldes et al. 2026)
+const K2_XI = 0.261;                  // the same DNS re-extracted with the Ξ(φ) closure (Pereira 2026)
+const modelUF = () => document.getElementById("sel-model").value === "uf";
 
 // ── Ionic data at 25 °C ──
 // lam: limiting molar ionic conductivity λ° [S cm² mol⁻¹] (per mole of ion, CRC Handbook)
@@ -546,7 +561,17 @@ const NEUTRALS = {
   "Caffeine":        { M: 194.19, D25: 0.63e-9,  V: 144.0, B: 0.30 },
   "Ethanol":         { M: 46.07,  D25: 1.24e-9,  V: 55.1,  B: 0.17 },
   "PEG 400":         { M: 400,    D25: 0.40e-9,  V: 340,   B: 1.2  },
-  "PEG 1000":        { M: 1000,   D25: 0.26e-9,  V: 850,   B: 2.5  }
+  "PEG 1000":        { M: 1000,   D25: 0.26e-9,  V: 850,   B: 2.5  },
+  // PEG 35 kDa: property laws of aqueous PEG 35 kDa at 20 °C, as used in the CFD reconstructions
+  // (Pereira, MSc thesis IST 2026, Table A.1; data compiled by Pires et al.). C in kg/m³ = g/L.
+  //   ν(C)  = Σ νk C^k   (quartic, m²/s; fitted to 10 measurements, 0–200 g/L, within 1.9 %)
+  //   D_A(C) = Σ Dk C^k  (quartic, m²/s; reproduces D0·exp(6·w); D0 estimated — no measurement for this polymer)
+  //   ρ = ρ0 (1 + β C), β = 1.66e-4 (g/L)⁻¹;  π(C) = a1 C + a2 C² + a3 C³ [Pa] (cryoscopy, this batch)
+  "PEG 35 kDa":      { M: 35000,  D25: 0.0497e-9, V: 29400, B: 0,
+                       fits: { Tref: 20, rho0: 998.23,
+                               nu: [1.0018e-6, 4.1249e-8, 7.3401e-10, 8.4041e-12, 4.5553e-15],
+                               D:  [4.0000e-11, 2.4016e-13, 6.9523e-16, 1.0342e-18, 2.4533e-21],
+                               beta: 1.66e-4, pi: [207.8569, 1.519474, 0.08946217] } }
 };
 
 // ── Pitzer ion-interaction parameters at 25 °C: β⁽⁰⁾, β⁽¹⁾, (β⁽²⁾ for 2-2), Cᵠ  [kg/mol basis] ──
@@ -637,7 +662,7 @@ const PITZER_CLASS = { "11": [0.08, 0.25, 0, 0], "21": [0.30, 1.60, 0, 0], "12":
                        "22": [0.20, 2.90, -40, 0.02], "31": [0.65, 5.7, 0, 0], "13": [0.3, 4.0, 0, 0], "32": [0.85, 18.5, 0, 0], "23": [0.85, 18.5, 0, 0] };
 // Neutral solutes: φ = 1 + b·m (second osmotic virial coefficient, kg/mol, from 25 °C water-activity data; approximate)
 const NEUTRAL_BOSM = { "Lactose": 0.09, "Sucrose": 0.088, "Glucose": 0.036, "Glycerol": 0.01, "Urea": -0.04,
-                       "Ethylene glycol": 0.02, "Boric acid": 0, "Caffeine": -0.10, "Ethanol": 0.0, "PEG 400": 0.5, "PEG 1000": 2.5 };
+                       "Ethylene glycol": 0.02, "Boric acid": 0, "Caffeine": -0.10, "Ethanol": 0.0, "PEG 400": 0.5, "PEG 1000": 2.5, "PEG 35 kDa": 0 };
 const M_WATER = 0.018015;             // kg/mol
 
 const R_GAS = 8.314462, F_CONST = 96485.33;
@@ -675,7 +700,7 @@ function buildSalt(catKey, anKey) {
 function buildNeutral(key) {
   const n = NEUTRALS[key];
   return { kind: "neutral", formula: key, M: n.M, nuP: 1, nuM: 0, D25: n.D25, phiV: n.V, bOsm: NEUTRAL_BOSM[key] || 0,
-           beta: (n.M - 0.997 * n.V) / (n.M * 997), Bjd: n.B, Ajd: 0, Ifac: 0, zz: 0 };
+           beta: n.fits ? n.fits.beta : (n.M - 0.997 * n.V) / (n.M * 997), Bjd: n.B, Ajd: 0, Ifac: 0, zz: 0, fits: n.fits || null };
 }
 function buildIon(key) {          // trace ion in a supporting electrolyte: own ionic diffusivity
   const ion = CATIONS[key] || ANIONS[key];
@@ -686,6 +711,14 @@ function buildCustom(D25, M) { return { kind: "custom", formula: "custom", M, D2
 // Solution properties for the main solute at concentration C [g/L] and temperature T [°C]
 function solnProps(s, C, T) {
   const Tk = T + 273.15, etaW = waterEta(T), rhoW = waterRho(T);
+  if (s.fits) {                                             // measured fits at Tref; T scaling through the water viscosity
+    const fz = s.fits, sc = waterEta(fz.Tref) / etaW;      // η_w(Tref)/η_w(T): ν ∝ η, D ∝ T/η
+    const poly = (c, x) => c.reduce((acc, a, i) => acc + a * Math.pow(x, i), 0);
+    const nuRef = poly(fz.nu, C), Dref = poly(fz.D, C);
+    const rho = fz.rho0 * (rhoW / waterRho(fz.Tref)) * (1 + s.beta * C);
+    return { D: Dref * (Tk / (fz.Tref + 273.15)) * sc, nuKin: nuRef / sc, rho, cM: C / s.M, m: C / s.M / Math.max((rho - C) / 1000, 0.3),
+             I: 0, thermo: 1, etaRel: nuRef / sc / (etaW / rho), etaW };
+  }
   const cM = C / s.M;                                       // mol/L
   const m = cM / Math.max((rhoW * (1 + s.beta * C) - C) / 1000, 0.3);   // molality
   const I = s.Ifac * m;
@@ -718,42 +751,68 @@ const dpFromRpm = OCMF.dpFromRpm, rpmFromDp = OCMF.rpmFromDp;
 const RintFromObs = (Robs, Gam) => 1 - (1 - Robs) / (1 + Gam);
 const BFromRint = (Jv, Rint) => Rint > 0 ? Jv * (1 - Rint) / Rint : Infinity;    // same units as Jv
 function gammaFilm(phi, Rint) { const E = Math.exp(Math.min(phi, 20)); return Rint * (E - 1) / (Rint + (1 - Rint) * E); }
+// Finite-permeation closure of Geraldes & Afonso (2006): k_c(J_v)/k_c = Ξ(φ) = (φ + 1 + 0.26 φ^1.4)^{-1.7}... written for Γ:
+//   Γ = R_obs · φ · (1 + 0.26 φ^1.4)^1.7            (R_obs given)
+//   with R_int given: R_obs = 1 − (1 − R_int)(1 + Γ)  →  Γ = R_int φ X / (1 + (1 − R_int) φ X),  X = (1 + 0.26 φ^1.4)^1.7
+const xiFac = phi => Math.pow(1 + 0.26 * Math.pow(phi, 1.4), 1.7);
+function gammaXiObs(phi, Robs)  { return Robs * phi * xiFac(phi); }
+function gammaXiInt(phi, Rint)  { const q = phi * xiFac(phi); return Rint * q / (1 + (1 - Rint) * q); }
 
 // spec = { Robs } (operating point) or { B } (other fluxes, B in LMH). sB/specB likewise for the tracer.
+// NF model: k_c from the feed properties, film theory (explicit).
+// UF model: k_c from the properties at the film concentration ½(c_m + c_0), closure Ξ(φ), K2 = 0.261 — implicit in Γ;
+//           solved by damped fixed point from Γ = 0, which converges to the smallest (physical) root when one exists.
 function solveGamma(Jv_lmh, spec, sA, C0, T, a_m, sB, specB) {
   const Jv = Jv_lmh / 3.6e6;
-  const p = solnProps(sA, C0, T);
-  const UA = Math.pow(a_m * p.D, 1 / 3), ScA = p.nuKin / p.D;
-  const kOf = R => { const G = Math.max(R, 1e-6) * sA.beta * C0 * Jv / UA;
-                     return { G, kA: K2 * UA * Math.pow(G, 0.25) * Math.pow(ScA, -0.25) }; };
-  let Robs, Rint, G, kA, GammaA;
+  const uf = modelUF(), Kc = uf ? K2_XI : K2;
+  const propsAt = G => solnProps(sA, uf ? 0.5 * C0 * (2 + G) : C0, T);
+  const kOf = (R, p) => { const UA = Math.pow(a_m * p.D, 1 / 3), ScA = p.nuKin / p.D;
+                          const G = Math.max(R, 1e-6) * sA.beta * C0 * Jv / UA;
+                          return { G, UA, ScA, kA: Kc * UA * Math.pow(G, 0.25) * Math.pow(ScA, -0.25) }; };
+  const gamOf = (phi, R, byInt) => uf ? (byInt ? gammaXiInt(phi, R) : gammaXiObs(phi, R))
+                                      : (byInt ? gammaFilm(phi, R) : R * (Math.exp(Math.min(phi, 20)) - 1));
+  let Robs, Rint, G, kA, UA, ScA, GammaA = 0, p, converged = true;
   if (spec.Robs !== undefined) {
-    Robs = spec.Robs; ({ G, kA } = kOf(Robs));
-    GammaA = Robs * (Math.exp(Math.min(Jv / kA, 20)) - 1);
+    Robs = spec.Robs;
+    for (let it = 0; it < 400; it++) {                       // explicit in one pass for NF (props do not depend on Γ)
+      p = propsAt(GammaA); ({ G, kA, UA, ScA } = kOf(Robs, p));
+      const Gn = gamOf(Jv / kA, Robs, false);
+      if (!Number.isFinite(Gn) || Gn > 1e4) { converged = false; break; }
+      if (Math.abs(Gn - GammaA) < 1e-9 * (1 + GammaA)) { GammaA = Gn; break; }
+      GammaA = uf ? GammaA + 0.5 * (Gn - GammaA) : Gn;
+      if (!uf) break;
+    }
     Rint = RintFromObs(Robs, GammaA);
   } else {
     Rint = Jv_lmh / (Jv_lmh + spec.B);
     Robs = Rint;
-    for (let it = 0; it < 100; it++) {
-      ({ G, kA } = kOf(Robs));
-      GammaA = gammaFilm(Jv / kA, Rint);
-      const Rn = 1 - (1 - Rint) * (1 + GammaA);
-      if (Math.abs(Rn - Robs) < 1e-9) { Robs = Rn; break; }
-      Robs = 0.5 * (Robs + Rn);
+    for (let it = 0; it < 400; it++) {
+      p = propsAt(GammaA); ({ G, kA, UA, ScA } = kOf(Robs, p));
+      const Gn = gamOf(Jv / kA, Rint, true);
+      if (!Number.isFinite(Gn) || Gn > 1e4) { converged = false; break; }
+      const Rn = 1 - (1 - Rint) * (1 + Gn);
+      const done = Math.abs(Rn - Robs) < 1e-9 && Math.abs(Gn - GammaA) < 1e-9 * (1 + GammaA);
+      Robs = 0.5 * (Robs + Rn); GammaA = uf ? GammaA + 0.5 * (Gn - GammaA) : Gn;
+      if (done) break;
     }
   }
   const phiA = Jv / kA;
+  const p0 = solnProps(sA, C0, T), Sc0 = p0.nuKin / p0.D;      // bulk Schmidt number: the one the validity ranges refer to
+  const nuRatio = sA.fits ? solnProps(sA, C0 * (1 + GammaA), T).nuKin / p0.nuKin : 1;
   const out = { G, kA, phiA, GammaA, RobsA: Robs, RintA: Rint, BA: BFromRint(Jv_lmh, Rint), ScA, UA, D: p.D, nuKin: p.nuKin,
-                thermo: p.thermo, etaRel: p.etaRel, I: p.I,
-                oorG: G < 7e-9 || G > 5e-6, oorSc: ScA < 700 || ScA > 2200, oorPhi: phiA > 1.5 };
+                thermo: p.thermo, etaRel: p.etaRel, I: p.I, nuRatio, converged, uf,
+                oorG: G < 7e-9 || G > 5e-6,
+                Sc0,
+                oorSc: uf ? (Sc0 < 700 || Sc0 > 3.6e4) : (Sc0 < 700 || Sc0 > 2200),
+                oorPhi: uf ? (phiA > 7 || GammaA > 100) : phiA > 1.5 };
   if (sB) {
     const DB = tracerD(sB, p, T), UB = Math.pow(a_m * DB, 1 / 3), ScB = p.nuKin / DB;
-    const kB = K2 * UB * Math.pow(Math.max(G, 1e-30), 0.25) * Math.pow(ScB, -0.25);
+    const kB = Kc * UB * Math.pow(Math.max(G, 1e-30), 0.25) * Math.pow(ScB, -0.25);
     const phiB = Jv / kB;
     let RobsB, RintB, GammaB;
-    if (specB.Robs !== undefined) { RobsB = specB.Robs; GammaB = RobsB * (Math.exp(Math.min(phiB, 20)) - 1); RintB = RintFromObs(RobsB, GammaB); }
-    else { RintB = Jv_lmh / (Jv_lmh + specB.B); GammaB = gammaFilm(phiB, RintB); RobsB = 1 - (1 - RintB) * (1 + GammaB); }
-    Object.assign(out, { DB, ScB, kB, phiB, GammaB, RobsB, RintB, BB: BFromRint(Jv_lmh, RintB), oorScB: ScB < 700 || ScB > 3600 || phiB > 1.5 });
+    if (specB.Robs !== undefined) { RobsB = specB.Robs; GammaB = gamOf(phiB, RobsB, false); RintB = RintFromObs(RobsB, GammaB); }
+    else { RintB = Jv_lmh / (Jv_lmh + specB.B); GammaB = gamOf(phiB, RintB, true); RobsB = 1 - (1 - RintB) * (1 + GammaB); }
+    Object.assign(out, { DB, ScB, kB, phiB, GammaB, RobsB, RintB, BB: BFromRint(Jv_lmh, RintB), oorScB: ScB < 700 || ScB > 3600 || (uf ? phiB > 7 : phiB > 1.5) });
   }
   return out;
 }
@@ -787,6 +846,8 @@ function osmoticCoeff(s, m, T) {
 }
 function piOsm(s, C, T) {                                            // bar, C in g/L
   if (!(C > 0)) return { pi: 0, phi: 1, m: 0 };
+  if (s.fits) { const a = s.fits.pi, piPa = a[0] * C + a[1] * C * C + a[2] * C * C * C;             // measured cubic at Tref
+                return { pi: piPa * (T + 273.15) / (s.fits.Tref + 273.15) / 1e5, phi: NaN, m: solnProps(s, C, T).m }; }
   const m = solnProps(s, C, T).m, phi = osmoticCoeff(s, m, T);
   return { pi: phi * nuIons(s) * m * R_GAS * (T + 273.15) * waterRho(T) / 1e5, phi, m };
 }
@@ -943,8 +1004,12 @@ function update() {
   if (sA.kind === "salt" && !sA.pitzerTab) msg.push(`No Pitzer parameters tabulated for ${sA.formula}: osmotic pressure uses class-average parameters for ${sA.zP}:${sA.zM} electrolytes (indicative).`);
   if (pi0 >= dP) msg.push(`Feed osmotic pressure ≈ ${f(pi0, 1)} bar is not below the mean ΔP (${f(dP, 1)} bar): no permeation is possible; the set flux cannot occur.`);
   else if (piWall >= dP) msg.push(`Osmotic pressure at the membrane ≈ ${f(piWall, 1)} bar (Pitzer at c<sub>m</sub>) reaches the mean ΔP (${f(dP, 1)} bar): the set flux is not attainable at this pressure.`);
+  if (!main.converged) { stop("No steady polarisation for this flux: with the properties of the polarised layer the mass-transfer coefficient collapses before Γ settles (limiting-flux regime). Lower J<sub>v</sub> or c<sub>0</sub>."); return; }
+  if (sA.fits && !main.uf) msg.push("PEG 35 kDa with the NF model: film theory and feed properties are not adequate for a macromolecule (J<sub>v</sub>/k<sub>c</sub> ≫ 1.5, layer viscosity up to 40× the feed). Select the UF model.");
+  if (main.uf && !sA.fits) msg.push("UF model with a solute whose properties are taken as concentration-independent: the film-concentration evaluation then only changes the osmotic check. Validated for PEG 35 kDa (measured fits).");
   if (main.oorG || main.oorSc) msg.push("Operating point outside the validated range of the correlation (𝒢 or Sc of A) — extrapolation.");
-  if (main.oorPhi) msg.push("J<sub>v</sub>/k<sub>c</sub> &gt; 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
+  if (main.oorPhi) msg.push(main.uf ? "J<sub>v</sub>/k<sub>c</sub> &gt; 7 or Γ &gt; 100: beyond the range covered by the UF reconstructions — extrapolation."
+                                    : "J<sub>v</sub>/k<sub>c</sub> &gt; 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
   if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600).");
   warn(msg.join(" "));
 
@@ -980,21 +1045,27 @@ function update() {
   setText("p-formula", sA.formula); setText("p-M", f(sA.M, 2));
   setText("p-beta", f(sA.beta * 1e4, 2));
   setText("p-D", f(main.D * 1e9, 3)); setText("p-nu-k", f(main.nuKin * 1e6, 3));
-  setText("p-Sc", f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#c47a00" : "";
+  setText("p-Sc", main.uf ? `${f(main.ScA, 0)} <span style="font-weight:400;">(film) · ${f(main.Sc0, 0)} (feed)</span>` : f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#c47a00" : "";
   setText("p-U", f(main.UA * 1e3, 1)); setText("p-am", f(a_m, 0));
   setText("p-G", fe(main.G)); document.getElementById("p-G").style.color = main.oorG ? "#c47a00" : "";
   setText("p-kA", f(main.kA * 1e6, 1)); setText("p-phiA", f(main.phiA, 3));
   setText("p-BA", Number.isFinite(main.BA) ? f(main.BA, main.BA < 1 ? 3 : 2) : "0");
   setText("p-pi", `${f(pi0, 1)} / ${f(piWall, 1)}`); document.getElementById("p-pi").style.color = piWall >= dP ? "#c47a00" : "";
-  setText("p-phi", (sA.kind === "salt" ? (sA.pitzerTab ? "Pitzer" : "Pitzer, class est.") : "virial") + `, φ = ${f(osm0.phi, 3)} / ${f(osmW.phi, 3)}`);
+  setText("p-phi", sA.fits ? "measured cubic fit" : (sA.kind === "salt" ? (sA.pitzerTab ? "Pitzer" : "Pitzer, class est.") : "virial") + `, φ = ${f(osm0.phi, 3)} / ${f(osmW.phi, 3)}`);
   if (sB) { setText("p-bformula", sB.formula); setText("p-DB", f(main.DB * 1e9, 3)); setText("p-ScB", f(main.ScB, 0));
             document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : "";
             setText("p-kB", f(main.kB * 1e6, 1)); setText("p-BB", Number.isFinite(main.BB) ? f(main.BB, main.BB < 1 ? 3 : 2) : "0"); }
-  setText("p-note",
-    `At ${f(T, 0)} °C and the feed concentration: D°<sub>A</sub> = ${f(sA.D25 * 1e9, 3)}×10⁻⁹ m²/s at 25 °C` +
-    (sA.kind === "salt" ? ` (Nernst–Hartley), thermodynamic factor ${f(main.thermo, 3)} (Davies, I = ${f(main.I, 4)} mol/kg)` : "") +
-    `, η/η<sub>w</sub> = ${f(main.etaRel, 4)} (Jones–Dole), φ<sub>V</sub>° = ${f(sA.phiV, 1)} cm³/mol. ` +
-    `𝒢<sub>A</sub> and all properties are evaluated at the bulk feed concentration, as in the source correlation.`);
+  setText("model-hint", main.uf
+    ? `k<sub>c</sub>/U* = ${K2_XI} 𝒢<sup>¼</sup> Sc<sup>−¼</sup> (DNS re-extracted with Ξ), ν and D<sub>A</sub> at ½(c<sub>m</sub> + c<sub>0</sub>) = ${f(0.5 * C0 * (2 + main.GammaA), 2)} g/L, Γ = R<sub>obs</sub> φ (1 + 0.26 φ<sup>1.4</sup>)<sup>1.7</sup>. Validated on PEG 35 kDa reconstructions (12 runs, Γ 2–66, φ 1.4–7) and on the NF DNS; implicit in Γ.`
+    : `k<sub>c</sub>/U* = ${K2} 𝒢<sup>¼</sup> Sc<sup>−¼</sup>, Γ = R<sub>obs</sub>(e<sup>φ</sup> − 1), all properties at the feed. Validated against DNS for 𝒢 7×10⁻⁹–5×10⁻⁶, Sc 700–2200, φ ≤ 1.5.`);
+  setText("p-note", sA.fits
+    ? `Property laws at ${sA.fits.Tref} °C (Pereira 2026, Table A.1; data of Pires et al.): ν(c) and D<sub>A</sub>(c) quartic polynomials (D<sub>A</sub>(0) = ${f(sA.fits.D[0] * 1e11, 1)}×10⁻¹¹ m²/s, an estimate: no measurement for this polymer), β = ${f(sA.fits.beta * 1e4, 2)}×10⁻⁴ (g/L)⁻¹, π(c) cubic from cryoscopy. ` +
+      `Scaled to ${f(T, 0)} °C through the water viscosity. ` +
+      (main.uf ? `Properties at the film concentration; ν<sub>m</sub>/ν<sub>0</sub> = ${f(main.nuRatio, 1)} at the wall.` : `Properties at the feed concentration (NF model).`)
+    : `At ${f(T, 0)} °C and the feed concentration: D°<sub>A</sub> = ${f(sA.D25 * 1e9, 3)}×10⁻⁹ m²/s at 25 °C` +
+      (sA.kind === "salt" ? ` (Nernst–Hartley), thermodynamic factor ${f(main.thermo, 3)} (Davies, I = ${f(main.I, 4)} mol/kg)` : "") +
+      `, η/η<sub>w</sub> = ${f(main.etaRel, 4)} (Jones–Dole), φ<sub>V</sub>° = ${f(sA.phiV, 1)} cm³/mol. ` +
+      (main.uf ? `𝒢<sub>A</sub> and the properties are evaluated at the film concentration (UF model).` : `𝒢<sub>A</sub> and all properties are evaluated at the bulk feed concentration, as in the source correlation.`));
 }
 
 fillIons();
