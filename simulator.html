@@ -46,14 +46,6 @@
       font-size: 13px; color: var(--navy);
     }
     .geom-readout strong { font-weight: 700; }
-    .locus-readout {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 7px 18px;
-      margin-top: 12px; padding-top: 11px;
-      border-top: 1px solid var(--line);
-      font-size: 13px; color: var(--navy);
-    }
-    .locus-readout strong { font-weight: 700; }
-    .locus-readout strong.out { color: #b4232a; }
     .field-group select,
     .field-group input[type="number"] {
       width: 100%;
@@ -263,31 +255,6 @@
             <span>r<sub>s</sub> = <strong id="lbl-rs">—</strong> mm</span>
           </div>
           <div class="field-hint">Membrane &amp; feed-surface radii set by the chosen tube + rotor (ΔP = ½ρω²(r<sub>m</sub>²−r<sub>s</sub>²)).</div>
-        </div>
-
-        <div class="sim-panel" id="panel-locus" style="display:none;">
-          <h3>Feed volume at fixed ΔP</h3>
-          <div class="field-hint" style="margin:-8px 0 13px;">
-            Inverts the measured free-surface curve <em>r</em><sub>s</sub>(<em>V</em>). Holding ΔP fixed and
-            changing rotor speed sweeps the acceleration field — and hence mass transfer — at constant
-            transmembrane pressure, provided the feed volume is set accordingly.
-          </div>
-          <div class="field-group">
-            <label for="inp-locus-dp">Transmembrane ΔP (bar)</label>
-            <input type="number" id="inp-locus-dp" min="0.5" max="60" step="0.5" value="10" oninput="onLocusChange()" />
-          </div>
-          <div class="field-group">
-            <label for="inp-locus-rpm">Rotor speed (rpm)</label>
-            <input type="number" id="inp-locus-rpm" min="500" max="25000" step="50" value="10000" oninput="onLocusChange()" />
-            <div class="field-hint" id="locus-range">—</div>
-          </div>
-          <div class="locus-readout">
-            <span>Feed volume = <strong id="lbl-locus-V">—</strong> mL</span>
-            <span><em>r</em><sub>s</sub> = <strong id="lbl-locus-rs">—</strong> mm</span>
-            <span><em>a</em><sub>m</sub> = <strong id="lbl-locus-am">—</strong> × <em>g</em></span>
-            <span><em>k</em><sub>c</sub> = <strong id="lbl-locus-kc">—</strong> × ref</span>
-          </div>
-          <div class="field-hint" id="locus-note">—</div>
         </div>
 
         <div class="sim-panel">
@@ -815,7 +782,6 @@ function onVolSlider() {
     document.getElementById("lbl-dP").textContent = DP_VALS[maxIdx];
   }
   updateDpScale(maxIdx);
-  if (document.getElementById("sel-cartridge").value === "94-25") onLocusChange();
   update();
 }
 
@@ -1379,92 +1345,8 @@ function drawRej(dPs, curves, dP_op, ops) {
   drawChartLegend(ctx, pad, W, legendItems);
 }
 
-// ── Feed volume at fixed ΔP (94/25 only) ──
+// ── Measured free-surface curve (94/25) ──
 const ds94 = V => OCMF.deltaS("94-25", V) * 1000;   // mm
-const v94FromDs = OCMF.v94FromDs;                    // inverse (physical branch), mm in
-
-function rpmForV94(dP_bar, V) {
-  const rmax = getRmax();
-  const r_m  = rmax - DELTA_M;
-  const r_s  = rmax - ds94(V) / 1000;
-  const K    = r_m * r_m - r_s * r_s;
-  if (K <= 0) return null;
-  return Math.sqrt(2 * dP_bar * 1e5 / (RHO * K)) * 60 / (2 * Math.PI);
-}
-
-function onLocusChange() {
-  const dP    = parseFloat(document.getElementById("inp-locus-dp").value);
-  const rpm   = parseFloat(document.getElementById("inp-locus-rpm").value);
-  const setTx = (id, t) => { document.getElementById(id).textContent = t; };
-  const flag  = (id, bad) => {
-    document.getElementById(id).classList.toggle("out", bad);
-  };
-  const blank = msg => {
-    ["lbl-locus-V", "lbl-locus-rs", "lbl-locus-am", "lbl-locus-kc"].forEach(id => {
-      setTx(id, "—"); flag(id, false);
-    });
-    setTx("locus-note", msg);
-  };
-
-  // Speed window that keeps the feed volume inside the measured span.
-  const nLo = rpmForV94(dP, DS94.vMax);       // most liquid  → slowest
-  const nHi = rpmForV94(dP, DS94.vMin);       // least liquid → fastest
-  const nMax = getMaxRpm();
-  if (dP > 0 && nLo && nHi) {
-    const hi = Math.min(nHi, nMax);
-    document.getElementById("locus-range").textContent = hi > nLo
-      ? `At ${dP} bar the calibrated window is ${Math.round(nLo).toLocaleString("en")}–` +
-        `${Math.round(hi).toLocaleString("en")} rpm` +
-        (nHi > nMax ? " (upper end capped by the rotor limit)." : ".")
-      : `At ${dP} bar this rotor cannot reach the calibrated window — its limit is ` +
-        `${nMax.toLocaleString("en")} rpm, and ${Math.round(nLo).toLocaleString("en")} rpm is needed.`;
-  } else {
-    document.getElementById("locus-range").textContent = "—";
-  }
-
-  if (!(dP > 0) || !(rpm > 0)) { blank("Enter a pressure and a rotor speed."); return; }
-
-  const rmax  = getRmax();
-  const r_m   = rmax - DELTA_M;
-  const omega = rpm * 2 * Math.PI / 60;
-  const rs2   = r_m * r_m - 2 * dP * 1e5 / (RHO * omega * omega);
-  if (rs2 <= 0) {
-    blank(`${rpm.toLocaleString("en")} rpm cannot reach ${dP} bar at any fill volume — ` +
-          `the free surface would have to sit outside the rotor.`);
-    return;
-  }
-  const r_s = Math.sqrt(rs2);
-  const V   = v94FromDs((rmax - r_s) * 1000);
-  if (V === null) { blank("No feed volume satisfies this combination."); return; }
-
-  const outOfRange = V < DS94.vMin || V > DS94.vMax;
-  const overSpeed  = rpm > nMax;
-  const a_m  = omega * omega * r_m / 9.80665;
-
-  // k_c ∝ a_m^(1/3); reference is the same ΔP held at the nominal 22.5 mL fill.
-  const nRef = rpmForV94(dP, VOL_NOM["94-25"]);
-  const kRel = nRef ? Math.pow(rpm / nRef, 2 / 3) : NaN;
-
-  setTx("lbl-locus-V",  V.toFixed(2));   flag("lbl-locus-V", outOfRange);
-  setTx("lbl-locus-rs", (r_s * 1000).toFixed(2)); flag("lbl-locus-rs", false);
-  setTx("lbl-locus-am", Math.round(a_m).toLocaleString("en")); flag("lbl-locus-am", false);
-  setTx("lbl-locus-kc", isFinite(kRel) ? kRel.toFixed(3) : "—"); flag("lbl-locus-kc", false);
-
-  const notes = [];
-  if (outOfRange) {
-    notes.push(`<strong>Outside the measured range.</strong> The curve was fitted over ` +
-               `${DS94.vMin}–${DS94.vMax} mL; ${V.toFixed(2)} mL is an extrapolation and is not supported.`);
-  }
-  if (overSpeed) {
-    notes.push(`Exceeds this rotor's ${nMax.toLocaleString("en")} rpm limit.`);
-  }
-  if (!notes.length) {
-    notes.push(`k<sub>c</sub> is referenced to the same ΔP held at the nominal 22.5 mL fill. ` +
-               `Changing speed at fixed ΔP also changes the volume-to-area ratio and the liquid ` +
-               `column height, so this is not a pure crossflow analogue.`);
-  }
-  document.getElementById("locus-note").innerHTML = notes.join(" ");
-}
 
 // ── Init ──
 function onRotorChange() { onCartridgeChange(); }
@@ -1472,7 +1354,6 @@ function onCartridgeChange() {
   const cart = document.getElementById("sel-cartridge").value;
   document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
   OCMF.fillRotorSelect(document.getElementById("sel-rotor"), cart);   // keeps the current rotor when still valid
-  document.getElementById("panel-locus").style.display = cart === "94-25" ? "block" : "none";
 
   // Re-range the volume slider before any geometry is read from it
   const vr   = getVolRange();
@@ -1486,7 +1367,6 @@ function onCartridgeChange() {
     ? `Measured free-surface curve, valid ${vr.min}–${vr.max}&nbsp;mL.`
     : `Declared operating range ${vr.min}–${vr.max}&nbsp;mL (linear δ<sub>s</sub> model).`;
 
-  if (cart === "94-25") onLocusChange();
   const geom = getGeom();
   document.getElementById("lbl-rm").textContent = (geom.r_m * 1000).toFixed(1);
   document.getElementById("lbl-rs").textContent = (geom.r_s * 1000).toFixed(1);
