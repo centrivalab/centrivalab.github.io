@@ -305,15 +305,21 @@
               <label>Stirrer Speed</label>
               <div class="ctrl-row">
                 <span class="ctrl-lbl">RPM</span>
-                <input type="range" id="inp-rpm" min="0" max="5" step="1" value="1" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 100–1000 rpm, Sterlitech HP4750" />
+                <input type="range" id="inp-rpm" min="100" max="1000" step="10" value="200" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 100–1000 rpm, Sterlitech HP4750" />
                 <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
               </div>
-              <div class="field-hint">Range 100–1000 rpm (typical working range). ΔP same as O-CMF.</div>
+              <div class="ctrl-row" style="margin-top:8px;">
+                <span class="ctrl-lbl">&lang;&tau;&rang;</span>
+                <input type="range" id="inp-tau-s" min="0" max="1" step="any" value="0" oninput="onTauStirred()" aria-label="Area-average wall shear stress at the membrane of the stirred cell, linked to the stirrer speed" />
+                <span class="ctrl-val"><span id="lbl-tau-s">—</span> Pa</span>
+              </div>
+              <div class="field-hint">Range 100–1000 rpm (typical working range). ΔP same as O-CMF. The shear-stress slider is linked to the speed: move either one.
+                <span id="tau-s-note"></span></div>
             </div>
             <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
               <strong>References:</strong><br/>
               • <a href="https://doi.org/10.1002/aic.690180512" target="_blank" rel="noopener">Colton &amp; Smith (1972)</a>: Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
-              • <a href="https://doi.org/10.1016/j.memsci.2012.01.029" target="_blank" rel="noopener">Koutsou &amp; Karabelas (2012)</a>: Stirrer diameter 21 mm, geometry &amp; assumptions
+              • <a href="https://doi.org/10.1016/j.memsci.2012.01.029" target="_blank" rel="noopener">Koutsou &amp; Karabelas (2012)</a>: Stirrer diameter 21 mm, geometry &amp; assumptions; mean wall shear stress &lang;&tau;&rang; = 0.85&nbsp;Re<sup>0.49</sup>&nbsp;&mu;&omega; (Eq. 7), Re = &rho;&omega;R²/&mu;, R = 16.5 mm
             </div>
           </div>
 
@@ -333,7 +339,7 @@
               <label>Feed-channel pressure drop Δp/L</label>
               <div class="ctrl-row">
                 <span class="ctrl-lbl">Δp/L</span>
-                <input type="range" id="inp-dpdl" min="0" max="7" step="1" value="2" oninput="onDpdlSlider()" aria-label="Feed-channel pressure drop per unit length, 0.1 to 1 bar per metre" />
+                <input type="range" id="inp-dpdl" min="0.1" max="1" step="0.01" value="0.3" oninput="onDpdlSlider()" aria-label="Feed-channel pressure drop per unit length, 0.1 to 1 bar per metre" />
                 <span class="ctrl-val"><span id="lbl-dpdl">0.30</span> bar/m</span>
               </div>
               <div class="ctrl-row" style="margin-top:8px; color:#8a97a6;">
@@ -341,6 +347,12 @@
                 <input type="range" id="inp-vel" min="0" max="1" step="1" value="0" disabled aria-label="Resulting mean channel velocity (calculated, not adjustable)" style="opacity:.45; cursor:not-allowed;" />
                 <span class="ctrl-val" style="color:#8a97a6;"><span id="lbl-vel">—</span> m/s</span>
               </div>
+              <div class="ctrl-row" style="margin-top:8px;">
+                <span class="ctrl-lbl">&lang;&tau;&rang;</span>
+                <input type="range" id="inp-tau-p" min="0" max="1" step="any" value="0" oninput="onTauSpiral()" aria-label="Indicative area-average wall shear stress in the spacer-filled channel, linked to the pressure drop" />
+                <span class="ctrl-val"><span id="lbl-tau-p">—</span> Pa</span>
+              </div>
+              <div class="field-hint">Indicative mean wall shear stress from Koutsou &amp; Karabelas (2012), Eq. 10 for a 28-mil net spacer (filament D = half the channel height), with U = &epsilon;&middot;v. The slider is linked to Δp/L: move either one.</div>
               <div class="field-hint">The pressure drop along the element is what you set in practice (limit ≈ 1 bar/m); the interstitial crossflow velocity in the spacer-filled channel follows from it (grey, calculated at the feed viscosity — it falls as the feed viscosity rises, e.g. PEG 35 kDa). Transmembrane ΔP same as O-CMF.</div>
             </div>
             <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
@@ -537,7 +549,7 @@ const RMAX_50_34   = OCMF.CARTRIDGES["50-34"].rotors[0].rmax;
 const MAXRPM_50_34 = OCMF.CARTRIDGES["50-34"].rotors[0].maxRpm;
 
 // Sterlitech HP4750 discrete RPM values (typical working range)
-const RPM_VALS = [100, 200, 400, 600, 800, 1000];
+const RPM_MIN = 100, RPM_MAX = 1000;   // stirrer-speed slider span
 
 // Sterlitech HP4750 properties — Colton-Smith correlation
 const STERLITECH = {
@@ -557,7 +569,7 @@ const SPACERS = {
   DesalUF: { label: "Desal UF",       dh: 1.39e-3, eps: 0.81 }
 };
 // Feed-channel pressure drop per unit length [bar/m] — the control of the spiral-wound module (element limit ≈ 1 bar/m)
-const DPDL_VALS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0];
+const DPDL_MIN = 0.1, DPDL_MAX = 1.0;
 const SPIRAL_COLOR = "#0066cc";  // blue for spiral-wound curve
 
 // Chart configuration constants
@@ -803,14 +815,76 @@ function onBSlider() {
   document.getElementById("lbl-B").textContent = fmtVal(v);
   update();
 }
+// ── Mean wall shear stress (Koutsou & Karabelas 2012, J. Membr. Sci. 399–400, 60–72) ──
+// Stirred cell, Eq. 7:  <τ> = 0.85 Re^0.49 μ ω,  Re = ρ ω R²/μ  (R = 16.5 mm cell-base radius; measured for Re 6500–39 000)
+const R_CELL = 0.0165;
+function stirredTau(rpm, mu) {
+  const w = rpm * 2 * Math.PI / 60;
+  return 0.85 * Math.pow(RHO * w * R_CELL * R_CELL / mu, 0.49) * mu * w;
+}
+function stirredRpmFromTau(tau, mu) {
+  const w = Math.pow(tau / (0.85 * Math.pow(mu, 0.51) * Math.pow(RHO, 0.49) * Math.pow(R_CELL, 0.98)), 1 / 1.49);
+  return w * 60 / (2 * Math.PI);
+}
+// Spacer-filled channel, Eq. 10 (28-mil net spacer, L/D = 8): τ̄ = τD/(μU) = 0.42 Re^0.61, Re = DU/ν, U superficial.
+// Applied to every spacer of the list as an indicative estimate, with D = H/2 and H recovered from (d_h, ε) of Schock & Miquel.
+function spacerD(key) { const sp = SPACERS[key]; return 0.5 * sp.dh * (2 + 8 * (1 - sp.eps)) / (4 * sp.eps); }
+function spiralTau(v_eff, key, nu) {
+  const sp = SPACERS[key], D = spacerD(key), U = sp.eps * v_eff;
+  return 0.42 * Math.pow(D * U / nu, 0.61) * RHO * nu * U / D;
+}
+function spiralVeffFromTau(tau, key, nu) {
+  const sp = SPACERS[key], D = spacerD(key);
+  const U = Math.pow(tau * D / (0.42 * RHO * nu * Math.pow(D / nu, 0.61)), 1 / 1.61);
+  return U / sp.eps;
+}
+const fmtTau = t => t < 10 ? t.toFixed(2) : t.toFixed(1);
+function feedProps() {
+  const sol = document.getElementById("sel-solute").value;
+  const C0  = C0_VALS[parseInt(document.getElementById("inp-C0").value)];
+  return { sol, C0, nu: getNu(sol, C0) };
+}
+// Re-range and re-position the two shear-stress sliders from the current speed / Δp/L, spacer and feed viscosity
+function refreshShear() {
+  const { sol, C0, nu } = feedProps(), mu = RHO * nu;
+  const rpm = parseFloat(document.getElementById("inp-rpm").value);
+  const sT = document.getElementById("inp-tau-s");
+  sT.min = stirredTau(RPM_MIN, mu); sT.max = stirredTau(RPM_MAX, mu); sT.value = stirredTau(rpm, mu);
+  document.getElementById("lbl-tau-s").textContent = fmtTau(stirredTau(rpm, mu));
+  const Re = RHO * (rpm * 2 * Math.PI / 60) * R_CELL * R_CELL / mu;
+  document.getElementById("tau-s-note").textContent =
+    Re < 6500 ? ` Re = ${Math.round(Re).toLocaleString("en")}: below the 6 500–39 000 range of the shear measurements — extrapolated.` : "";
+
+  const key = document.getElementById("sel-spacer").value;
+  const dpdl = parseFloat(document.getElementById("inp-dpdl").value);
+  const tauAt = d => spiralTau(getSpiralVeff(d, key, sol, C0), key, nu);
+  const pT = document.getElementById("inp-tau-p");
+  pT.min = tauAt(DPDL_MIN); pT.max = tauAt(DPDL_MAX); pT.value = tauAt(dpdl);
+  document.getElementById("lbl-tau-p").textContent = fmtTau(tauAt(dpdl));
+}
 function onRpmSlider() {
-  const v = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
-  document.getElementById("lbl-rpm").textContent = v;
+  document.getElementById("lbl-rpm").textContent = parseFloat(document.getElementById("inp-rpm").value);
+  update();
+}
+function onTauStirred() {
+  const { nu } = feedProps();
+  const tau = parseFloat(document.getElementById("inp-tau-s").value);
+  const rpm = Math.min(RPM_MAX, Math.max(RPM_MIN, Math.round(stirredRpmFromTau(tau, RHO * nu))));
+  document.getElementById("inp-rpm").value = rpm;
+  document.getElementById("lbl-rpm").textContent = rpm;
   update();
 }
 function onDpdlSlider() {
-  const v = DPDL_VALS[parseInt(document.getElementById("inp-dpdl").value)];
-  document.getElementById("lbl-dpdl").textContent = v.toFixed(2);
+  document.getElementById("lbl-dpdl").textContent = parseFloat(document.getElementById("inp-dpdl").value).toFixed(2);
+  update();
+}
+function onTauSpiral() {
+  const { sol, C0, nu } = feedProps();
+  const key = document.getElementById("sel-spacer").value;
+  const tau = parseFloat(document.getElementById("inp-tau-p").value);
+  const d = Math.min(DPDL_MAX, Math.max(DPDL_MIN, getSpiralDpdl(spiralVeffFromTau(tau, key, nu), key, sol, C0)));
+  document.getElementById("inp-dpdl").value = d;
+  document.getElementById("lbl-dpdl").textContent = d.toFixed(2);
   update();
 }
 function onSpacerChange() { update(); }
@@ -890,6 +964,7 @@ function update() {
   const dP_op = DP_VALS[parseInt(document.getElementById("inp-dP").value)];  // bar
 
   const B_SI  = B * 1e-3 / 3600;   // m/s
+  refreshShear();
 
   const { DP_MIN: dP_min, DP_POINTS: N } = CHART_CONFIG;
   const dP_max = Math.min(getRotorDP(), 80);
@@ -952,7 +1027,7 @@ function update() {
   const compJvMax = 150;
   let compSolver, compLabel, compColor;
   if (compareMode === "spiral") {
-    const dpdl = DPDL_VALS[parseInt(document.getElementById("inp-dpdl").value)];
+    const dpdl = parseFloat(document.getElementById("inp-dpdl").value);
     const spacerKey = document.getElementById("sel-spacer").value;
     const v_eff = getSpiralVeff(dpdl, spacerKey, sol, C0);   // follows from Δp/L at the feed viscosity
     compSolver = (dP, s, c, lp, b) => solveCPSpiral(dP, s, c, lp, b, v_eff, spacerKey);
@@ -963,7 +1038,7 @@ function update() {
     const elV = document.getElementById("inp-vel");
     elV.min = 0; elV.max = 0.6; elV.step = "any"; elV.value = v_eff;
   } else {
-    const rpm_sterlitech = RPM_VALS[parseInt(document.getElementById("inp-rpm").value)];
+    const rpm_sterlitech = parseFloat(document.getElementById("inp-rpm").value);
     compSolver = (dP, s, c, lp, b) => solveCPSterlitech(dP, s, c, lp, b, rpm_sterlitech);
     compLabel  = "Sterlitech";
     compColor  = "#ff0000";
