@@ -434,8 +434,7 @@
       <div>
 
         <div id="warning-box" class="warning-box">
-          <strong>Out-of-calibration range.</strong> <span id="warning-text"></span>
-          Results are extrapolations — interpret with caution.
+          <strong>Outside the validated range.</strong> <span id="warning-text"></span>
         </div>
         <div id="info-box" class="info-box"><span id="info-text"></span></div>
 
@@ -1036,7 +1035,9 @@ function onTSlider() { document.getElementById("lbl-T").textContent = document.g
 function onSoluteChange() { update(); }
 
 // ── Main update ──
+let OOR_WHY = new Set();
 function update() {
+  OOR_WHY = new Set();
   rebuildOSN();
   // Validate rotor geometry before proceeding
   const geom_check = getGeom();
@@ -1079,7 +1080,10 @@ function update() {
       Jvs.push(res.Jv_lmh);
       // Check out-of-range only if G is present (O-CMF has it, Sterlitech doesn't)
       if (res.G) {
-        if (res.Sc0 < 700 || res.Sc0 > 3.6e4 || res.phi > 7 || res.Gamma > 100 || res.G < 7e-9 || res.G > 5e-6) oor = true;
+        if (res.Sc0 < 700) { oor = true; OOR_WHY.add("sc-low"); }
+        if (res.Sc0 > 3.6e4) { oor = true; OOR_WHY.add("sc-high"); }
+        if (res.phi > 7 || res.Gamma > 100) { oor = true; OOR_WHY.add("phi"); }
+        if (res.G < 7e-9 || res.G > 5e-6) { oor = true; OOR_WHY.add("G"); }
       }
     }
     return { gammas, Rints, Robss, Jvs, oor };
@@ -1098,6 +1102,11 @@ function update() {
   });
 
   const outOfRange = classCurves.some(c => c.oor);
+  const oorTexts = [];
+  if (OOR_WHY.has("sc-low"))  oorTexts.push("Schmidt number of the feed below 700 (validated range 700–3.6×10⁴; k<sub>c</sub> ∝ Sc<sup>−¼</sup>, so the extrapolation is usually mild)");
+  if (OOR_WHY.has("sc-high")) oorTexts.push("Schmidt number of the feed above 3.6×10⁴");
+  if (OOR_WHY.has("phi"))     oorTexts.push("J<sub>v</sub>/k<sub>c</sub> &gt; 7 or Γ &gt; 100 (beyond the UF reconstructions)");
+  if (OOR_WHY.has("G"))       oorTexts.push("modified Grashof number outside 7×10⁻⁹–5×10⁻⁶ (validated range of the DNS)");
 
   // Operating point for each class at the specified ΔP
   const dP_clamped = Math.max(dP_min, Math.min(dP_op, dP_max));
@@ -1146,7 +1155,7 @@ function update() {
     const lp_dom = MEM_CLASSES[cl.key].Lp;  // LMH/bar for display
     const res = compSolver(dP_clamped, sol, C0, lp, B_SI);
     if (!res) return null;  // Explicit validation
-    return { ...res, color: cl.color, label: cl.label + ` (${lp_dom} LMH/bar)`,
+    return { ...res, color: cl.color, label: cl.label,
              jvMax: MEM_CLASSES[cl.key].Jv_max };
   });
 
@@ -1163,9 +1172,12 @@ function update() {
 
   // Alerts
   const warningBox = document.getElementById("warning-box");
-  warningBox.classList.toggle("show", outOfRange);
-  if (outOfRange) document.getElementById("warning-text").textContent =
-    " Some points fall outside the range covered by the reconstructions (Jv/kc ≤ 7, Γ ≤ 100, feed Sc ≤ 3.6×10⁴, 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶]).";
+  const organic = document.getElementById("sel-solvent").value !== "water";
+  warningBox.classList.toggle("show", outOfRange || organic);
+  const parts = [];
+  if (outOfRange) parts.push("Some points fall outside the range in which the correlation was validated: " + oorTexts.join("; ") + ".");
+  if (organic) parts.push("The correlation has been validated for aqueous systems and PEG 35 kDa in water, not for organic solvents: treat the numbers as screening estimates.");
+  document.getElementById("warning-text").innerHTML = " " + parts.join(" ");
 
   const hasData = classCurves.some(c => c.gammas.some(g => g !== null));
   const infoBox = document.getElementById("info-box");
@@ -1366,7 +1378,7 @@ function drawGamma(dPs, curves, dP_op, ops) {
   });
 
   drawChartLegend(ctx, pad, W, curves.map(c => ({
-    label: c.label + (c.lp_display ? ` (${c.lp_display} LMH/bar)` : ''),
+    label: c.label,
     color: c.color,
     lw: c.lineWidth || 1.5
   })));
