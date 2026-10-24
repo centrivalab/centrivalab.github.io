@@ -64,6 +64,8 @@
     .kpi-card.main.warn { border-color: #f0a500; background: #fff8e6; }
     .kpi-card.main.warn .kpi-value { color: #c47a00; }
     .kpi-card.main.warn .kpi-label::after { content: " · extrapolated"; color: #c47a00; }
+    .kpi-card.main.near { border-color: #d9cf9a; background: #fdfbf2; }
+    .kpi-card.main.near .kpi-label::after { content: " · Sc marginal"; color: #8f7f3c; }
 
     table.res { width: 100%; border-collapse: collapse; font-size: 13px; box-shadow: none; border: none; border-radius: 0; }
     table.res th, table.res td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); }
@@ -72,6 +74,7 @@
     table.res td:first-child, table.res th:first-child { text-align: left; }
     table.res td.gam { font-weight: 700; }
     table.res tr.extrap td { color: #c47a00; }
+    table.res tr.near td { color: #8f7f3c; }
     table.res tr.user td { background: #f2fbff; }
     .props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 18px; font-size: 13px; color: var(--navy); }
     .props span em { color: var(--muted); font-style: normal; }
@@ -366,6 +369,7 @@
             the ◀ row reproduces your input. <span style="color:#c47a00;font-weight:700;">Orange rows</span>: outside the range over which the
             correlation was validated against DNS (𝒢 7×10⁻⁹–5×10⁻⁶; Sc 700–2200), or J<sub>v</sub>/k<sub>c</sub> &gt; 1.5 where
             film theory itself loses accuracy — values are extrapolated. With the UF model the flags are J<sub>v</sub>/k<sub>c</sub> &gt; 7 or Γ &gt; 100.
+            <span style="color:#8f7f3c;font-weight:700;">Olive rows</span>: Sc between 500 and 700, just below the validated range — k<sub>c</sub> ∝ Sc<sup>−¼</sup> is a weak dependence (≈ 6 % at Sc = 555, NaCl at 25 °C), so these values are marginal rather than extrapolated; Sc &lt; 500 is orange.
           </div>
         </div>
 
@@ -380,7 +384,7 @@
           </table>
           <div class="field-hint" style="margin-top:8px;">
             k<sub>B</sub> is set by the convective field of solute A (𝒢<sub>A</sub>) and the tracer's own diffusivity (Eq. 47).
-            Orange rows: Sc<sub>B</sub> outside 700–3600 or J<sub>v</sub>/k<sub>B</sub> &gt; 1.5, or the row is already extrapolated for A.
+            Orange rows: Sc<sub>B</sub> outside 500–3600 or J<sub>v</sub>/k<sub>B</sub> &gt; 1.5, or the row is already extrapolated for A.
           </div>
         </div>
 
@@ -762,6 +766,9 @@ function gammaXiInt(phi, Rint)  { const q = phi * xiFac(phi); return Rint * q / 
 // NF model: k_c from the feed properties, film theory (explicit).
 // UF model: k_c from the properties at the film concentration ½(c_m + c_0), closure Ξ(φ), K2 = 0.261 — implicit in Γ;
 //           solved by damped fixed point from Γ = 0, which converges to the smallest (physical) root when one exists.
+// Two-level Schmidt-number flag: 500 ≤ Sc < 700 is marginal (Sc^−¼ is a weak law; e.g. NaCl at room temperature), below 500 is extrapolation
+const SC_SOFT = 500;
+const scShift = Sc => 100 * (Math.pow(700 / Sc, 0.25) - 1);   // % change in k_c between Sc = 700 and Sc
 function solveGamma(Jv_lmh, spec, sA, C0, T, a_m, sB, specB) {
   const Jv = Jv_lmh / 3.6e6;
   const uf = modelUF(), Kc = uf ? K2_XI : K2;
@@ -803,7 +810,8 @@ function solveGamma(Jv_lmh, spec, sA, C0, T, a_m, sB, specB) {
                 thermo: p.thermo, etaRel: p.etaRel, I: p.I, nuRatio, converged, uf,
                 oorG: G < 7e-9 || G > 5e-6,
                 Sc0,
-                oorSc: uf ? (Sc0 < 700 || Sc0 > 3.6e4) : (Sc0 < 700 || Sc0 > 2200),
+                oorSc: uf ? (Sc0 < SC_SOFT || Sc0 > 3.6e4) : (Sc0 < SC_SOFT || Sc0 > 2200),
+                nearSc: Sc0 >= SC_SOFT && Sc0 < 700,
                 oorPhi: uf ? (phiA > 7 || GammaA > 100) : phiA > 1.5 };
   if (sB) {
     const DB = tracerD(sB, p, T), UB = Math.pow(a_m * DB, 1 / 3), ScB = p.nuKin / DB;
@@ -812,7 +820,7 @@ function solveGamma(Jv_lmh, spec, sA, C0, T, a_m, sB, specB) {
     let RobsB, RintB, GammaB;
     if (specB.Robs !== undefined) { RobsB = specB.Robs; GammaB = gamOf(phiB, RobsB, false); RintB = RintFromObs(RobsB, GammaB); }
     else { RintB = Jv_lmh / (Jv_lmh + specB.B); GammaB = gamOf(phiB, RintB, true); RobsB = 1 - (1 - RintB) * (1 + GammaB); }
-    Object.assign(out, { DB, ScB, kB, phiB, GammaB, RobsB, RintB, BB: BFromRint(Jv_lmh, RintB), oorScB: ScB < 700 || ScB > 3600 || (uf ? phiB > 7 : phiB > 1.5) });
+    Object.assign(out, { DB, ScB, kB, phiB, GammaB, RobsB, RintB, BB: BFromRint(Jv_lmh, RintB), oorScB: ScB < SC_SOFT || ScB > 3600 || (uf ? phiB > 7 : phiB > 1.5), nearScB: ScB >= SC_SOFT && ScB < 700 });
   }
   return out;
 }
@@ -1008,17 +1016,21 @@ function update() {
   if (sA.fits && !main.uf) msg.push("PEG 35 kDa with the NF model: film theory and feed properties are not adequate for a macromolecule (J<sub>v</sub>/k<sub>c</sub> ≫ 1.5, layer viscosity up to 40× the feed). Select the UF model.");
   if (main.uf && !sA.fits) msg.push("UF model with a solute whose properties are taken as concentration-independent: the film-concentration evaluation then only changes the osmotic check. Validated for PEG 35 kDa (measured fits).");
   if (main.oorG || main.oorSc) msg.push("Operating point outside the validated range of the correlation (𝒢 or Sc of A) — extrapolation.");
+  else if (main.nearSc) msg.push(`Sc of A = ${f(main.Sc0, 0)} is slightly below the DNS-validated range (700–2200). Because k<sub>c</sub> ∝ Sc<sup>−¼</sup>, this shifts k<sub>c</sub> by only ≈ ${f(scShift(main.Sc0), 0)} % relative to Sc = 700; not validated directly.`);
   if (main.oorPhi) msg.push(main.uf ? "J<sub>v</sub>/k<sub>c</sub> &gt; 7 or Γ &gt; 100: beyond the range covered by the UF reconstructions — extrapolation."
                                     : "J<sub>v</sub>/k<sub>c</sub> &gt; 1.5: beyond the range where film theory is accurate (Γ ≳ 3) — extrapolation.");
-  if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600).");
+  if (sB && main.oorScB) msg.push("Tracer Schmidt number outside the validated range (700–3600; below 700 down to 500 is marginal).");
+  else if (sB && main.nearScB) msg.push(`Tracer Sc<sub>B</sub> = ${f(main.ScB, 0)} is slightly below the validated range (700–3600): k<sub>B</sub> shifts by only ≈ ${f(scShift(main.ScB), 0)} %.`);
   warn(msg.join(" "));
 
   // KPIs
-  document.getElementById("kpi-gamma").classList.toggle("warn", main.oorG || main.oorSc || main.oorPhi);
+  { const strong = main.oorG || main.oorSc || main.oorPhi, el = document.getElementById("kpi-gamma");
+    el.classList.toggle("warn", strong); el.classList.toggle("near", !strong && main.nearSc); }
   setText("val-gamma", f(main.GammaA, 3));
   setText("val-cm", `c<sub>m</sub> = ${f(main.GammaA * C0 + C0, 3)} g/L = ${f((1 + main.GammaA) * C0 / sA.M, 4)} mol/L`);
   if (sB) {
-    document.getElementById("kpi-gammab").classList.toggle("warn", main.oorG || main.oorSc || main.oorPhi || main.oorScB);
+    { const strong = main.oorG || main.oorSc || main.oorPhi || main.oorScB, el = document.getElementById("kpi-gammab");
+      el.classList.toggle("warn", strong); el.classList.toggle("near", !strong && (main.nearSc || main.nearScB)); }
     setText("val-gammab", f(main.GammaB, 3));
     setText("val-cmb", CB > 0 ? `c<sub>m</sub> = ${f((1 + main.GammaB) * CB, 2)} mg/L` : "—");
   }
@@ -1033,11 +1045,11 @@ function update() {
   const extrapA = r => r.oorG || r.oorSc || r.oorPhi;
   const mark = j => (j === Jv ? "user " : "");
   document.querySelector("#tbl-res tbody").innerHTML = rowRes.map(({ j, r }) =>
-    `<tr class="${mark(j)}${extrapA(r) ? "extrap" : ""}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${fe(r.G)}</td>` +
+    `<tr class="${mark(j)}${extrapA(r) ? "extrap" : r.nearSc ? "near" : ""}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${fe(r.G)}</td>` +
     `<td>${f(r.kA * 1e6, 1)}</td><td>${f(r.phiA, 3)}</td><td class="gam">${f(r.GammaA, 3)}</td><td>${f((1 + r.GammaA) * C0, 3)}</td>` +
     `<td>${f(100 * r.RintA, 1)} %</td><td>${f(100 * r.RobsA, 1)} %</td></tr>`).join("");
   if (sB) document.querySelector("#tbl-trc tbody").innerHTML = rowRes.map(({ j, r }) =>
-    `<tr class="${mark(j)}${extrapA(r) || r.oorScB ? "extrap" : ""}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${f(r.kB * 1e6, 1)}</td>` +
+    `<tr class="${mark(j)}${extrapA(r) || r.oorScB ? "extrap" : (r.nearSc || r.nearScB) ? "near" : ""}"><td>${f(j, 0)}${j === Jv ? " ◀" : ""}</td><td>${f(r.kB * 1e6, 1)}</td>` +
     `<td>${f(r.phiB, 3)}</td><td class="gam">${f(r.GammaB, 3)}</td><td>${CB > 0 ? f((1 + r.GammaB) * CB, 2) : "—"}</td>` +
     `<td>${f(100 * r.RintB, 1)} %</td><td>${f(100 * r.RobsB, 1)} %</td></tr>`).join("");
 
@@ -1045,7 +1057,7 @@ function update() {
   setText("p-formula", sA.formula); setText("p-M", f(sA.M, 2));
   setText("p-beta", f(sA.beta * 1e4, 2));
   setText("p-D", f(main.D * 1e9, 3)); setText("p-nu-k", f(main.nuKin * 1e6, 3));
-  setText("p-Sc", main.uf ? `${f(main.ScA, 0)} <span style="font-weight:400;">(film) · ${f(main.Sc0, 0)} (feed)</span>` : f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#c47a00" : "";
+  setText("p-Sc", main.uf ? `${f(main.ScA, 0)} <span style="font-weight:400;">(film) · ${f(main.Sc0, 0)} (feed)</span>` : f(main.ScA, 0)); document.getElementById("p-Sc").style.color = main.oorSc ? "#c47a00" : main.nearSc ? "#8f7f3c" : "";
   setText("p-U", f(main.UA * 1e3, 1)); setText("p-am", f(a_m, 0));
   setText("p-G", fe(main.G)); document.getElementById("p-G").style.color = main.oorG ? "#c47a00" : "";
   setText("p-kA", f(main.kA * 1e6, 1)); setText("p-phiA", f(main.phiA, 3));
@@ -1053,7 +1065,7 @@ function update() {
   setText("p-pi", `${f(pi0, 1)} / ${f(piWall, 1)}`); document.getElementById("p-pi").style.color = piWall >= dP ? "#c47a00" : "";
   setText("p-phi", sA.fits ? "measured cubic fit" : (sA.kind === "salt" ? (sA.pitzerTab ? "Pitzer" : "Pitzer, class est.") : "virial") + `, φ = ${f(osm0.phi, 3)} / ${f(osmW.phi, 3)}`);
   if (sB) { setText("p-bformula", sB.formula); setText("p-DB", f(main.DB * 1e9, 3)); setText("p-ScB", f(main.ScB, 0));
-            document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : "";
+            document.getElementById("p-ScB").style.color = main.oorScB ? "#c47a00" : main.nearScB ? "#8f7f3c" : "";
             setText("p-kB", f(main.kB * 1e6, 1)); setText("p-BB", Number.isFinite(main.BB) ? f(main.BB, main.BB < 1 ? 3 : 2) : "0"); }
   setText("model-hint", main.uf
     ? `k<sub>c</sub>/U* = ${K2_XI} 𝒢<sup>¼</sup> Sc<sup>−¼</sup> (DNS re-extracted with Ξ), ν and D<sub>A</sub> at ½(c<sub>m</sub> + c<sub>0</sub>) = ${f(0.5 * C0 * (2 + main.GammaA), 2)} g/L, Γ = R<sub>obs</sub> φ (1 + 0.26 φ<sup>1.4</sup>)<sup>1.7</sup>. Validated on PEG 35 kDa reconstructions (12 runs, Γ 2–66, φ 1.4–7) and on the NF DNS; implicit in Γ.`
