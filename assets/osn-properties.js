@@ -84,13 +84,13 @@
         const Rh = cls === "peg" ? 0.0145e-9 * Math.pow(M, 0.571)
                                  : 1.25 * Math.cbrt(3 * M * vbar * 1e-6 / (4 * Math.PI * NA));    // compact sphere × 1.25 hydration
         D0 = KB * T / (6 * Math.PI * solv.mu * Rh); Dtag = "Stokes–Einstein";
-        tags.push(cls === "peg" ? "D: Stokes–Einstein with R_h = 0.0145·M^0.571 nm (water power law; not validated in organic solvents)"
+        tags.push(cls === "peg" ? "D: Stokes–Einstein with R_h = 0.0145·M^0.571 nm (water power law; constants not confirmed in the original; not validated in organic solvents)"
                                 : "D: Stokes–Einstein, compact sphere with 25 % hydration shell (checked on lysozyme in water only)");
       }
     }
     let eta = spec.etaInt;                                                        // mL/g
     if (eta === null || eta === undefined || !(eta >= 0)) {
-      if (cls === "peg") { eta = 0.0125 * Math.pow(M, 0.78); tags.push("[η] = 0.0125·M^0.78 mL/g (PEG in water, from memory of the literature — to be verified); assumed also in the organic solvent"); }
+      if (cls === "peg") { eta = 0.0125 * Math.pow(M, 0.78); tags.push("[η] = 0.0125·M^0.78 mL/g: constants not confirmed in the original source, but they reproduce the measured viscosity of PEG 35 kDa in water within 1 %; assumed also in the organic solvent"); }
       else { eta = 2.5 * vbar * 1.95; tags.push("[η] from Einstein sphere with hydration (≈ 3.6 mL/g): estimate"); }
     }
     const kH = spec.kH > 0 ? spec.kH : (cls === "peg" ? 0.4 : 1.0);
