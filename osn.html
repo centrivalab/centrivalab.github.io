@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSN simulator — CentrivaLab</title>
+  <link rel="icon" href="favicon.ico" />
+  <meta name="description" content="Concentration polarisation and observed rejection in organic solvent nanofiltration (and water for reference): your solute, pure solvents or solvent–water mixtures, in the O-CMF, a stirred cell and a spiral-wound module." />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .sim-layout {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .sim-panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .sim-panel h3 {
+      margin: 0 0 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .field-group { margin-bottom: 13px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .geom-readout {
+      display: flex; gap: 18px; margin-top: 12px; padding-top: 11px;
+      border-top: 1px solid var(--line);
+      font-size: 13px; color: var(--navy);
+    }
+    .geom-readout strong { font-weight: 700; }
+    .field-group select,
+    .field-group input[type="number"] {
+      width: 100%;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text);
+      background: #f9fbfd;
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      transition: border-color .2s;
+      box-sizing: border-box;
+    }
+    .field-group select:focus,
+    .field-group input[type="number"]:focus { border-color: var(--blue); background: white; }
+    .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e7c96' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 11px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 10px;
+      box-shadow: var(--shadow);
+      text-align: center;
+      transition: border-color .3s, background .3s;
+    }
+    .kpi-card .kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+    .kpi-card .kpi-value { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.1; transition: color .3s; }
+    .kpi-card .kpi-unit  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .chart-panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px 20px 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .chart-panel h3 { margin: 0 0 2px; font-size: 11px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .07em; }
+    .chart-panel .chart-sub { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+    canvas { display: block; width: 100% !important; }
+
+    .class-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+    .class-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--navy);
+      background: #f9fbfd;
+      cursor: pointer;
+      user-select: none;
+      transition: opacity .15s, border-color .15s;
+    }
+    .class-toggle input { margin: 0; cursor: pointer; }
+    .class-toggle .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+    .class-toggle.off { opacity: .42; }
+
+    .warning-box, .info-box {
+      max-height: 0; overflow: hidden; opacity: 0;
+      transition: max-height 0.3s, opacity 0.3s;
+      margin-bottom: 0;
+    }
+    .warning-box.show, .info-box.show {
+      max-height: 100px; opacity: 1; margin-bottom: 14px;
+    }
+    .warning-box {
+      background: #fff8e6; border: 1px solid #f6c85f; border-left: 5px solid #f0a500;
+      border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6b4c00;
+    }
+    .info-box {
+      background: #f0f4ff; border: 1px solid #b0c4e8; border-left: 5px solid #3a6bc4;
+      border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #1a2d5a;
+    }
+    .preprint-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 4px; }
+    .preprint-note a { color: var(--muted); }
+
+    /* Discrete sliders */
+    .ctrl-row {
+      display: flex; align-items: center; gap: 10px; margin: 6px 0 10px;
+    }
+    .ctrl-row .ctrl-lbl {
+      font-size: 11px; font-weight: 700; color: var(--navy);
+      text-transform: uppercase; letter-spacing: .06em;
+      white-space: nowrap; min-width: 28px;
+    }
+    .ctrl-row input[type="range"] {
+      flex: 1; accent-color: var(--blue, #2d6bc4); cursor: pointer;
+    }
+    .ctrl-row input[type="range"]:focus-visible {
+      outline: 2px solid var(--blue, #2d6bc4);
+      outline-offset: 2px;
+    }
+    .ctrl-row .ctrl-val {
+      font-size: 13px; font-weight: 700; color: var(--navy);
+      min-width: 72px; text-align: right;
+    }
+    .ctrl-row .ctrl-rpm {
+      font-size: 11px; color: var(--muted); min-width: 100px;
+    }
+    .dp-scale {
+      position: relative; height: 14px; margin: -6px 0 4px;
+      font-size: 9px; color: var(--muted);
+      overflow: visible;
+    }
+    .dp-scale span {
+      position: absolute; top: 0; text-align: center; line-height: 1.2;
+      transform: translateX(-50%); white-space: nowrap;
+      width: auto; left: var(--left-px);
+    }
+
+    @media (max-width: 1000px) {
+      .sim-layout { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container topbar">
+    <a class="brand" href="index.html">
+      <img class="brand-mark" src="assets/logo.svg" alt="CentrivaLab logo" />
+      <span class="brand-name">CentrivaLab™</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" onclick="this.nextElementSibling.classList.toggle('open')">
+      <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+        <rect width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="7" width="22" height="2" rx="1" fill="currentColor"/>
+        <rect y="14" width="22" height="2" rx="1" fill="currentColor"/>
+      </svg>
+    </button>
+    <nav class="nav">
+      <a href="technology.html">Technology</a>
+      <a href="products.html">Products</a>
+      <a href="specifications.html">Specifications</a>
+      <a href="applications.html">Applications</a>
+      <a href="publications.html">Publications</a>
+      <a href="gamma.html">CP Calculator</a>
+      <a href="osn.html" style="color:white;font-weight:700;">OSN Simulator</a>
+      <a href="speed.html">Rotor Speed</a>
+      <a href="planner.html">Test Planner</a>
+      <a href="batch.html">Batch Planner</a>
+      <a href="support.html">Support</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+  <div class="container page-hero">
+    <div class="breadcrumbs"><a href="index.html">Home</a> › OSN simulator</div>
+    <h1>Organic solvent nanofiltration: concentration polarisation</h1>
+    <p>
+      Polarisation can decide the rejection you measure in OSN. Choose the solvent (or a solvent–water mixture, or plain water as a reference),
+      define your solute, and see Γ and observed rejection for the same membrane in the O-CMF, a stirred cell and a spiral-wound module.
+      Every physical property is documented and marked with its validation status in the
+      <a href="guide-osn-properties.html" style="color:#7dd3fc;">property guide</a>.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="guide-osn-properties.html">How the properties are estimated, and how to check them →</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="container" style="margin-top:36px; margin-bottom:56px;">
+    <div class="sim-layout">
+
+      <!-- ── LEFT: Inputs ── -->
+      <div>
+
+        <div class="sim-panel">
+          <h3>Cartridge &amp; Rotor</h3>
+          <div class="field-group">
+            <label for="sel-cartridge">Cartridge</label>
+            <select id="sel-cartridge" onchange="onCartridgeChange()">
+              <option value="50-34">CentrivaLab 50/34</option>
+              <option value="94-25">CentrivaLab 94/25</option>
+            </select>
+            <div class="field-hint" id="vol-hint">Nominal feed volume: 13 mL</div>
+          </div>
+          <div class="field-group" id="group-rotor" style="display:none;">
+            <label for="sel-rotor">Rotor</label>
+            <select id="sel-rotor" onchange="onRotorChange()"></select>
+          </div>
+          <div class="field-group">
+            <label for="inp-vol">Feed volume</label>
+            <div class="ctrl-row">
+              <input type="range" id="inp-vol" min="7.4" max="22.8" step="0.1" value="22.5" oninput="onVolSlider()" aria-label="Feed volume in millilitres" />
+              <span class="ctrl-val"><span id="lbl-vol">22.5</span> mL</span>
+            </div>
+            <div class="field-hint" id="vol-range-hint">—</div>
+          </div>
+          <div class="geom-readout" id="geom-readout">
+            <span>r<sub>m</sub> = <strong id="lbl-rm">—</strong> mm</span>
+            <span>r<sub>s</sub> = <strong id="lbl-rs">—</strong> mm</span>
+          </div>
+          <div class="field-hint">Membrane &amp; feed-surface radii set by the chosen tube + rotor (ΔP = ½ρω²(r<sub>m</sub>²−r<sub>s</sub>²)).</div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Solvent</h3>
+          <div class="field-group">
+            <label for="sel-solvent">Solvent</label>
+            <select id="sel-solvent" onchange="onSolventChange()">
+              <option value="water">Water (reference)</option>
+              <option value="acetonitrile" selected>Acetonitrile</option>
+              <option value="methanol">Methanol</option>
+              <option value="ethanol">Ethanol</option>
+              <option value="isopropanol">Isopropanol</option>
+              <option value="acetone">Acetone</option>
+              <option value="ethylacetate">Ethyl acetate</option>
+              <option value="toluene">Toluene</option>
+              <option value="thf">Tetrahydrofuran</option>
+              <option value="dmf">N,N-Dimethylformamide</option>
+              <option value="dmso">Dimethyl sulfoxide</option>
+            </select>
+          </div>
+          <div class="field-group" id="group-mix" style="display:none;">
+            <label>Mixture with water</label>
+            <div class="ctrl-row">
+              <span class="ctrl-lbl">x<sub>org</sub></span>
+              <input type="range" id="inp-xorg" min="0" max="100" step="1" value="100" oninput="onMixSlider()" aria-label="Mole fraction of the organic solvent in the water mixture" />
+              <span class="ctrl-val"><span id="lbl-xorg">100</span> mol %</span>
+            </div>
+            <div class="field-hint">Mole fraction of the organic solvent (100 % = pure solvent). Viscosity from NIST-fitted Redlich–Kister laws; see the guide.</div>
+          </div>
+          <div class="field-group">
+            <label>Temperature</label>
+            <div class="ctrl-row">
+              <span class="ctrl-lbl">T</span>
+              <input type="range" id="inp-T" min="10" max="50" step="1" value="25" oninput="onTSlider()" aria-label="Temperature in degrees Celsius" />
+              <span class="ctrl-val"><span id="lbl-T">25</span> °C</span>
+            </div>
+            <div class="field-hint">Density is taken at 25 °C (varies &lt; 1 % over ±15 K); viscosity follows T.</div>
+          </div>
+          <div class="field-hint" id="solvent-hint">—</div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Solute</h3>
+          <div class="field-group">
+            <label for="sel-solute">Solute type</label>
+            <select id="sel-solute" onchange="onSoluteChange()">
+              <option value="peg">PEG (polymer coil)</option>
+              <option value="globular" selected>Peptide / protein (compact)</option>
+              <option value="small">Small molecule (API, intermediate)</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="inp-M">Molar mass M (g/mol)</label>
+            <input type="number" id="inp-M" min="100" max="200000" step="any" value="4000" oninput="onSoluteChange()" />
+            <div class="field-hint" id="peg-presets" style="display:none;">PEG presets:
+              <a href="#" onclick="setM(400);return false;">400</a> ·
+              <a href="#" onclick="setM(1000);return false;">1 000</a> ·
+              <a href="#" onclick="setM(2000);return false;">2 000</a> ·
+              <a href="#" onclick="setM(8000);return false;">8 000</a> ·
+              <a href="#" onclick="setM(10000);return false;">10 000</a> ·
+              <a href="#" onclick="setM(20000);return false;">20 000</a> ·
+              <a href="#" onclick="setM(35000);return false;">35 000</a></div>
+          </div>
+          <details class="field-group">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;">Override estimated properties</summary>
+            <div class="field-hint" style="margin:6px 0;">Leave blank to use the estimate. Measured values are always better.</div>
+            <label for="inp-vbar">Partial specific volume v̄ (cm³/g)</label>
+            <input type="number" id="inp-vbar" step="any" placeholder="auto" oninput="onSoluteChange()" />
+            <label for="inp-D0" style="margin-top:8px;">Diffusivity D₀ (10⁻¹⁰ m²/s)</label>
+            <input type="number" id="inp-D0" step="any" placeholder="auto" oninput="onSoluteChange()" />
+            <label for="inp-eta" style="margin-top:8px;">Intrinsic viscosity [η] (mL/g)</label>
+            <input type="number" id="inp-eta" step="any" placeholder="auto" oninput="onSoluteChange()" />
+            <label for="inp-Mn" style="margin-top:8px;">Number-average M<sub>n</sub> for the osmotic pressure (g/mol)</label>
+            <input type="number" id="inp-Mn" step="any" placeholder="= M" oninput="onSoluteChange()" />
+            <label for="inp-A2" style="margin-top:8px;">Osmotic 2nd virial A₂ (mol·m³/kg²)</label>
+            <input type="number" id="inp-A2" step="any" placeholder="0 (ideal)" oninput="onSoluteChange()" />
+          </details>
+          <div class="field-group">
+            <label>Feed concentration C<sub>A0</sub></label>
+            <div class="ctrl-row">
+              <span class="ctrl-lbl">C₀</span>
+              <input type="range" id="inp-C0" min="0" max="9" step="1" value="7" oninput="onC0Slider()" aria-label="Feed concentration C₀, logarithmic scale 0.05–50 g/L" />
+              <span class="ctrl-val"><span id="lbl-C0">10</span> g L⁻¹</span>
+            </div>
+            <div class="field-hint">Log scale 0.05–50 g/L</div>
+          </div>
+          <div class="field-group">
+            <label>Solute permeability B</label>
+            <div class="ctrl-row">
+              <span class="ctrl-lbl">B</span>
+              <input type="range" id="inp-B" min="0" max="12" step="1" value="3" oninput="onBSlider()" aria-label="Solute permeability B, logarithmic scale 0.01–50 LMH" />
+              <span class="ctrl-val"><span id="lbl-B">0.1</span> LMH</span>
+            </div>
+            <div class="field-hint">B sets the intrinsic rejection R<sub>int</sub> = J<sub>v</sub>/(J<sub>v</sub>+B); use your own membrane data.</div>
+          </div>
+          <div class="props-box" id="props-box"></div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Comparison technology</h3>
+          <div class="field-group">
+            <label for="sel-compare">Compare O-CMF against</label>
+            <select id="sel-compare" onchange="onCompareChange()">
+              <option value="stirred">Stirred cell (Sterlitech HP4750)</option>
+              <option value="spiral">Spiral-wound module (Schock &amp; Miquel)</option>
+            </select>
+          </div>
+
+          <!-- Stirred cell controls -->
+          <div id="ctrl-stirred">
+            <div class="field-group">
+              <label>Stirrer Speed</label>
+              <div class="ctrl-row">
+                <span class="ctrl-lbl">RPM</span>
+                <input type="range" id="inp-rpm" min="100" max="1000" step="10" value="200" oninput="onRpmSlider()" aria-label="Stirrer speed RPM, 100–1000 rpm, Sterlitech HP4750" />
+                <span class="ctrl-val"><span id="lbl-rpm">200</span> rpm</span>
+              </div>
+              <div class="ctrl-row" style="margin-top:8px;">
+                <span class="ctrl-lbl">&lang;&tau;&rang;</span>
+                <input type="range" id="inp-tau-s" min="0" max="1" step="any" value="0" oninput="onTauStirred()" aria-label="Area-average wall shear stress at the membrane of the stirred cell, linked to the stirrer speed" />
+                <span class="ctrl-val"><span id="lbl-tau-s">—</span> Pa</span>
+              </div>
+              <div class="field-hint">Range 100–1000 rpm (typical working range). ΔP same as O-CMF. The shear-stress slider is linked to the speed: move either one.
+                <span id="tau-s-note"></span></div>
+            </div>
+            <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
+              <strong>References:</strong><br/>
+              • <a href="https://doi.org/10.1002/aic.690180512" target="_blank" rel="noopener">Colton &amp; Smith (1972)</a>: Sh = 0.285 × Re<sup>0.567</sup> × Sc<sup>0.33</sup><br/>
+              • <a href="https://doi.org/10.1016/j.memsci.2012.01.029" target="_blank" rel="noopener">Koutsou &amp; Karabelas (2012)</a>: Stirrer diameter 21 mm, geometry &amp; assumptions; mean wall shear stress &lang;&tau;&rang; = 0.85&nbsp;Re<sup>0.49</sup>&nbsp;&mu;&omega; (Eq. 7), Re = &rho;&omega;R²/&mu;, R = 16.5 mm
+            </div>
+          </div>
+
+          <!-- Spiral-wound controls -->
+          <div id="ctrl-spiral" style="display:none;">
+            <div class="field-group">
+              <label for="sel-spacer">Feed spacer</label>
+              <select id="sel-spacer" onchange="onSpacerChange()">
+                <option value="FT30">FilmTec FT30 (d_h 0.95 mm, ε 0.89)</option>
+                <option value="Toray">Toray PEC-1000 (d_h 0.72 mm, ε 0.91)</option>
+                <option value="Naltex">Naltex 1228 (d_h 0.96 mm, ε 0.90)</option>
+                <option value="DesalRO">Desal RO (d_h 0.97 mm, ε 0.88)</option>
+                <option value="DesalUF">Desal UF (d_h 1.39 mm, ε 0.81)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Feed-channel pressure drop Δp/L</label>
+              <div class="ctrl-row">
+                <span class="ctrl-lbl">Δp/L</span>
+                <input type="range" id="inp-dpdl" min="0.1" max="1" step="0.01" value="0.3" oninput="onDpdlSlider()" aria-label="Feed-channel pressure drop per unit length, 0.1 to 1 bar per metre" />
+                <span class="ctrl-val"><span id="lbl-dpdl">0.30</span> bar/m</span>
+              </div>
+              <div class="ctrl-row" style="margin-top:8px; color:#8a97a6;">
+                <span class="ctrl-lbl">v</span>
+                <input type="range" id="inp-vel" min="0" max="1" step="1" value="0" disabled aria-label="Resulting mean channel velocity (calculated, not adjustable)" style="opacity:.45; cursor:not-allowed;" />
+                <span class="ctrl-val" style="color:#8a97a6;"><span id="lbl-vel">—</span> m/s</span>
+              </div>
+              <div class="ctrl-row" style="margin-top:8px;">
+                <span class="ctrl-lbl">&lang;&tau;&rang;</span>
+                <input type="range" id="inp-tau-p" min="0" max="1" step="any" value="0" oninput="onTauSpiral()" aria-label="Indicative area-average wall shear stress in the spacer-filled channel, linked to the pressure drop" />
+                <span class="ctrl-val"><span id="lbl-tau-p">—</span> Pa</span>
+              </div>
+              <div class="field-hint">Indicative mean wall shear stress from Koutsou &amp; Karabelas (2012), Eq. 10 for a 28-mil net spacer (filament D = half the channel height), with U = &epsilon;&middot;v. The slider is linked to Δp/L: move either one.</div>
+              <div class="field-hint">The pressure drop along the element is what you set in practice (limit ≈ 1 bar/m); the interstitial crossflow velocity in the spacer-filled channel follows from it (grey, calculated at the feed viscosity — it falls as the feed viscosity rises, e.g. PEG 35 kDa). Transmembrane ΔP same as O-CMF.</div>
+            </div>
+            <div class="field-hint" style="margin-top: 14px; border-top: 1px solid #e8edf5; padding-top: 10px; font-size: 11px; color: #7c8fa3; line-height: 1.6;">
+              <strong>References:</strong><br/>
+              • <a href="https://doi.org/10.1016/0011-9164(87)90107-X" target="_blank" rel="noopener">Schock &amp; Miquel (1987)</a>: Sh = 0.065 × Re<sup>0.875</sup> × Sc<sup>0.25</sup>; λ = 6.23 Re<sup>−0.3</sup><br/>
+              • Spacer geometry (d_h, ε) from their Tab. 1. Validity 100 &lt; Re &lt; 1000.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── RIGHT: Results ── -->
+      <div>
+
+        <div id="warning-box" class="warning-box">
+          <strong>Out-of-calibration range.</strong> <span id="warning-text"></span>
+          Results are extrapolations — interpret with caution.
+        </div>
+        <div id="info-box" class="info-box"><span id="info-text"></span></div>
+
+        <div class="class-toggles" id="class-toggles" role="group" aria-label="Membrane classes shown on the charts below"></div>
+
+        <!-- Chart 1: Γ vs Jv -->
+        <div class="chart-panel">
+          <h3>CP factor Γ vs J<sub>v</sub></h3>
+          <datalist id="dp-ticks">
+            <option value="0"></option><option value="1"></option><option value="2"></option>
+            <option value="3"></option><option value="4"></option><option value="5"></option>
+            <option value="6"></option><option value="7"></option><option value="8"></option>
+            <option value="9"></option><option value="10"></option>
+          </datalist>
+          <div class="ctrl-row" style="margin-top:4px;">
+            <span class="ctrl-lbl">ΔP</span>
+            <input type="range" id="inp-dP" min="0" max="10" step="1" value="5" oninput="onDpSlider()" list="dp-ticks" aria-label="Pressure differential ΔP, logarithmic scale 0.01–10 bar" />
+            <span class="ctrl-val"><span id="lbl-dP">10</span> bar</span>
+            <span class="ctrl-rpm" id="op-rpm-hint"></span>
+          </div>
+          <!-- Log-scale tick labels: updated dynamically by updateDpScale() -->
+          <div id="dp-scale" class="dp-scale"></div>
+          <p class="chart-sub" id="gamma-chart-sub">Log scale 0.01–100. Five illustrative solvent permeances (0.3 → 30 LMH/bar; enter your own membrane's B above), toggle below. Green band: reliable window (Γ &lt; 0.20). Dots: operating point at the specified ΔP.</p>
+          <canvas id="chart-gamma" role="img" aria-label="Chart: Concentration polarization factor Γ versus volumetric flux Jv. Five illustrative solvent permeances in the O-CMF, individually selectable, plus the selected comparison technology (stirred cell or spiral-wound module). Green band indicates reliable window (Γ less than 0.20)." height="230"></canvas>
+        </div>
+
+        <!-- Chart 2: Solute passage vs Jv (log scale) -->
+        <div class="chart-panel">
+          <h3>Solute passage (1−R) vs J<sub>v</sub></h3>
+          <p class="chart-sub">Solid line: R<sub>int</sub>(J<sub>v</sub>) = J<sub>v</sub>/(J<sub>v</sub>+B). At the operating ΔP, each class operates at a different J<sub>v</sub>: open circle = R<sub>int</sub>, filled = R<sub>obs</sub>. The gap between them shows the CP correction — larger for classes that require lower RPM.</p>
+          <canvas id="chart-rej" role="img" aria-label="Chart: Solute passage (1−R) versus volumetric flux Jv on logarithmic scale. Shows intrinsic rejection R_int and observed rejection R_obs for each membrane class." height="230"></canvas>
+        </div>
+
+        <p class="preprint-note">
+          Model: Geraldes V., Fan H., Yang M., Rodrigues M., Elimelech M. —
+          "<a href="https://doi.org/10.2139/ssrn.6528979" target="_blank" rel="noopener">Predicting concentration polarization in Ortho-Centrifugal Membrane Filters for NF/RO membrane screening</a>."
+          Preprint under review, <em>Journal of Membrane Science</em> (2026).
+          The correlation and the solver are those of the device-comparison page; here the thermo-physical properties are those of <a href="guide-osn-properties.html">the OSN property guide</a> (solvent density and viscosity from Choupo/ChemSep and NIST-fitted laws, solvent–water mixtures, solute v̄, D, [η] estimated unless you enter measured values), and the density of the solvent enters the ΔP–rpm conversion. <strong>The correlation was validated for aqueous systems and PEG 35 kDa in water; its use in organic solvents is an extension, not yet validated against OSN data.</strong>
+          Correlation k<sub>c</sub>/U* = 0.261 𝒢<sup>1/4</sup> Sc<sup>−1/4</sup>, with the finite-permeation closure Ξ(φ) of
+          Geraldes &amp; Afonso (2006), Γ = R<sub>int</sub> φX / (1 + (1 − R<sub>int</sub>) φX), X = (1 + 0.26 φ<sup>1.4</sup>)<sup>1.7</sup>,
+          exact in R<sub>int</sub> — used for every solute and device, since film theory (valid only for φ ≲ 1.5) is a special case of it.
+          In the O-CMF, ν and D are evaluated at the film concentration ½(c<sub>m</sub> + c<sub>0</sub>). In the stirred cell and the
+          spiral-wound module (forced convection) the correlations keep the bulk properties and k<sub>c</sub> is multiplied by the weak
+          viscosity correction (ν<sub>m</sub>/ν<sub>0</sub>)<sup>−0.075</sup> found in the reconstructed radial cross-flow cell (36 runs);
+          evaluating a Re<sup>0.875</sup>Sc<sup>0.25</sup> law at the film concentration would over-correct.
+          Validated against DNS for Sc ∈ [700, 2200] and 𝒢 ∈ [7×10⁻⁹, 5×10⁻⁶] (mean relative deviation ~7%, maximum ~22%), and against
+          twelve reconstructed PEG 35 kDa ultrafiltration experiments in the O-CMF (Pereira, MSc thesis, IST 2026; Sc ≈ 3×10⁴, Γ 2–66,
+          φ 1.4–7, within ±20 % in Γ). The five solvent permeances are illustrative and imply no particular membrane; enter your own B (and compare with your own permeance) to read off R<sub>int</sub>.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>CentrivaLab™</h4>
+      <p>CentrivaLab is a commercial brand of Talentground Lda.</p>
+      <p>CentrivaLab products are intended for research and process development use only and are not intended for clinical or diagnostic use.</p>
+    </div>
+    <div>
+      <h4>Pages</h4>
+      <p>
+        <a href="technology.html">Technology</a><br>
+        <a href="products.html">Products</a><br>
+        <a href="specifications.html">Specifications</a><br>
+        <a href="applications.html">Applications</a><br>
+        <a href="publications.html">Publications</a><br>
+        <a href="gamma.html">CP Calculator</a><br><a href="speed.html">Rotor Speed Calculator</a><br><a href="simulator.html">Device comparison</a><br><a href="osn.html">OSN Simulator</a><br><a href="planner.html">Test Planner</a><br><a href="batch.html">Batch Planner</a><br>
+        <a href="support.html">Support</a><br>
+        <a href="contact.html">Contact</a>
+      </p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p><a href="mailto:info@centrivalab.com">info@centrivalab.com</a><br>
+         <a href="mailto:commercial@centrivalab.com">commercial@centrivalab.com</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/ocmf-geometry.js"></script>
+<script src="assets/osn-properties.js"></script>
+<script>
+// ============================================================
+//  O-CMF device comparison (CP simulator)
+//  Model: Geraldes et al. (2026)
+//  Thermo-physical properties at 20 °C, Table 1
+// ============================================================
+
+// Discrete slider values
+const DP_VALS = [1, 2, 3, 5, 7, 10, 15, 20, 30, 40, 60];                    // bar (log scale)
+const C0_VALS = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50];                // g/L
+const B_VALS  = [0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2, 5, 10, 20, 50]; // LMH
+
+function closestLogIdx(arr, target) {
+  return arr.reduce((best, v, i) =>
+    Math.abs(Math.log(v) - Math.log(target)) <
+    Math.abs(Math.log(arr[best]) - Math.log(target)) ? i : best, 0);
+}
+function fmtVal(v) { return v < 1 ? v.toString() : v % 1 === 0 ? v.toString() : v.toFixed(1); }
+
+let RHO          = 1000;       // kg/m³ — set from the chosen solvent by rebuildOSN()
+
+// Cartridge geometry: single source in assets/ocmf-geometry.js (shared with gamma.html and speed.html)
+const DELTA_M      = OCMF.CARTRIDGES["94-25"].deltaM;   // m  (r_max − r_m)
+const DELTA_M_5034 = OCMF.CARTRIDGES["50-34"].deltaM;   // m  (r_max − r_m = 0.108 − 0.0762)
+const DELTA_S_5034 = OCMF.CARTRIDGES["50-34"].deltaS;   // m
+const ALPHA_5034   = OCMF.CARTRIDGES["50-34"].alpha;    // m/mL
+const K2_XI      = 0.261;      // correlation constant for the Ξ(φ) closure (Pereira 2026), used for every solute and device
+const NU_W       = 1.004e-6;   // m²/s  kinematic viscosity of water at 20 °C
+
+// Nominal feed volumes [mL]
+const VOL_NOM = { "50-34": OCMF.CARTRIDGES["50-34"].vol.nom, "94-25": OCMF.CARTRIDGES["94-25"].vol.nom };
+
+// 94/25 measured free-surface curve δ_s(V) = A + B·V + C·V² (mm, V in mL) — see ocmf-geometry.js.
+// Do not extrapolate — the tool refuses volumes outside the measured span.
+const DS94 = { ...OCMF.CARTRIDGES["94-25"].ds, vMin: OCMF.CARTRIDGES["94-25"].vol.min, vMax: OCMF.CARTRIDGES["94-25"].vol.max };
+
+// Illustrative membrane SOLVENT PERMEANCES (no membrane is implied): { Lp [LMH/bar], Jv_max [LMH] }
+const MEM_CLASSES = {
+  P03: { Lp: 0.3,  Jv_max: 60  },
+  P1:  { Lp: 1.0,  Jv_max: 100 },
+  P3:  { Lp: 3.0,  Jv_max: 150 },
+  P10: { Lp: 10.0, Jv_max: 150 },
+  P30: { Lp: 30.0, Jv_max: 150 }
+};
+const CLASS_LINES = [
+  { key: "P03", label: "0.3 LMH/bar", color: "#b23a3a", title: "Tight OSN-type solvent permeance" },
+  { key: "P1",  label: "1 LMH/bar",   color: "#d9772e", title: "Solvent permeance 1 LMH/bar" },
+  { key: "P3",  label: "3 LMH/bar",   color: "#2d9e6a", title: "Solvent permeance 3 LMH/bar" },
+  { key: "P10", label: "10 LMH/bar",  color: "#3a7fc1", title: "Solvent permeance 10 LMH/bar" },
+  { key: "P30", label: "30 LMH/bar",  color: "#9c4fbf", title: "Open, high solvent permeance 30 LMH/bar" }
+];
+
+// Membrane classes hidden by the user via the toggle chips
+const disabledClasses = new Set();
+const visibleClasses  = () => CLASS_LINES.filter(cl => !disabledClasses.has(cl.key));
+
+function renderClassToggles() {
+  const box = document.getElementById("class-toggles");
+  box.innerHTML = CLASS_LINES.map(cl => {
+    const off = disabledClasses.has(cl.key);
+    return `<label class="class-toggle${off ? " off" : ""}" title="${cl.title}">` +
+      `<input type="checkbox" ${off ? "" : "checked"} onchange="onClassToggle('${cl.key}', this.checked)" />` +
+      `<span class="dot" style="background:${cl.color}"></span>${cl.label}</label>`;
+  }).join("");
+}
+
+function onClassToggle(key, checked) {
+  if (checked) disabledClasses.delete(key);
+  else disabledClasses.add(key);
+  // Never let all classes be hidden at once
+  if (CLASS_LINES.every(cl => disabledClasses.has(cl.key))) disabledClasses.delete(key);
+  renderClassToggles();
+  update();
+}
+const RINT_COLOR = "#1a3a6b";
+
+// 50/34 rotor: Beckman JA-20, r_max = 108.0 mm (r_m=76.2 mm, δ_m=31.8 mm)
+const RMAX_50_34   = OCMF.CARTRIDGES["50-34"].rotors[0].rmax;
+const MAXRPM_50_34 = OCMF.CARTRIDGES["50-34"].rotors[0].maxRpm;
+
+// Sterlitech HP4750 discrete RPM values (typical working range)
+const RPM_MIN = 100, RPM_MAX = 1000;   // stirrer-speed slider span
+
+// Sterlitech HP4750 properties — Colton-Smith correlation
+const STERLITECH = {
+  stirrer_radius: 0.0105,  // m (diameter 21 mm)
+  Sh_const: 0.285,
+  Sh_Re_exp: 0.567,
+  Sh_Sc_exp: 0.33,
+  color: "#404040"         // dark grey
+};
+
+// Spiral-wound feed spacers — Schock & Miquel (1987) Tab. 1 (d_h, ε)
+const SPACERS = {
+  FT30:    { label: "FilmTec FT30",   dh: 0.95e-3, eps: 0.89 },
+  Toray:   { label: "Toray PEC-1000", dh: 0.72e-3, eps: 0.91 },
+  Naltex:  { label: "Naltex 1228",    dh: 0.96e-3, eps: 0.90 },
+  DesalRO: { label: "Desal RO",       dh: 0.97e-3, eps: 0.88 },
+  DesalUF: { label: "Desal UF",       dh: 1.39e-3, eps: 0.81 }
+};
+// Feed-channel pressure drop per unit length [bar/m] — the control of the spiral-wound module (element limit ≈ 1 bar/m)
+const DPDL_MIN = 0.1, DPDL_MAX = 1.0;
+const SPIRAL_COLOR = "#0066cc";  // blue for spiral-wound curve
+
+// Chart configuration constants
+const CHART_CONFIG = {
+  DP_MIN: 0.5,           // Minimum pressure for chart (bar)
+  DP_POINTS: 100,        // Number of points per curve
+  SAFE_GAMMA: 0.20,      // Threshold for safe zone
+  SAFE_COLOR: "rgba(52,199,89,0.10)"
+};
+
+// Canvas line patterns
+const LINE_PATTERNS = {
+  SAFE_ZONE: [4, 3],
+  DASHED: [6, 4]
+};
+
+// Solute properties at 20 °C  (NaCl, MgSO₄, lactose: Table 1, Geraldes et al. 2026; PEG 35 kDa: Table A.1, Pereira 2026)
+// Every law is a polynomial in C [kg/m³ = g/L]:  D_A(C) = Σ D[k] C^k [m²/s],  ν(C) = Σ nu[k] C^k [m²/s],  π(C) = Σ pi[k] C^(k+1) [Pa]
+// β = concentration contraction coefficient [m³/kg]
+const SOLUTES = {
+  NaCl:    { beta: 6.713e-4, D: [1.41e-9, -2.661e-11, 1.3507e-12, -1.8741e-14, 0], nu: [NU_W, 1.61e-9], pi: [77811, 0], B_default: 2.0 },
+  MgSO4:   { beta: 9.855e-4, D: [0.608e-9, -2.0425e-11, 1.3394e-12, -4.1465e-14, 4.4485e-16], nu: [NU_W, 5.08e-9], pi: [22910, -13.85], B_default: 0.3 },
+  Lactose: { beta: 3.75e-4,  D: [0.496e-9, -0.1395e-11, 0.02148e-12, 0, 0], nu: [NU_W, 2.8e-9], pi: [7314.5, 8.253], B_default: 0.5 },
+  // PEG 35 kDa in water, 20 °C — property laws of the CFD reconstructions (quartic ν and D_A fitted 0–200 g/L; D_A(0) estimated,
+  // no measurement for this polymer; cubic π from cryoscopy on the batch of the experiments; data compiled by Pires et al.)
+  PEG35k:  { beta: 1.66e-4,  D: [4.0000e-11, 2.4016e-13, 6.9523e-16, 1.0342e-18, 2.4533e-21],
+             nu: [1.0018e-6, 4.1249e-8, 7.3401e-10, 8.4041e-12, 4.5553e-15], pi: [207.8569, 1.519474, 0.08946217],
+             B_default: 0.5 }
+};
+const poly = (c, x) => c.reduce((acc, a, i) => acc + a * Math.pow(x, i), 0);
+function getDA(sol, C) { const S = SOLUTES[sol]; return S.Dfun ? S.Dfun(C) : poly(S.D, C); }
+function getNu(sol, C) { const S = SOLUTES[sol]; return S.nuFun ? S.nuFun(C) : poly(S.nu, C); }
+function getPi(sol, C) { const S = SOLUTES[sol]; return S.piFun ? S.piFun(C) : C * poly(S.pi, C); }
+// Transport properties are evaluated at the film concentration ½(c_0 + c_m), for every solute and device
+const propConc = (C0, C_Am) => 0.5 * (C0 + C_Am);
+// Forced convection (stirred cell, spiral-wound): bulk properties times the weak viscosity correction
+// (ν_m/ν_0)^−0.075 found in the radial cross-flow reconstructions (Pereira 2026, §6.4). Evaluating a Re^0.875 Sc^0.25 law
+// at the film concentration would over-correct by far (Re falls below the validity of the correlation).
+const VISC_EXP_FORCED = -0.075;
+const forcedVisc = (sol, C0, C_Am) => Math.pow(getNu(sol, C_Am) / getNu(sol, C0), VISC_EXP_FORCED);
+// Γ from the suction parameter φ = J_v/k_c and the intrinsic rejection R_int, via the finite-permeation
+// closure Ξ(φ) of Geraldes & Afonso (2006), exact in R_int:  Γ = R_int φX / (1 + (1 − R_int) φX),  X = (1 + 0.26 φ^1.4)^1.7
+function gammaOf(phi, R) {
+  const q = phi * Math.pow(1 + 0.26 * Math.pow(phi, 1.4), 1.7);
+  return R * q / (1 + (1 - R) * q);
+}
+
+// Sterlitech mass transfer coefficient via Colton-Smith correlation
+// Sh = 0.285 × Re^0.567 × Sc^0.33, where Re = ω·r²/ν, Sc = ν/D_A
+// k_c = Sh × D_A / r_stirrer [m/s]
+function getSterlitechKc(rpm, sol, C_Am) {
+  const omega = rpm * 2 * Math.PI / 60;  // rad/s
+  const DA = Math.max(getDA(sol, C_Am), 1e-12);
+  const nu = getNu(sol, C_Am);
+
+  // Re = ω·r²/ν
+  const Re = omega * STERLITECH.stirrer_radius * STERLITECH.stirrer_radius / nu;
+
+  // Sc = ν/D_A
+  const Sc = nu / DA;
+
+  // Sh = 0.285 × Re^0.567 × Sc^0.33
+  const Sh = STERLITECH.Sh_const *
+             Math.pow(Re, STERLITECH.Sh_Re_exp) *
+             Math.pow(Sc, STERLITECH.Sh_Sc_exp);
+
+  // k_c = Sh × D_A / r_stirrer [m/s]
+  return Sh * DA / STERLITECH.stirrer_radius;
+}
+
+// Spiral-wound mass transfer via Schock & Miquel (1987)
+// Input is the mean interstitial channel velocity v_eff [m/s] (obtained from the imposed Δp/L by getSpiralVeff):
+//   Re = ρ·v_eff·d_h/η,  Sh = 0.065·Re^0.875·Sc^0.25,  k = Sh·D_A/d_h
+function getSpiralWoundKc(v_eff, spacerKey, sol, C_Am) {
+  const sp = SPACERS[spacerKey];
+  const dh = sp.dh;
+  const DA = Math.max(getDA(sol, C_Am), 1e-12);
+  const nu = getNu(sol, C_Am);
+  const eta = nu * RHO;             // dynamic viscosity [Pa·s], concentration-dependent
+  const Re = RHO * v_eff * dh / eta;
+  const Sc = nu / DA;
+  const Sh = 0.065 * Math.pow(Re, 0.875) * Math.pow(Sc, 0.25);
+  return Sh * DA / dh;
+}
+
+// Resulting feed-channel pressure gradient [bar/m] for a given v_eff (S&M friction law)
+//   Δp/L = λ·ρ·v_eff²/(2·d_h),  λ = 6.23·Re^(−0.3)
+function getSpiralDpdl(v_eff, spacerKey, sol, C_Am) {
+  const sp = SPACERS[spacerKey];
+  const dh = sp.dh;
+  const nu = getNu(sol, C_Am);
+  const eta = nu * RHO;
+  const Re = RHO * v_eff * dh / eta;
+  const lambda = 6.23 * Math.pow(Re, -0.3);
+  return lambda * RHO * v_eff * v_eff / (2 * dh) / 1e5;  // bar/m
+}
+
+// Inverse of getSpiralDpdl: mean interstitial velocity [m/s] that produces a given Δp/L [bar/m] at the viscosity of the
+// feed. Closed form, since Δp/L = 6.23·Re^−0.3·ρ·v²/(2 d_h) with Re = v·d_h/ν  →  v^1.7 = (Δp/L)·2 d_h/(6.23 ρ)·(d_h/ν)^0.3
+function getSpiralVeff(dpdl_bar, spacerKey, sol, C_Am) {
+  const dh = SPACERS[spacerKey].dh;
+  const nu = getNu(sol, C_Am);
+  return Math.pow(dpdl_bar * 1e5 * 2 * dh / (6.23 * RHO) * Math.pow(dh / nu, 0.3), 1 / 1.7);
+}
+
+// ── Geometry helpers ──
+function rotorSel() { return OCMF.rotor(document.getElementById("sel-cartridge").value, document.getElementById("sel-rotor").value); }
+function getRmax()   { return rotorSel().rmax; }
+function getMaxRpm() { return rotorSel().maxRpm; }
+// Fill range the geometry is trusted over. For the 94/25 this is the span of the
+// free-surface measurements; for the 50/34 it is the declared operating range,
+// beyond which the linear δ_s* + αV form has no support.
+function getVolRange() {
+  return document.getElementById("sel-cartridge").value === "50-34"
+    ? { min: 11.0, max: 13.0 }
+    : { min: DS94.vMin, max: DS94.vMax };
+}
+function getVolume() { return parseFloat(document.getElementById("inp-vol").value); }
+
+function getGeom(V) {
+  const cart = document.getElementById("sel-cartridge").value;
+  if (V === undefined) V = getVolume();
+  const rmax = getRmax();
+  let r_m, r_s;
+  if (cart === "50-34") {
+    r_m = rmax - DELTA_M_5034;
+    r_s = rmax - (DELTA_S_5034 + ALPHA_5034 * V);
+  } else {
+    r_m = rmax - DELTA_M;
+    r_s = rmax - ds94(V) / 1000;   // measured quadratic, not the local linearisation
+  }
+  return { r_m, r_s };
+}
+// Full rotor limit — used for the chart x-axis range
+function getRotorDP() {
+  const { r_m, r_s } = getGeom();
+  const omega = getMaxRpm() * 2 * Math.PI / 60;
+  return 0.5 * RHO * omega * omega * (r_m*r_m - r_s*r_s) / 1e5; // bar
+}
+function dpToRpm(dP_bar, r_m, r_s) {
+  const dP_Pa = dP_bar * 1e5;
+  const denom = RHO * (r_m*r_m - r_s*r_s);
+  if (denom <= 0) return 0;
+  return Math.sqrt(2 * dP_Pa / denom) * 60 / (2 * Math.PI);
+}
+
+// ── Steady wall concentration by bisection ──
+// With the osmotic feedback J_v = L_p(ΔP − π(c_m)), the balance F(c_m) = c_0[1 + Γ(c_m)] − c_m is positive at c_m = c_0
+// and negative at c_m = c_π (where π = ΔP and J_v = 0), so a root always exists in between: bisection stays robust even
+// in the limiting-flux regime of macromolecules, where a relaxed fixed-point iteration would overshoot into π_wall > ΔP.
+// kcOf(Cp, Jv, RA, C_Am) returns { kc, ...extras }; Cp = ½(c_0 + c_m) is the film concentration (used by the O-CMF law),
+// C_Am the wall concentration (used by the forced-convection devices for their weak viscosity correction).
+function solveUF(dP_bar, sol, C0, Lp_SI, B_SI, kcOf) {
+  const dP_Pa = dP_bar * 1e5;
+  if (getPi(sol, C0) >= dP_Pa) return null;
+  let lo = C0, hi = C0 * 2;
+  while (getPi(sol, hi) < dP_Pa && hi < 1e5) hi *= 2;          // c_π bracket
+  for (let i = 0; i < 60; i++) { const m = 0.5 * (lo + hi); if (getPi(sol, m) < dP_Pa) lo = m; else hi = m; }
+  const Cpi = lo;
+  const evalAt = C_Am => {
+    const Jv = Lp_SI * (dP_Pa - getPi(sol, C_Am));
+    const RA = Jv / (Jv + B_SI);
+    const k = kcOf(propConc(C0, C_Am), Jv, RA, C_Am);
+    const phi = Jv / k.kc, Gamma = gammaOf(phi, RA);
+    return { Jv, RA, phi, Gamma, k, F: C0 * (1 + Gamma) - C_Am };
+  };
+  lo = C0; hi = Cpi;
+  if (evalAt(hi).F > 0) return null;                              // no steady state below the osmotic limit (should not occur)
+  let r = null;
+  for (let i = 0; i < 80; i++) {
+    const m = 0.5 * (lo + hi); r = evalAt(m);
+    if (Math.abs(hi - lo) < 1e-9 * (1 + m)) break;
+    if (r.F > 0) lo = m; else hi = m;
+  }
+  const { Jv, RA, phi, Gamma, k } = r;
+  if (!(Jv > 0)) return null;
+  return { Gamma, RA, R_obs: Math.max(0, 1 - (1 + Gamma) * (1 - RA)), Jv_lmh: Jv * 3.6e6, phi, ...k };
+}
+
+// ── Iterative CP solver at a single ΔP ──
+// Returns null when no permeation (π_wall ≥ ΔP)
+function solveCP(dP_bar, sol, C0, Lp_SI, B_SI, geom) {
+  const { r_m, r_s } = geom || getGeom();
+  const rpm   = dpToRpm(dP_bar, r_m, r_s);
+  const omega = rpm * 2 * Math.PI / 60;
+  const a_m   = omega * omega * r_m;
+
+  const Sc0 = getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12);
+  const res = solveUF(dP_bar, sol, C0, Lp_SI, B_SI, (Cp, Jv, RA) => {
+    const DA = Math.max(getDA(sol, Cp), 1e-12), nu = getNu(sol, Cp);
+    const Ustar = Math.pow(a_m * DA, 1/3), Sc = nu / DA, G = Math.max(RA, 1e-9) * SOLUTES[sol].beta * C0 * (Jv / Ustar);
+    return { kc: K2_XI * Ustar * Math.pow(G, 0.25) * Math.pow(Sc, -0.25), Sc, G };
+  });
+  return res ? { ...res, rpm, Sc0 } : null;
+}
+
+// ── Iterative CP solver for Sterlitech at single ΔP and RPM ──
+// Uses Colton-Smith correlation for mass transfer coefficient
+function solveCPSterlitech(dP_bar, sol, C0, Lp_SI, B_SI, rpm) {
+  // Jv depends only on applied ΔP (no centrifugal effects)
+  const res = solveUF(dP_bar, sol, C0, Lp_SI, B_SI, (Cp, Jv, RA, C_Am) =>
+    ({ kc: getSterlitechKc(rpm, sol, C0) * forcedVisc(sol, C0, C_Am), Sc: getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12) }));
+  return res ? { ...res, rpm } : null;
+}
+
+// ── Iterative CP solver for spiral-wound (Schock & Miquel) at single ΔP ──
+// Mass transfer fixed by spacer + feed-channel pressure gradient Δp/L
+function solveCPSpiral(dP_bar, sol, C0, Lp_SI, B_SI, v_eff, spacerKey) {
+  return solveUF(dP_bar, sol, C0, Lp_SI, B_SI, (Cp, Jv, RA, C_Am) =>
+    ({ kc: getSpiralWoundKc(v_eff, spacerKey, sol, C0) * forcedVisc(sol, C0, C_Am), Sc: getNu(sol, C0) / Math.max(getDA(sol, C0), 1e-12) }));
+}
+
+// ── Slider handlers ──
+function onVolSlider() {
+  document.getElementById("lbl-vol").textContent = getVolume().toFixed(1);
+  const rotorDP = getRotorDP();
+  const maxIdx  = DP_VALS.filter(v => v <= rotorDP * 1.05).length - 1;
+  const slider  = document.getElementById("inp-dP");
+  slider.max = maxIdx;
+  if (parseInt(slider.value) > maxIdx) {
+    slider.value = maxIdx;
+    document.getElementById("lbl-dP").textContent = DP_VALS[maxIdx];
+  }
+  updateDpScale(maxIdx);
+  update();
+}
+
+function onDpSlider() {
+  const sliderEl = document.getElementById("inp-dP");
+  const maxIdx = parseInt(sliderEl.max);
+  const v = DP_VALS[parseInt(sliderEl.value)];
+  document.getElementById("lbl-dP").textContent = v;
+  updateDpScale(maxIdx);  // Refresh scale labels alignment
+  update();
+}
+function onC0Slider() {
+  const v = C0_VALS[parseInt(document.getElementById("inp-C0").value)];
+  document.getElementById("lbl-C0").textContent = fmtVal(v);
+  update();
+}
+function onBSlider() {
+  const v = B_VALS[parseInt(document.getElementById("inp-B").value)];
+  document.getElementById("lbl-B").textContent = fmtVal(v);
+  update();
+}
+// ── Mean wall shear stress (Koutsou & Karabelas 2012, J. Membr. Sci. 399–400, 60–72) ──
+// Stirred cell, Eq. 7:  <τ> = 0.85 Re^0.49 μ ω,  Re = ρ ω R²/μ  (R = 16.5 mm cell-base radius; measured for Re 6500–39 000)
+const R_CELL = 0.0165;
+function stirredTau(rpm, mu) {
+  const w = rpm * 2 * Math.PI / 60;
+  return 0.85 * Math.pow(RHO * w * R_CELL * R_CELL / mu, 0.49) * mu * w;
+}
+function stirredRpmFromTau(tau, mu) {
+  const w = Math.pow(tau / (0.85 * Math.pow(mu, 0.51) * Math.pow(RHO, 0.49) * Math.pow(R_CELL, 0.98)), 1 / 1.49);
+  return w * 60 / (2 * Math.PI);
+}
+// Spacer-filled channel, Eq. 10 (28-mil net spacer, L/D = 8): τ̄ = τD/(μU) = 0.42 Re^0.61, Re = DU/ν, U superficial.
+// Applied to every spacer of the list as an indicative estimate, with D = H/2 and H recovered from (d_h, ε) of Schock & Miquel.
+function spacerD(key) { const sp = SPACERS[key]; return 0.5 * sp.dh * (2 + 8 * (1 - sp.eps)) / (4 * sp.eps); }
+function spiralTau(v_eff, key, nu) {
+  const sp = SPACERS[key], D = spacerD(key), U = sp.eps * v_eff;
+  return 0.42 * Math.pow(D * U / nu, 0.61) * RHO * nu * U / D;
+}
+function spiralVeffFromTau(tau, key, nu) {
+  const sp = SPACERS[key], D = spacerD(key);
+  const U = Math.pow(tau * D / (0.42 * RHO * nu * Math.pow(D / nu, 0.61)), 1 / 1.61);
+  return U / sp.eps;
+}
+const fmtTau = t => t < 10 ? t.toFixed(2) : t.toFixed(1);
+function feedProps() {
+  const sol = "OSN";
+  const C0  = C0_VALS[parseInt(document.getElementById("inp-C0").value)];
+  return { sol, C0, nu: getNu(sol, C0) };
+}
+// Re-range and re-position the two shear-stress sliders from the current speed / Δp/L, spacer and feed viscosity
+function refreshShear() {
+  const { sol, C0, nu } = feedProps(), mu = RHO * nu;
+  const rpm = parseFloat(document.getElementById("inp-rpm").value);
+  const sT = document.getElementById("inp-tau-s");
+  sT.min = stirredTau(RPM_MIN, mu); sT.max = stirredTau(RPM_MAX, mu); sT.value = stirredTau(rpm, mu);
+  document.getElementById("lbl-tau-s").textContent = fmtTau(stirredTau(rpm, mu));
+  const Re = RHO * (rpm * 2 * Math.PI / 60) * R_CELL * R_CELL / mu;
+  document.getElementById("tau-s-note").textContent =
+    Re < 6500 ? ` Re = ${Math.round(Re).toLocaleString("en")}: below the 6 500–39 000 range of the shear measurements — extrapolated.` : "";
+
+  const key = document.getElementById("sel-spacer").value;
+  const dpdl = parseFloat(document.getElementById("inp-dpdl").value);
+  const tauAt = d => spiralTau(getSpiralVeff(d, key, sol, C0), key, nu);
+  const pT = document.getElementById("inp-tau-p");
+  pT.min = tauAt(DPDL_MIN); pT.max = tauAt(DPDL_MAX); pT.value = tauAt(dpdl);
+  document.getElementById("lbl-tau-p").textContent = fmtTau(tauAt(dpdl));
+}
+function onRpmSlider() {
+  document.getElementById("lbl-rpm").textContent = parseFloat(document.getElementById("inp-rpm").value);
+  update();
+}
+function onTauStirred() {
+  const { nu } = feedProps();
+  const tau = parseFloat(document.getElementById("inp-tau-s").value);
+  const rpm = Math.min(RPM_MAX, Math.max(RPM_MIN, Math.round(stirredRpmFromTau(tau, RHO * nu))));
+  document.getElementById("inp-rpm").value = rpm;
+  document.getElementById("lbl-rpm").textContent = rpm;
+  update();
+}
+function onDpdlSlider() {
+  document.getElementById("lbl-dpdl").textContent = parseFloat(document.getElementById("inp-dpdl").value).toFixed(2);
+  update();
+}
+function onTauSpiral() {
+  const { sol, C0, nu } = feedProps();
+  const key = document.getElementById("sel-spacer").value;
+  const tau = parseFloat(document.getElementById("inp-tau-p").value);
+  const d = Math.min(DPDL_MAX, Math.max(DPDL_MIN, getSpiralDpdl(spiralVeffFromTau(tau, key, nu), key, sol, C0)));
+  document.getElementById("inp-dpdl").value = d;
+  document.getElementById("lbl-dpdl").textContent = d.toFixed(2);
+  update();
+}
+function onSpacerChange() { update(); }
+function onCompareChange() {
+  const mode = document.getElementById("sel-compare").value;
+  document.getElementById("ctrl-stirred").style.display = (mode === "stirred") ? "" : "none";
+  document.getElementById("ctrl-spiral").style.display  = (mode === "spiral")  ? "" : "none";
+  update();
+}
+
+// ── ΔP scale labels (dynamic, log-spaced) ──
+function updateDpScale(maxIdx) {
+  // Defer to next frame to ensure layout is computed
+  requestAnimationFrame(() => {
+    const picks = [0,
+      Math.round(maxIdx * 0.25),
+      Math.round(maxIdx * 0.50),
+      Math.round(maxIdx * 0.75),
+      maxIdx];
+    const unique = [...new Set(picks)];
+
+    const rangeInput = document.getElementById("inp-dP");
+    const ctrlRow = rangeInput.parentElement;
+    const ctrlLbl = ctrlRow.querySelector(".ctrl-lbl");
+
+    // Get actual dimensions after layout
+    const lblWidth = ctrlLbl?.offsetWidth || 28;
+    const gap = 10;
+    const rangeWidth = rangeInput.offsetWidth;
+
+    // Fallback if elements not ready: use percentage-based positioning
+    if (rangeWidth <= 0) {
+      // Fallback: use percentage positioning relative to parent width
+      document.getElementById("dp-scale").innerHTML = unique.map(i => {
+        const pct = maxIdx > 0 ? (i / maxIdx) * 100 : 0;
+        return `<span style="--left-px:${pct}%">${DP_VALS[i]}</span>`;
+      }).join("");
+      return;
+    }
+
+    const rangeStartInRow = lblWidth + gap;
+
+    document.getElementById("dp-scale").innerHTML = unique.map(i => {
+      const ratio = maxIdx > 0 ? i / maxIdx : 0;
+      const leftPx = rangeStartInRow + ratio * rangeWidth;
+      return `<span style="--left-px:${leftPx}px">${DP_VALS[i]}</span>`;
+    }).join("");
+  });
+}
+
+// ── Solvent / solute definition (OSN property layer: assets/osn-properties.js) ──
+SOLUTES.OSN = { beta: 3e-4, B_default: 0.1, D: [1e-10], nu: [1e-6], pi: [0] };   // overwritten by rebuildOSN()
+const MIXABLE = ["acetonitrile", "methanol", "ethanol", "dmf"];
+function setM(m) { document.getElementById("inp-M").value = m; onSoluteChange(); }
+function readOpt(id, scale) { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v * (scale || 1) : null; }
+function rebuildOSN() {
+  const solvent = document.getElementById("sel-solvent").value;
+  const canMix = MIXABLE.includes(solvent);
+  document.getElementById("group-mix").style.display = canMix ? "" : "none";
+  const x = parseFloat(document.getElementById("inp-xorg").value) / 100;
+  const T = parseFloat(document.getElementById("inp-T").value) + 273.15;
+  const sv = OSNP.solventProps({ solvent, T, xOrg: x, mixWater: canMix && x < 0.9999 });
+  RHO = sv.rho;
+  const cls = document.getElementById("sel-solute").value;
+  document.getElementById("peg-presets").style.display = cls === "peg" ? "" : "none";
+  const M = parseFloat(document.getElementById("inp-M").value) || 1000;
+  const so = OSNP.soluteProps({ cls, M, vbar: readOpt("inp-vbar"), D0: readOpt("inp-D0", 1e-10), etaInt: readOpt("inp-eta"), A2: readOpt("inp-A2") || 0, Mn: readOpt("inp-Mn") }, sv, T);
+  const noOverride = readOpt("inp-vbar") === null && readOpt("inp-D0") === null && readOpt("inp-eta") === null && !readOpt("inp-A2") && readOpt("inp-Mn") === null;
+  const useMeasured = solvent === "water" && cls === "peg" && Math.abs(M - 35000) <= 1500 && Math.abs(T - 293.15) <= 0.6 && noOverride;
+  if (useMeasured) {            // exactly the property laws of the device-comparison page (Pereira 2026, Table A.1; data of Pires et al.)
+    SOLUTES.OSN = Object.assign({}, SOLUTES.PEG35k, { B_default: 0.1 });
+    RHO = 1000;
+    so.tags = ["<strong>Measured property laws in use</strong>: PEG 35 kDa in water at 20 °C — ν(c), D<sub>A</sub>(c), π(c) from the CFD reconstructions (Pereira 2026, Table A.1; data of Pires et al.), identical to the device-comparison page. Change T, M or the solvent, or enter an override, and the estimates below are used instead."];
+    so.vtag = "measured laws"; so.Dtag = "measured laws";
+  } else {
+    SOLUTES.OSN = { beta: so.beta, B_default: 0.1, nuFun: so.nu, Dfun: so.D, piFun: so.pi };
+  }
+  const C0 = C0_VALS[parseInt(document.getElementById("inp-C0").value)];
+  const Sc0 = getNu('OSN', C0) / getDA('OSN', C0);
+  const fx = v => v.toExponential(2);
+  const names = OSNP.SOLVENTS[solvent].label + (canMix && x < 0.9999 ? ` + water (${(100 * x).toFixed(0)} mol % organic)` : "");
+  document.getElementById("solvent-hint").innerHTML =
+    `<strong>${names}</strong>, ${(T - 273.15).toFixed(0)} °C: ρ = ${sv.rho.toFixed(0)} kg/m³, μ = ${(sv.mu * 1e3).toFixed(3)} mPa·s.` +
+    (sv.warn.length ? `<br><span style="color:#c47a00;">${sv.warn.join("; ")}.</span>` : "");
+  const notes = sv.tags.concat(so.tags).map(t => `<li>${t}</li>`).join("");
+  document.getElementById("props-box").innerHTML =
+    `<div class="field-hint" style="margin-top:10px;"><strong>Solute properties used</strong> (${so.vtag}; ${so.Dtag}):<br>` +
+    `v̄ = ${so.vbar.toFixed(3)} cm³/g → β = ${(so.beta * 1e4).toFixed(2)}×10⁻⁴ m³/kg · D₀ = ${fx(useMeasured ? SOLUTES.PEG35k.D[0] : so.D0)} m²/s · [η] = ${so.eta.toFixed(1)} mL/g · Sc(C₀) = ${Sc0.toExponential(1)} · π(C₀) = ${(getPi('OSN', C0) / 1e5).toFixed(3)} bar` +
+    `<ul style="margin:6px 0 0 16px;padding:0;">${notes}</ul>` +
+    `<a href="guide-osn-properties.html">Which of these are validated, and how →</a></div>`;
+  return { sv, so, T };
+}
+function onSolventChange() { update(); }
+function onMixSlider() { document.getElementById("lbl-xorg").textContent = document.getElementById("inp-xorg").value; update(); }
+function onTSlider() { document.getElementById("lbl-T").textContent = document.getElementById("inp-T").value; update(); }
+function onSoluteChange() { update(); }
+
+// ── Main update ──
+function update() {
+  rebuildOSN();
+  // Validate rotor geometry before proceeding
+  const geom_check = getGeom();
+  if (geom_check.r_m <= geom_check.r_s) {
+    console.error("Invalid geometry: r_m must be > r_s");
+    document.getElementById("warning-box").classList.add("show");
+    document.getElementById("warning-text").textContent = " Invalid cartridge/rotor configuration.";
+    return;
+  }
+
+  const sol   = "OSN";
+  const C0    = C0_VALS[parseInt(document.getElementById("inp-C0").value)];  // g/L = kg/m³
+  const B     = B_VALS[parseInt(document.getElementById("inp-B").value)];    // LMH
+  const dP_op = DP_VALS[parseInt(document.getElementById("inp-dP").value)];  // bar
+
+  const B_SI  = B * 1e-3 / 3600;   // m/s
+  refreshShear();
+
+  const { DP_MIN: dP_min, DP_POINTS: N } = CHART_CONFIG;
+  const dP_max = Math.min(getRotorDP(), 80);
+
+  const dPs = [];
+  for (let i = 0; i <= N; i++) dPs.push(dP_min + (dP_max - dP_min) * i / N);
+
+  const CLASSES = visibleClasses();
+
+  // Helper: compute Γ, R_int, R_obs arrays for a membrane (lp, B_SI in SI)
+  // Optional solverFn for custom solvers (default: solveCP for O-CMF)
+  function computeCurve(lp, b, jvMax, solverFn = solveCP) {
+    const gammas = [], Rints = [], Robss = [], Jvs = [];
+    let oor = false;
+    for (const dP of dPs) {
+      const res = solverFn(dP, sol, C0, lp, b);
+      if (!res || (jvMax !== undefined && res.Jv_lmh > jvMax)) {
+        gammas.push(null); Rints.push(null); Robss.push(null); Jvs.push(null); continue;
+      }
+      gammas.push(res.Gamma);
+      Rints.push(res.RA);
+      Robss.push(res.R_obs);
+      Jvs.push(res.Jv_lmh);
+      // Check out-of-range only if G is present (O-CMF has it, Sterlitech doesn't)
+      if (res.G) {
+        if (res.Sc0 < 700 || res.Sc0 > 3.6e4 || res.phi > 7 || res.Gamma > 100 || res.G < 7e-9 || res.G > 5e-6) oor = true;
+      }
+    }
+    return { gammas, Rints, Robss, Jvs, oor };
+  }
+
+  // class reference curves — all use the same B
+  const classCurves = CLASSES.map(cl => {
+    const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const computed = computeCurve(lp, B_SI, MEM_CLASSES[cl.key].Jv_max);
+    return {
+      label: cl.label, color: cl.color, lineWidth: 1.5,
+      jvMax: MEM_CLASSES[cl.key].Jv_max,
+      lp_display: MEM_CLASSES[cl.key].Lp,
+      ...computed
+    };
+  });
+
+  const outOfRange = classCurves.some(c => c.oor);
+
+  // Operating point for each class at the specified ΔP
+  const dP_clamped = Math.max(dP_min, Math.min(dP_op, dP_max));
+  const ops = CLASSES.map(cl => {
+    const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const res = solveCP(dP_clamped, sol, C0, lp, B_SI);
+    if (!res) return null;  // Explicit validation
+    return { ...res, color: cl.color, label: cl.label,
+             jvMax: MEM_CLASSES[cl.key].Jv_max };
+  });
+
+  // Comparison technology curve (single intrinsic curve — all classes converge on it)
+  // Use NF membrane as reference (curve shape is the same for all classes)
+  const compareMode = document.getElementById("sel-compare").value;
+  const lp_ref = MEM_CLASSES.P3.Lp * 1e-3 / 3600 / 1e5;
+  const compJvMax = 150;
+  let compSolver, compLabel, compColor;
+  if (compareMode === "spiral") {
+    const dpdl = parseFloat(document.getElementById("inp-dpdl").value);
+    const spacerKey = document.getElementById("sel-spacer").value;
+    const v_eff = getSpiralVeff(dpdl, spacerKey, sol, C0);   // follows from Δp/L at the feed viscosity
+    compSolver = (dP, s, c, lp, b) => solveCPSpiral(dP, s, c, lp, b, v_eff, spacerKey);
+    compLabel  = "Spiral-wound";
+    compColor  = SPIRAL_COLOR;
+    // Resulting velocity: grey, read-only (the grey slider only visualises where it falls in 0–0.6 m/s)
+    document.getElementById("lbl-vel").textContent = v_eff.toFixed(3);
+    const elV = document.getElementById("inp-vel");
+    elV.min = 0; elV.max = 0.6; elV.step = "any"; elV.value = v_eff;
+  } else {
+    const rpm_sterlitech = parseFloat(document.getElementById("inp-rpm").value);
+    compSolver = (dP, s, c, lp, b) => solveCPSterlitech(dP, s, c, lp, b, rpm_sterlitech);
+    compLabel  = "Sterlitech";
+    compColor  = "#ff0000";
+  }
+
+  const compCurveData = computeCurve(lp_ref, B_SI, compJvMax, compSolver);
+  const compCurve = {
+    label: compLabel, color: compColor, lineWidth: 2.5,
+    jvMax: compJvMax,
+    ...compCurveData
+  };
+
+  // Comparison operating points (5 classes, each with its own Lp, on the single curve)
+  const comp_ops = CLASSES.map(cl => {
+    const lp = MEM_CLASSES[cl.key].Lp * 1e-3 / 3600 / 1e5;
+    const lp_dom = MEM_CLASSES[cl.key].Lp;  // LMH/bar for display
+    const res = compSolver(dP_clamped, sol, C0, lp, B_SI);
+    if (!res) return null;  // Explicit validation
+    return { ...res, color: cl.color, label: cl.label + ` (${lp_dom} LMH/bar)`,
+             jvMax: MEM_CLASSES[cl.key].Jv_max };
+  });
+
+  // Merge curves and operating points for drawing (keep original function signatures)
+  const allCurves = [...classCurves, compCurve];
+  const allOps = [...ops, ...comp_ops];
+
+  // RPM hint (depends only on ΔP and geometry, not on membrane class)
+  const { r_m, r_s } = geom_check;  // Reuse cached geometry check
+  const rpm_op = dpToRpm(dP_clamped, r_m, r_s);
+  const isClamped = dP_clamped !== dP_op;
+  document.getElementById("op-rpm-hint").textContent =
+    `Corresponding RPM: ${Math.round(rpm_op).toLocaleString()} rpm${isClamped ? " (clamped)" : ""}`;
+
+  // Alerts
+  const warningBox = document.getElementById("warning-box");
+  warningBox.classList.toggle("show", outOfRange);
+  if (outOfRange) document.getElementById("warning-text").textContent =
+    " Some points fall outside the range covered by the reconstructions (Jv/kc ≤ 7, Γ ≤ 100, feed Sc ≤ 3.6×10⁴, 𝒢 ∈ [7×10⁻⁹–5×10⁻⁶]).";
+
+  const hasData = classCurves.some(c => c.gammas.some(g => g !== null));
+  const infoBox = document.getElementById("info-box");
+  infoBox.classList.toggle("show", !hasData);
+  if (!hasData) {
+    document.getElementById("info-text").textContent =
+      "No permeation: osmotic pressure exceeds ΔP throughout. Try reducing C₀ or increasing ΔP.";
+  }
+
+  drawGamma(dPs, allCurves, dP_clamped, allOps);
+  drawRej(dPs, allCurves, dP_clamped, allOps);
+}
+
+// ── Canvas utilities ──
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y,   x+w, y+r,   r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x,   y+h, x,   y+h-r, r);
+  ctx.lineTo(x, y+r);   ctx.arcTo(x,   y,   x+r, y,     r);
+  ctx.closePath();
+}
+
+function drawChartLegend(ctx, pad, W, items) {
+  // items: [{label, color, lw, dashed?}]
+  const itemH = 16, swW = 22, textOff = 28, boxW = 140;
+  const boxH = items.length * itemH + 6;
+  const bx = pad.l + (W - pad.l - pad.r) - boxW - 4;
+  const by = pad.t + 4;
+
+  ctx.fillStyle = "rgba(255,255,255,0.90)";
+  ctx.strokeStyle = "#cdd6e0"; ctx.lineWidth = 0.8;
+  roundRect(ctx, bx, by, boxW, boxH, 5);
+  ctx.fill(); ctx.stroke();
+
+  items.forEach((item, i) => {
+    const y = by + 4 + i * itemH + itemH * 0.5 + 1;
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth   = item.lw || 1.5;
+    ctx.setLineDash(item.dashed ? [5,3] : []);
+    ctx.beginPath(); ctx.moveTo(bx+5, y); ctx.lineTo(bx+5+swW, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#2c3e50"; ctx.font = "10px Arial,sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(item.label, bx + textOff, y + 3.5);
+  });
+}
+
+// Nice round Jv tick values suited to each membrane class range
+function niceJvTicks(xMax) {
+  const step = xMax <= 50 ? 5 : xMax <= 100 ? 10 : 20;
+  const ticks = [];
+  for (let t = 0; t <= xMax + 0.01; t += step) ticks.push(t);
+  return ticks;
+}
+
+function initCanvas(id, H) {
+  const el  = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const W   = el.parentElement.offsetWidth || 600;
+  el.width  = W * dpr; el.height = H * dpr;
+  el.style.width = W + "px"; el.style.height = H + "px";
+  const ctx = el.getContext("2d");
+  ctx.scale(dpr, dpr);
+  return { ctx, W, H };
+}
+
+function makeScalers(xMin, xMax, yMin, yMax, pad, W, H) {
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  return {
+    tx: x => pad.l + (x - xMin) / (xMax - xMin) * cw,
+    ty: y => pad.t + (1 - (y - yMin) / (yMax - yMin)) * ch,
+    cw, ch
+  };
+}
+
+function drawGrid(ctx, tx, ty, xMin, xMax, yMin, yMax, pad, nX, nY, W, H, xLabel, yLabel, yFmt, xTicks) {
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  // Horizontal grid lines (y)
+  for (let i = 0; i <= nY; i++) {
+    const y = yMin + (yMax - yMin) * i / nY;
+    ctx.beginPath(); ctx.moveTo(pad.l, ty(y)); ctx.lineTo(pad.l + cw, ty(y)); ctx.stroke();
+  }
+  // Vertical grid lines (x) — only when xTicks provided
+  if (xTicks) {
+    xTicks.forEach(x => {
+      ctx.beginPath(); ctx.moveTo(tx(x), pad.t); ctx.lineTo(tx(x), pad.t + ch); ctx.stroke();
+    });
+  }
+  // Y labels
+  ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "right";
+  for (let i = 0; i <= nY; i++) {
+    const y = yMin + (yMax - yMin) * i / nY;
+    ctx.fillText(yFmt(y), pad.l - 5, ty(y) + 4);
+  }
+  // X labels
+  ctx.textAlign = "center";
+  const xLabels = xTicks || Array.from({length: nX+1}, (_, i) => xMin + (xMax-xMin)*i/nX);
+  xLabels.forEach(x => ctx.fillText(x.toFixed(0), tx(x), H - pad.b + 14));
+  // Axis labels
+  ctx.fillText(xLabel, pad.l + cw/2, H - 2);
+  ctx.save(); ctx.translate(11, pad.t + ch/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0); ctx.restore();
+}
+
+function drawGamma(dPs, curves, dP_op, ops) {
+  const H = 230;
+  const { ctx, W } = initCanvas("chart-gamma", H);
+  const pad = { l:54, r:22, t:16, b:38 };
+  ctx.clearRect(0, 0, W, H);
+
+  const xMax = Math.max(...curves.map(c => c.jvMax || 0));
+  const allGValid = curves.flatMap(c => (c.gammas || []).filter(g => g !== null && g > 0));
+  if (!xMax || !allGValid.length) return;
+
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const tx = x => pad.l + x / xMax * cw;
+
+  // Log y-axis: Γ from 0.01 to 10 (NF) or to 100 (UF)
+  const yMin_log = -2, yMax_log = 2, logRange = yMax_log - yMin_log;
+  const ty = g => {
+    if (g <= 0) return pad.t + ch + 10;
+    const l = Math.log10(g);
+    return pad.t + (1 - (l - yMin_log) / logRange) * ch;
+  };
+
+  // ── Log y-axis grid ──
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  ctx.fillStyle   = "#5e7c96"; ctx.font = "11px Arial,sans-serif";
+  for (let l = yMin_log; l <= yMax_log; l++) {
+    const yp = ty(Math.pow(10, l));
+    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+    ctx.textAlign = "right";
+    const lbl = l === 2 ? "100" : l === 1 ? "10" : l === 0 ? "1" : l === -1 ? "0.1" : "0.01";
+    ctx.fillText(lbl, pad.l - 5, yp + 4);
+    // Minor ticks
+    if (l < yMax_log) {
+      ctx.strokeStyle = "#f0f3f8";
+      for (let m = 2; m <= 9; m++) {
+        const ym = ty(m * Math.pow(10, l));
+        ctx.beginPath(); ctx.moveTo(pad.l, ym); ctx.lineTo(pad.l + cw, ym); ctx.stroke();
+      }
+      ctx.strokeStyle = "#e8edf5";
+    }
+  }
+  // x grid + labels
+  const xTicks = niceJvTicks(xMax);
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  xTicks.forEach(x => {
+    ctx.beginPath(); ctx.moveTo(tx(x), pad.t); ctx.lineTo(tx(x), pad.t + ch); ctx.stroke();
+  });
+  ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "center";
+  xTicks.forEach(x => ctx.fillText(x.toFixed(0), tx(x), H - pad.b + 14));
+  ctx.fillText("Jv (L\u00A0m\u207B\u00B2\u00A0h\u207B\u00B9)", pad.l + cw / 2, H - 2);
+  ctx.save(); ctx.translate(11, pad.t + ch / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("\u0393", 0, 0); ctx.restore();
+
+  // Green safe zone (Γ < SAFE_GAMMA) — lower portion of log chart
+  const y_safe = ty(CHART_CONFIG.SAFE_GAMMA);
+  ctx.fillStyle = CHART_CONFIG.SAFE_COLOR;
+  ctx.fillRect(pad.l, y_safe, cw, pad.t + ch - y_safe);
+  ctx.strokeStyle = "#34c759"; ctx.lineWidth = 1.2; ctx.setLineDash(LINE_PATTERNS.SAFE_ZONE);
+  ctx.beginPath(); ctx.moveTo(pad.l, y_safe); ctx.lineTo(pad.l + cw, y_safe); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#1a7c3a"; ctx.font = "10px Arial"; ctx.textAlign = "right";
+  ctx.fillText(`Γ = ${CHART_CONFIG.SAFE_GAMMA}`, pad.l + cw - 4, y_safe - 4);
+
+  // Draw all 5 class curves
+  curves.forEach(c => {
+    if (!c.Jvs) return;
+    ctx.strokeStyle = c.color; ctx.lineWidth = c.lineWidth || 1.5;
+    ctx.lineJoin = "round"; ctx.setLineDash([]);
+    ctx.beginPath();
+    let pen = false;
+    for (let i = 0; i < c.Jvs.length; i++) {
+      if (c.Jvs[i] === null || c.gammas[i] === null || c.gammas[i] <= 0) { pen = false; continue; }
+      if (c.Jvs[i] > xMax * 1.01) { pen = false; continue; }
+      const yp = ty(c.gammas[i]);
+      if (yp < pad.t - 2 || yp > pad.t + ch + 2) { pen = false; continue; }
+      pen ? ctx.lineTo(tx(c.Jvs[i]), yp) : ctx.moveTo(tx(c.Jvs[i]), yp);
+      pen = true;
+    }
+    ctx.stroke();
+  });
+
+  // Operating point: one dot per class
+  ops.forEach(op => {
+    if (!op || op.Gamma <= 0 || op.Jv_lmh > (op.jvMax || xMax) * 1.01) return;
+    const yp = ty(op.Gamma);
+    if (yp < pad.t || yp > pad.t + ch) return;
+    ctx.beginPath(); ctx.arc(tx(op.Jv_lmh), yp, 5, 0, 2*Math.PI);
+    ctx.fillStyle   = op.color;
+    ctx.strokeStyle = "white"; ctx.lineWidth = 1.5;
+    ctx.fill(); ctx.stroke();
+  });
+
+  drawChartLegend(ctx, pad, W, curves.map(c => ({
+    label: c.label + (c.lp_display ? ` (${c.lp_display} LMH/bar)` : ''),
+    color: c.color,
+    lw: c.lineWidth || 1.5
+  })));
+}
+
+function drawRej(dPs, curves, dP_op, ops) {
+  const H = 230;
+  const { ctx, W } = initCanvas("chart-rej", H);
+  const pad = { l:60, r:22, t:16, b:38 };
+  ctx.clearRect(0, 0, W, H);
+
+  const xMax = Math.max(...curves.map(c => c.jvMax || 0));
+  if (!xMax) return;
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const tx = x => pad.l + x / xMax * cw;
+  const xTicks = niceJvTicks(xMax);
+
+  // y-axis: log₁₀(1−R), auto-range from min R_int across all curves
+  // (R_int is identical for all since B is shared, but we take the min to be safe)
+  const allRintValid = curves.flatMap(c => (c.Rints || []).filter(r => r !== null));
+  if (!allRintValid.length) return;
+  const minPass = Math.min(...allRintValid.map(r => 1 - r));
+  const yMin_log = Math.max(Math.floor(Math.log10(minPass) - 0.5), -4);
+  const yMax_log = 0;
+  const logRange = yMax_log - yMin_log;
+  const ty = v => {
+    if (v <= 0) return pad.t + ch + 10;
+    const l = Math.log10(v);
+    return pad.t + (1 - (l - yMin_log) / logRange) * ch;
+  };
+
+  // ── Log y-axis grid ──
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  ctx.fillStyle   = "#5e7c96"; ctx.font = "11px Arial,sans-serif";
+  for (let l = yMin_log; l <= yMax_log; l++) {
+    const yp = ty(Math.pow(10, l));
+    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+    ctx.textAlign = "right";
+    const lbl = l === 0 ? "1" : l === -1 ? "0.1" : l === -2 ? "0.01"
+              : "10\u207B" + ["\u00B9","\u00B2","\u00B3","\u2074"][Math.abs(l)-1];
+    ctx.fillText(lbl, pad.l - 5, yp + 4);
+    if (l < yMax_log) {
+      ctx.strokeStyle = "#f0f3f8";
+      for (let m = 2; m <= 9; m++) {
+        const ym = ty(m * Math.pow(10, l));
+        ctx.beginPath(); ctx.moveTo(pad.l, ym); ctx.lineTo(pad.l + cw, ym); ctx.stroke();
+      }
+      ctx.strokeStyle = "#e8edf5";
+    }
+  }
+  ctx.strokeStyle = "#e8edf5"; ctx.lineWidth = 1;
+  xTicks.forEach(x => {
+    ctx.beginPath(); ctx.moveTo(tx(x), pad.t); ctx.lineTo(tx(x), pad.t + ch); ctx.stroke();
+  });
+  ctx.fillStyle = "#5e7c96"; ctx.font = "11px Arial,sans-serif"; ctx.textAlign = "center";
+  xTicks.forEach(x => ctx.fillText(x.toFixed(0), tx(x), H - pad.b + 14));
+  ctx.fillText("Jv (L\u00A0m\u207B\u00B2\u00A0h\u207B\u00B9)", pad.l + cw / 2, H - 2);
+  ctx.save(); ctx.translate(11, pad.t + ch / 2); ctx.rotate(-Math.PI / 2);
+  ctx.fillText("1 \u2212 R", 0, 0); ctx.restore();
+
+  function plotLine(Jvs, Rdata, color, lw, dashed) {
+    ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = "round";
+    ctx.setLineDash(dashed ? [6,4] : []);
+    ctx.beginPath();
+    let pen = false;
+    for (let i = 0; i < Jvs.length; i++) {
+      if (Jvs[i] === null || Rdata[i] === null) { pen = false; continue; }
+      if (Jvs[i] > xMax * 1.01) { pen = false; continue; }
+      const val = 1 - Rdata[i];
+      if (val <= 0) { pen = false; continue; }
+      const yp = ty(val);
+      if (yp < pad.t - 2) { pen = false; continue; }
+      if (yp > pad.t + ch + 2) { pen = false; continue; }
+      pen ? ctx.lineTo(tx(Jvs[i]), yp) : ctx.moveTo(tx(Jvs[i]), yp);
+      pen = true;
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // R_obs — 5 curves, one per class (solid, class colours)
+  curves.forEach(c => plotLine(c.Jvs, c.Robss, c.color, c.lineWidth || 1.5, false));
+
+  // R_int — single analytical curve spanning the full Jv range (dashed navy, on top)
+  const B_dom = B_VALS[parseInt(document.getElementById("inp-B").value)];
+  const B_si  = B_dom * 1e-3 / 3600;
+  const nRint = 300;
+  const rintJvs  = Array.from({length: nRint+1}, (_, i) => xMax * i / nRint);
+  const rintRvals = rintJvs.map(jv => {
+    const jvsi = jv * 1e-3 / 3600;
+    return jvsi > 0 ? jvsi / (jvsi + B_si) : 0;
+  });
+  plotLine(rintJvs, rintRvals, RINT_COLOR, 2.0, true);
+
+  // Operating point markers: one pair per class at the specified ΔP
+  // Each class has a different Jv (different Lp) → different x-position on curve
+  // Open circle = R_int; filled circle = R_obs; vertical segment shows CP gap
+  ops.forEach(op => {
+    if (!op || op.Jv_lmh > (op.jvMax || xMax) * 1.01) return;
+    const jvsi   = op.Jv_lmh * 1e-3 / 3600;
+    const r_int  = jvsi / (jvsi + B_si);
+    const r_obs  = op.R_obs;
+    const px     = tx(op.Jv_lmh);
+
+    const pass_int = 1 - r_int;
+    const pass_obs = Math.max(1e-5, 1 - r_obs);
+    const yp_int = ty(pass_int);
+    const yp_obs = ty(pass_obs);
+
+    if (yp_int < pad.t || yp_int > pad.t + ch) return;
+
+    // Vertical connector (CP gap)
+    if (Math.abs(yp_obs - yp_int) > 2) {
+      ctx.strokeStyle = op.color; ctx.lineWidth = 1.5; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(px, yp_int); ctx.lineTo(px, yp_obs); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // R_int: open circle (white fill, class-colour border)
+    ctx.beginPath(); ctx.arc(px, yp_int, 5, 0, 2*Math.PI);
+    ctx.fillStyle = "white"; ctx.strokeStyle = op.color; ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+
+    // R_obs: filled circle (class colour)
+    if (yp_obs >= pad.t && yp_obs <= pad.t + ch) {
+      ctx.beginPath(); ctx.arc(px, yp_obs, 5, 0, 2*Math.PI);
+      ctx.fillStyle = op.color; ctx.strokeStyle = "white"; ctx.lineWidth = 1.5;
+      ctx.fill(); ctx.stroke();
+    }
+  });
+
+  // Legend
+  const legendItems = [
+    { label: "R\u1D05\u207F\u1D1C (intrinsic)", color: RINT_COLOR, lw: 2.0 },
+    ...visibleClasses().map(cl => ({
+      label: cl.label,
+      color: cl.color,
+      lw: 1.5
+    }))
+  ];
+  drawChartLegend(ctx, pad, W, legendItems);
+}
+
+// ── Measured free-surface curve (94/25) ──
+const ds94 = V => OCMF.deltaS("94-25", V) * 1000;   // mm
+
+// ── Init ──
+function onRotorChange() { onCartridgeChange(); }
+function onCartridgeChange() {
+  const cart = document.getElementById("sel-cartridge").value;
+  document.getElementById("group-rotor").style.display = cart === "94-25" ? "block" : "none";
+  OCMF.fillRotorSelect(document.getElementById("sel-rotor"), cart);   // keeps the current rotor when still valid
+
+  // Re-range the volume slider before any geometry is read from it
+  const vr   = getVolRange();
+  const vSld = document.getElementById("inp-vol");
+  const prev = parseFloat(vSld.value);
+  vSld.min = vr.min; vSld.max = vr.max;
+  vSld.value = (prev >= vr.min && prev <= vr.max) ? prev : VOL_NOM[cart];
+  document.getElementById("lbl-vol").textContent = parseFloat(vSld.value).toFixed(1);
+  document.getElementById("vol-hint").textContent = `Nominal feed volume: ${VOL_NOM[cart]} mL`;
+  document.getElementById("vol-range-hint").innerHTML = cart === "94-25"
+    ? `Measured free-surface curve, valid ${vr.min}–${vr.max}&nbsp;mL.`
+    : `Declared operating range ${vr.min}–${vr.max}&nbsp;mL (linear δ<sub>s</sub> model).`;
+
+  const geom = getGeom();
+  document.getElementById("lbl-rm").textContent = (geom.r_m * 1000).toFixed(1);
+  document.getElementById("lbl-rs").textContent = (geom.r_s * 1000).toFixed(1);
+  const rotorDP = getRotorDP();
+  const maxIdx  = DP_VALS.filter(v => v <= rotorDP * 1.05).length - 1;
+  const slider  = document.getElementById("inp-dP");
+  slider.max = maxIdx;
+  if (parseInt(slider.value) > maxIdx) {
+    slider.value = maxIdx;
+    document.getElementById("lbl-dP").textContent = DP_VALS[maxIdx];
+  }
+  updateDpScale(maxIdx);
+  update();
+}
+
+window.addEventListener("DOMContentLoaded", () => { onCartridgeChange(); renderClassToggles(); update(); });
+window.addEventListener("resize", () => {
+  const sliderEl = document.getElementById("inp-dP");
+  const maxIdx = parseInt(sliderEl.max);
+  updateDpScale(maxIdx);
+  update();
+});
+</script>
+
+</body>
+</html>

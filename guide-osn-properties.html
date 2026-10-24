@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OSN property guide – CentrivaLab™</title>
+<meta name="description" content="Assumptions, equations and validation behind the physical properties used in the CentrivaLab OSN simulator: density, densification coefficient β, viscosity and diffusivity." />
+<style>
+  :root { --navy:#08203a; --navy-2:#0d3158; --blue:#38b6ff; --light:#f4f8fc; --card:#fff; --text:#16324a; --muted:#5e7c96; --line:#d9e1ec; --warn:#c47a00; --ok:#128f72; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; color:var(--text); line-height:1.65; background:#eef5fb; }
+  header { background:var(--navy); color:#fff; padding:18px 0 26px; }
+  .wrap { max-width:980px; margin:0 auto; padding:0 20px; }
+  header a { color:#cfe9ff; }
+  h1 { margin:14px 0 6px; font-size:28px; }
+  h2 { margin:34px 0 10px; font-size:21px; color:var(--navy); border-bottom:2px solid var(--line); padding-bottom:6px; }
+  h3 { margin:22px 0 6px; font-size:16px; color:var(--navy-2); }
+  .lead { color:#cfe0f0; max-width:760px; }
+  main { padding-bottom:50px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 20px; margin:14px 0; }
+  .note { border-left:4px solid var(--blue); background:#f2fbff; padding:10px 14px; border-radius:6px; margin:12px 0; }
+  .warn { border-left:4px solid var(--warn); background:#fff8e6; padding:10px 14px; border-radius:6px; margin:12px 0; }
+  .eq { background:var(--light); border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin:10px 0; font-family: "Cambria Math", Georgia, serif; font-size:16px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14px; background:#fff; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { background:var(--light); color:var(--navy); font-size:13px; }
+  .tblwrap { overflow-x:auto; }
+  code { background:#eaf1f8; padding:1px 5px; border-radius:4px; font-size:13px; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; }
+  .tag.ok { background:#dff5ee; color:var(--ok); } .tag.unv { background:#fff0d0; color:var(--warn); }
+  .calc { display:grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap:10px; }
+  .calc label { font-size:12px; font-weight:700; color:var(--navy); display:block; }
+  .calc input { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:8px; font-size:14px; }
+  .out { font-weight:700; color:var(--navy); margin-top:8px; }
+  ol.refs li, ul.refs li { margin-bottom:6px; font-size:14px; }
+  nav.toc a { margin-right:14px; font-size:14px; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a href="index.html">CentrivaLab™</a> · <a href="osn.html">OSN simulator</a> · <a href="simulator.html">Device comparison</a> · <a href="gamma.html">CP Calculator</a>
+  <h1>OSN property guide</h1>
+  <div class="lead">What the OSN simulator assumes about density, densification coefficient β, viscosity and diffusivity — the equations, the data they were checked against, where they fail, and a calculator so you can verify every number.</div>
+</div></header>
+<main><div class="wrap">
+
+<div class="warn"><strong>Status: draft, for review.</strong> Items marked <span class="tag unv">unverified</span> have no direct measurement behind them yet. Everything else was compared with experimental data from the NIST/TRC ThermoML Archive, and the primary articles are cited by DOI so you can check them.</div>
+
+<nav class="toc card">
+  <a href="#model">1. Model chain</a><a href="#beta">2. Density and β</a><a href="#peg">3. v̄ of PEG</a><a href="#additivity">4. Why not pure-density additivity</a>
+  <a href="#solvents">5. Solvents</a><a href="#diffusion">6. Diffusivity</a><a href="#limits">7. Hypotheses and limits</a><a href="#consistency">7b. Consistency check</a><a href="#check">8. Check it yourself</a><a href="#refs">9. Sources</a>
+</nav>
+
+<h2 id="model">1. Where the properties enter</h2>
+<p>The concentration-polarisation correlation of the simulator is k<sub>c</sub>/U* = 0.261 𝒢<sup>¼</sup> Sc<sup>−¼</sup> with 𝒢 ∝ β·c<sub>0</sub>·(J<sub>v</sub>/U*). The properties therefore enter through three numbers per solute–solvent pair: the <strong>densification coefficient β</strong> (how much the density rises per unit solute mass concentration), the <strong>kinematic viscosity ν(c)</strong> and the <strong>diffusivity D<sub>AB</sub>(c)</strong>, with Sc = ν/D. The error in each propagates into k<sub>c</sub> with weights ¼ (β) and ¼ (ν/D through Sc, together with the property evaluation at the film concentration).</p>
+
+<h2 id="beta">2. Density and β from a partial specific volume</h2>
+<p>For c kg of solute per m³ of solution with partial specific volume v̄ (m³/kg), the solute occupies c·v̄ and the solvent the rest:</p>
+<div class="eq">ρ(c) = c + ρ₀ (1 − c v̄) = ρ₀ + c (1 − ρ₀ v̄) &nbsp;&nbsp;⇒&nbsp;&nbsp; β = (1/ρ₀) dρ/dc = (1 − ρ₀ v̄)/ρ₀</div>
+<p>v̄ is taken at infinite dilution; for the concentrations of interest (≤ 5–10 wt %) this is a good approximation for non-associating solutes, but see §4.</p>
+<h3>Sensitivity — how much an error in v̄ matters</h3>
+<p>β is a <em>difference</em> (1 − ρ₀v̄), so an error in v̄ is amplified by ρ₀v̄/(1 − ρ₀v̄) on the way to β:</p>
+<div class="tblwrap"><table>
+<tr><th>Solvent</th><th>ρ₀ (kg/m³, 25 °C)</th><th>ρ₀v̄ (PEG)</th><th>Δβ/β for 1 % error in v̄</th></tr>
+<tr><td>Water</td><td>997.0</td><td>0.838</td><td>5.2 %</td></tr>
+<tr><td>Acetonitrile</td><td>776.6</td><td>0.659</td><td>1.9 %</td></tr>
+</table></div>
+<p>But β enters the mass-transfer coefficient only through 𝒢<sup>¼</sup>, so the effect on k<sub>c</sub> is small. Running the CP Calculator solver for PEG 35 kDa (6000 rpm, 20 °C, R<sub>obs</sub> = 0.98) with β changed by −25 % / +25 %:</p>
+<div class="tblwrap"><table>
+<tr><th>c₀ (g/L)</th><th>J<sub>v</sub> (LMH)</th><th>k<sub>c</sub> (µm/s), β −25 % / base / +25 %</th><th>Γ, β −25 % / base / +25 %</th></tr>
+<tr><td>10</td><td>15</td><td>5.71 / 6.13 / 6.49</td><td>1.05 / 0.95 / 0.88</td></tr>
+<tr><td>20</td><td>30</td><td>7.56 / 8.13 / 8.59</td><td>1.97 / 1.75 / 1.60</td></tr>
+<tr><td>20</td><td>60</td><td>9.00 / 9.67 / 10.22</td><td>5.27 / 4.52 / 4.03</td></tr>
+</table></div>
+<div class="note">A ±25 % error in β changes k<sub>c</sub> by only ±6 %, and Γ by −11 % to +17 % (the polarisation grows non-linearly with φ = J<sub>v</sub>/k<sub>c</sub>). The viscosity and the diffusivity are the properties that decide the result; β is the least critical of the three. For proteins, whose v̄ is nearly universal (≈ 0.73 ± 0.02 cm³/g), an approximate v̄ is enough; for short peptides (v̄ 0.58–0.74 cm³/g in water) the spread is larger but still moves k<sub>c</sub> by about 6 %. Test run with the NF closure of the calculator; the UF closure amplifies more at high φ.</div>
+
+<h2 id="peg">3. Partial specific volume of PEG</h2>
+<h3>3.1 Oligomers, from experimental densities</h3>
+<p>Apparent specific volumes φ(w) = [1/ρ − (1−w)/ρ₀]/w were extrapolated to w → 0 using published density series of ethylene glycol oligomers at 298.15 K (NIST ThermoML Archive; articles in §9). The pure-water density used when an article does not report w = 0 is the median of the archive (997.0 kg/m³).</p>
+<div class="tblwrap"><table>
+<tr><th>Solute</th><th>Solvent</th><th>EO units n</th><th>v̄<sup>∞</sup> (cm³/g)</th><th>V<sup>∞</sup> (cm³/mol)</th><th>Articles</th></tr>
+<tr><td>Ethylene glycol</td><td>water</td><td>1</td><td>0.878</td><td>54.5</td><td>2</td></tr>
+<tr><td>Diethylene glycol</td><td>water</td><td>2</td><td>0.863</td><td>91.6</td><td>1</td></tr>
+<tr><td>Triethylene glycol</td><td>water</td><td>3</td><td>0.864</td><td>129.8</td><td>3 (range 0.858–0.882)</td></tr>
+<tr><td>Ethylene glycol</td><td>DMSO</td><td>1</td><td>0.888</td><td>55.1</td><td>1</td></tr>
+<tr><td>Ethylene glycol</td><td>DMF</td><td>1</td><td>0.889</td><td>55.2</td><td>1</td></tr>
+<tr><td>Diethylene glycol</td><td>DMF</td><td>2</td><td>0.873</td><td>92.6</td><td>1</td></tr>
+</table></div>
+<p>In the two organic solvents v̄ is about 1 % <em>higher</em> than in water for the same oligomer.</p>
+<h3>3.2 From oligomers to the polymer: group model</h3>
+<p>The molar volume is linear in the number of ethylene-oxide units: V<sup>∞</sup>(n) = n·V<sub>EO</sub> + V<sub>ends</sub>, with M = 44.053 n + 18.015 g/mol.</p>
+<div class="eq">v̄(M) = (V<sub>EO</sub> n + V<sub>ends</sub>) / (44.053 n + 18.015) &nbsp;,&nbsp; n → ∞: &nbsp; v̄ → V<sub>EO</sub>/44.053</div>
+<ul>
+<li>Our three oligomer points (n = 1–3) give V<sub>EO</sub> ≈ 37.7 cm³/mol and V<sub>ends</sub> ≈ 17 cm³/mol. Three short oligomers cannot fix the polymer limit on their own.</li>
+<li>For the polymer limit we use V<sub>EO</sub> = 37.0 cm³/mol, which Mollica (1978) reports as independent of chain length and end groups <span class="tag unv">value taken from a summary of the paper; not yet checked against the original</span>, with V<sub>ends</sub> = 18.0 cm³/mol (close to the molar volume of water; ends = one H and one OH).</li>
+<li>This reproduces the oligomers within 1 %: EG 0.886 (measured 0.878), DEG 0.867 (0.863), TEG 0.859 (0.864).</li>
+</ul>
+<h3>3.3 Consequence for PEG 35 kDa</h3>
+<div class="tblwrap"><table>
+<tr><th>Quantity</th><th>Value</th><th>Status</th></tr>
+<tr><td>v̄ (n ≈ 794), water</td><td>0.840 cm³/g</td><td>group model</td></tr>
+<tr><td>β in water from v̄</td><td>1.63×10⁻⁴ m³/kg</td><td>calculated</td></tr>
+<tr><td>β in the simulator (PEG 35 kDa, Pereira 2026 / Pires et al.)</td><td>1.66×10⁻⁴ m³/kg</td><td>fitted to measured density; implies v̄ = 0.837 cm³/g</td></tr>
+<tr><td>Agreement</td><td>−1.8 % in β</td><td>consistent</td></tr>
+<tr><td>Apparent specific volume of PEG 1500 in water (Costa et al., 2014)</td><td>0.8336–0.8528 cm³/g</td><td>literature range, consistent</td></tr>
+<tr><td>v̄ in acetonitrile</td><td>0.840 (water value) to 0.848 (+1 %) cm³/g</td><td><span class="tag unv">unverified — no measurement found</span></td></tr>
+<tr><td>β in acetonitrile (ρ₀ = 776.6)</td><td>4.4–4.5×10⁻⁴ m³/kg</td><td><span class="tag unv">estimate, ±6 % if v̄ is ±3 %</span></td></tr>
+</table></div>
+<div class="note">The acetonitrile value rests on the oligomer behaviour in DMF/DMSO and on the water polymer limit. A direct density measurement of PEG (1–35 kDa) in acetonitrile at 5–50 g/L would remove the uncertainty and costs one afternoon with a vibrating-tube densimeter.</div>
+
+<h2 id="additivity">4. Why β must not be computed from pure-component densities</h2>
+<p>Ideal volume additivity (ρ<sub>id</sub> = 1/Σ w<sub>i</sub>/ρ<sub>i</sub>) predicts the <em>density</em> of binary mixtures within ≤ 1–2 % over the whole composition range (3.8 % at worst, water + oligo-ethers). But β depends on the <em>density increment</em> at low concentration, which is small, and there additivity fails. Ratio of measured to additive increment at w ≤ 0.10 (median, 298 K region, NIST data):</p>
+<div class="tblwrap"><table>
+<tr><th>Solvent</th><th>Solute</th><th>Measured/additive</th></tr>
+<tr><td>water</td><td>glycerol</td><td>1.11</td></tr>
+<tr><td>water</td><td>ethylene glycol</td><td>1.25</td></tr>
+<tr><td>water</td><td>triethylene glycol</td><td>1.33</td></tr>
+<tr><td>water</td><td>2-butoxyethanol</td><td>0.26</td></tr>
+<tr><td>water</td><td>2-(2-hexyloxyethoxy)ethanol</td><td>0.04</td></tr>
+<tr><td>ethanol</td><td>glymes (n = 1–4)</td><td>1.06–1.14</td></tr>
+<tr><td>DMF</td><td>diethylene glycol</td><td>1.11</td></tr>
+<tr><td>acetonitrile</td><td>2-methoxyethanol</td><td>1.09</td></tr>
+</table></div>
+<p>Hydrating solutes contract the mixture (increment 10–37 % larger); amphiphilic ethers are density-matched to water (increment ≈ 0). The simulator therefore uses a measured or literature v̄, never pure-liquid densities, for β.</p>
+
+<h2 id="solvents">5. Solvents: density and viscosity</h2>
+<p>Pure-solvent data come from the Choupo/ChemSep v8.3 correlations (liquid viscosity: Andrade or ChemSep Eq. 101; density from V<sub>liq</sub> at 25 °C). They were compared with all pure-liquid points at ambient pressure in the NIST archive (about 14 000 points). Median relative error of μ(T) over the temperatures in the data, and density at 298 K:</p>
+<div class="tblwrap"><table>
+<tr><th>Solvent</th><th>μ model</th><th>Points</th><th>Median |error| in μ</th><th>90th percentile</th><th>ρ(298 K) Δ</th></tr>
+<tr><td>Acetonitrile</td><td>Eq. 101</td><td>100</td><td>1.5 %</td><td>9.0 %</td><td>0.0 %</td></tr>
+<tr><td>Methanol</td><td>Andrade</td><td>261</td><td>1.3 %</td><td>4.2 %</td><td>+0.1 %</td></tr>
+<tr><td>Ethanol</td><td>Andrade</td><td>425</td><td>1.2 %</td><td>3.8 %</td><td>+0.3 %</td></tr>
+<tr><td>Isopropanol</td><td>Eq. 101</td><td>204</td><td>1.1 %</td><td>4.3 %</td><td>+0.1 %</td></tr>
+<tr><td>Toluene</td><td>Andrade</td><td>168</td><td>0.5 %</td><td>2.9 %</td><td>0.0 %</td></tr>
+<tr><td>THF</td><td>Eq. 101</td><td>52</td><td>2.5 %</td><td>6.0 %</td><td>−0.1 %</td></tr>
+<tr><td>DMSO</td><td>Eq. 101</td><td>155</td><td>1.8 %</td><td>4.5 %</td><td>+0.1 %</td></tr>
+<tr><td>Water (reference solvent)</td><td>Andrade</td><td>571</td><td>3.0 %</td><td>5.0 %</td><td>0.0 %</td></tr>
+<tr><td>Acetone</td><td colspan="4">no viscosity correlation in Choupo (31 NIST points available)</td><td>+0.7 %</td></tr>
+<tr><td>Ethyl acetate</td><td colspan="4">no viscosity correlation in Choupo (42 NIST points available)</td><td>+0.3 %</td></tr>
+<tr><td>DMF</td><td colspan="4">not in Choupo (171 NIST viscosity points available)</td><td>—</td></tr>
+</table></div>
+<p>Water is included as a <strong>reference solvent</strong>, so the same solute can be compared in water and in the organic solvents. Its Andrade fit overestimates μ by about 2 % at 25 °C; the Vogel form ln μ = A + B/(T − C) from the same database is used instead (0.89 mPa·s at 298 K).</p>
+<p>The comparison is not fully independent (ChemSep and NIST share literature sources) and a few outlier points in the archive were not removed; medians and percentiles are used for that reason.</p>
+
+<h2 id="diffusion">6. Diffusivity</h2>
+<h3>6.1 Small and API-sized solutes: Wilke–Chang</h3>
+<div class="eq">D<sub>AB</sub> = 7.4×10⁻⁸ (φ M<sub>B</sub>)<sup>½</sup> T / (μ<sub>B</sub> V<sub>A</sub><sup>0.6</sup>) &nbsp;[cm²/s; μ in cP, V<sub>A</sub> in cm³/mol at T<sub>b</sub>]</div>
+<p>φ = 1.9 for methanol, 1.5 for ethanol, 1.0 for non-associating solvents; V<sub>A</sub> by Le Bas additive volumes (C 14.8, H 3.7, O 7.4, N 10.5/12.0 for primary/secondary amines, −15 per ring). Compared with published infinite-dilution values at 298–328 K:</p>
+<div class="tblwrap"><table>
+<tr><th>Solute</th><th>Solvent</th><th>V<sub>A</sub> (cm³/mol)</th><th>Points</th><th>Wilke–Chang error</th></tr>
+<tr><td>Phenol</td><td>MeOH / EtOH</td><td>103</td><td>1 + 1</td><td>+12 % / +3 %</td></tr>
+<tr><td>Benzaldehyde</td><td>MeOH / EtOH</td><td>118</td><td>1 + 1</td><td>−1 % / −6 %</td></tr>
+<tr><td>Acetophenone</td><td>MeOH / EtOH</td><td>140</td><td>1 + 1</td><td>0 % / −5 %</td></tr>
+<tr><td>1-Amino-2-methylanthraquinone</td><td>MeOH / EtOH</td><td>243</td><td>16 + 12</td><td>−12 % / −14 %</td></tr>
+<tr><td>1,4-Bis(methylamino)anthraquinone</td><td>MeOH / EtOH</td><td>282</td><td>8 + 8</td><td>−14 % / −21 %</td></tr>
+</table></div>
+<div class="note">The correlation is within ±6 % for small aromatics and under-predicts D by 12–21 % for the two API-sized dyes. The sample is small (10 solute–solvent pairs, alcohols only); for acetonitrile, DMF, THF and ethyl acetate no suitable dilute-solute data were found.</div>
+<h3>6.2 PEG and macromolecules <span class="tag unv">not yet validated</span></h3>
+<p>Wilke–Chang was fitted to small molecules and is not used for chains. For PEG the plan is Stokes–Einstein, D = k<sub>B</sub>T/(6πμR<sub>h</sub>), with R<sub>h</sub> from a power law R<sub>h</sub> ∝ M<sup>0.57</sup> in water. The prefactor and exponent will be taken from the original measurements and listed here with their DOI before they are used. For PEG 35 kDa the simulator keeps the measured D<sub>A</sub>(c) of Pereira (2026), with D<sub>A</sub>(0) an estimate (stated on the simulator page).</p>
+<h3>6.3 Concentration dependence of viscosity</h3>
+<p>For polymers: [η] = K M<sup>a</sup> (Mark–Houwink, constants from the Polymer Handbook for each solvent) and η/η₀ = 1 + [η]c + k<sub>H</sub>([η]c)². Near limiting flux the wall viscosity controls k<sub>c</sub> (Peeva et al. 2026 find k ∝ η<sup>−2</sup> for PEG 35 kDa in acetonitrile), so these constants decide the result and each one is listed in the simulator with its source. <span class="tag unv">pending</span></p>
+
+<h2 id="limits">7. Hypotheses and limits</h2>
+<ol>
+<li>Dilute solutions: v̄ at infinite dilution; no excess volume at 5–10 wt % beyond what the oligomer data show.</li>
+<li>Temperature around 298 K (v̄ and R<sub>h</sub> have temperature dependences not modelled yet; tabulated solvent μ(T) is).</li>
+<li>Pressure ≈ ambient; the compression of liquids at 10–60 bar changes ρ by &lt; 0.5 % and is neglected.</li>
+<li>No solvent-membrane interaction: swelling, adsorption and solvent-induced conformational change are outside the model (Peeva et al. discuss them as sources of deviation).</li>
+<li>Acetonitrile v̄ for PEG and all macromolecular D and η values are estimates until direct measurements are added.</li>
+<li>Proteins: no data from the archive (the NIST archive has none); properties will come from the original literature, one protein at a time.</li>
+</ol>
+
+<h2 id="consistency">7b. Consistency check against the measured PEG 35 kDa laws</h2>
+<p>The device-comparison page uses measured property laws for PEG 35 kDa in water at 20 °C (ν(c), D<sub>A</sub>(c), π(c) from the CFD reconstructions of Pereira 2026, Table A.1; data of Pires et al.). The OSN simulator uses <strong>exactly those laws</strong> whenever the solvent is water, the solute is PEG with M = 35 000 ± 1 500 g/mol, T = 20 °C and no property is overridden. Otherwise it uses the generic estimates of this guide. To check how far the generic estimates are from the measured case, the same PEG 35 kDa/water problem was solved with both (generic run at 21 °C, UF permeance 32 LMH/bar, B = 0.5 LMH, O-CMF):</p>
+<div class="tblwrap"><table>
+<tr><th>Property at c (g/L)</th><th>Measured laws</th><th>Generic estimate</th></tr>
+<tr><td>ν, 20 g/L (10<sup>−6</sup> m²/s)</td><td>2.19</td><td>2.14</td></tr>
+<tr><td>D, 20 g/L (10<sup>−11</sup> m²/s)</td><td>4.51</td><td>4.37</td></tr>
+<tr><td>π, 20 g/L</td><td>5.5 kPa</td><td>2.3 kPa</td></tr>
+<tr><td>π, 40 g/L</td><td>16.5 kPa</td><td>7.0 kPa</td></tr>
+</table></div>
+<div class="tblwrap"><table>
+<tr><th>c₀ (g/L)</th><th>ΔP (bar)</th><th>k<sub>c</sub> (µm/s) measured / generic</th><th>J<sub>v</sub> (LMH) measured / generic</th><th>Γ measured / generic</th></tr>
+<tr><td>10</td><td>2</td><td>4.55 / 4.58</td><td>41.0 / 48.4</td><td>6.98 / 9.77</td></tr>
+<tr><td>10</td><td>10</td><td>6.90 / 7.19</td><td>93.7 / 125.5</td><td>17.99 / 33.09</td></tr>
+<tr><td>20</td><td>5</td><td>6.27 / 6.57</td><td>52.8 / 72.0</td><td>6.25 / 10.95</td></tr>
+<tr><td>20</td><td>10</td><td>7.62 / 8.11</td><td>75.0 / 106.3</td><td>8.77 / 16.77</td></tr>
+</table></div>
+<div class="note">The mass-transfer coefficient agrees within 1–6 %. The flux and Γ differ because the generic π is 2.4–2.9 times lower than the measured law: the measured π/c at c → 0 corresponds to an effective number-average molar mass of about 12 kDa, not 35 kDa, so that batch behaves as if it contained a low-molar-mass fraction (or the cryoscopy included other contributions). Which one is right is not settled here. If you know M<sub>n</sub> of your polymer, enter it in the override field and the generic π follows it.</div>
+<p>Two modelling choices behind the generic estimates are calibrated on this single measured case: the collective diffusivity D(c) = D₀(1 + 0.15 [η] c), and the semi-dilute osmotic pressure π = (RT/M) c [1 + 0.73 (c[η])<sup>1.3</sup>]. Calibrating on one polymer and one solvent is a limitation; they are replaced as soon as measurements in other solvents are available. A first version of the page used D(c) = D₀/η<sub>rel</sub>(c), which collapses the film diffusivity at high concentration and over-predicted Γ by about a factor of 10 for this case; that assumption was removed.</p>
+
+<h2 id="check">8. Check it yourself</h2>
+<div class="card">
+<h3>β from v̄</h3>
+<div class="calc">
+  <div><label>Solvent density ρ₀ (kg/m³)</label><input id="a_rho" type="number" value="997.05" step="any"></div>
+  <div><label>v̄ (cm³/g)</label><input id="a_v" type="number" value="0.840" step="any"></div>
+</div>
+<div class="out" id="a_out"></div>
+<h3 style="margin-top:18px;">v̄ of PEG from molar mass</h3>
+<div class="calc">
+  <div><label>Molar mass M (g/mol)</label><input id="b_m" type="number" value="35000" step="any"></div>
+  <div><label>V<sub>EO</sub> (cm³/mol)</label><input id="b_v" type="number" value="37.0" step="any"></div>
+  <div><label>V<sub>ends</sub> (cm³/mol)</label><input id="b_e" type="number" value="18.0" step="any"></div>
+</div>
+<div class="out" id="b_out"></div>
+<h3 style="margin-top:18px;">Wilke–Chang</h3>
+<div class="calc">
+  <div><label>T (K)</label><input id="c_t" type="number" value="308.2" step="any"></div>
+  <div><label>Solvent M (g/mol)</label><input id="c_m" type="number" value="32.04" step="any"></div>
+  <div><label>Association φ</label><input id="c_phi" type="number" value="1.9" step="any"></div>
+  <div><label>Solvent μ (mPa·s)</label><input id="c_mu" type="number" value="0.474" step="any"></div>
+  <div><label>Solute V<sub>A</sub> (cm³/mol)</label><input id="c_va" type="number" value="243" step="any"></div>
+</div>
+<div class="out" id="c_out"></div>
+</div>
+<p>Defaults reproduce the table values: PEG 35 kDa in water (β ≈ 1.63×10⁻⁴), and 1-amino-2-methylanthraquinone in methanol at 308.2 K (μ = 0.474 mPa·s from the Andrade fit): Wilke–Chang ≈ 1.4×10⁻⁹ m²/s against 1.44–1.60×10⁻⁹ m²/s measured (four points at that temperature).</p>
+
+<h2 id="refs">9. Sources</h2>
+<p><strong>Data.</strong> NIST/TRC ThermoML Archive, v. 2020-09-30, DOI 10.18434/mds2-2422 (the arrangement is NIST's; the measurements belong to the articles below). Pure-component correlations: ChemSep v8.3 (Kooijman &amp; Taylor), accessed through the Choupo component database. Cite the primary articles, not the archive.</p>
+<p><strong>Primary articles used for v̄ of oligomers</strong> (DOI): 10.1016/j.fluid.2015.07.030, 10.1016/j.jct.2015.05.024, 10.1016/j.jct.2018.02.022 (water + triethylene/diethylene glycol); further series from the same archive for ethylene glycol in water, DMSO and DMF.<br/>
+<strong>Diffusion (dilute solutes in alcohols):</strong> 10.1021/je700539w (phenol, benzaldehyde, acetophenone in methanol and ethanol, 298.15 K); 10.1016/j.fluid.2016.01.010 (amino- and bis(methylamino)anthraquinone, 308–328 K).</p>
+<ul class="refs">
+<li>Peeva L., Oxley A., Livingston A.G., <em>Selectivity control in organic solvent nanofiltration – membranes or process?</em> J. Membr. Sci. 737 (2026) 124613, doi:10.1016/j.memsci.2025.124613.</li>
+<li>Koutsou C.P., Karabelas A.J., J. Membr. Sci. 399–400 (2012) 60–72, doi:10.1016/j.memsci.2012.01.029.</li>
+<li>Mollica (1978): PEG limiting partial volumes, 25 °C, repeat-unit contribution 37.0 mL/mol <span class="tag unv">to be checked in the original</span>.</li>
+<li>Cruz et al. (2009), J. Solution Chem.: PEG 3000–20000 in water, 283–313 K; Costa et al. (2014), J. Chem. Eng. Data: PEG 1500 in water; Ambrosone et al. (1996), J. Chem. Soc. Faraday Trans.: ethylene glycol oligomers <span class="tag unv">details to be completed from the originals</span>.</li>
+<li>Geraldes V. et al., predictive concentration-polarisation correlation (preprint under review), doi:10.2139/ssrn.6528979; Pereira (MSc thesis, IST 2026) for PEG 35 kDa property fits.</li>
+</ul>
+</div></main>
+<script>
+  const $ = id => document.getElementById(id);
+  function upd() {
+    const rho = +$("a_rho").value, v = +$("a_v").value * 1e-3;       // cm3/g -> m3/kg
+    const beta = (1 - rho * v) / rho;
+    $("a_out").textContent = `β = (1 − ρ₀v̄)/ρ₀ = ${(beta * 1e4).toFixed(3)}×10⁻⁴ m³/kg ; a 1 % error in v̄ changes β by ${(100 * rho * v / (1 - rho * v)).toFixed(1)} %`;
+    const M = +$("b_m").value, VEO = +$("b_v").value, Ve = +$("b_e").value;
+    const n = (M - 18.015) / 44.053;
+    $("b_out").textContent = `n = ${n.toFixed(1)} EO units ; v̄ = ${((VEO * n + Ve) / M).toFixed(4)} cm³/g (n→∞ limit ${(VEO / 44.053).toFixed(4)})`;
+    const T = +$("c_t").value, Ms = +$("c_m").value, phi = +$("c_phi").value, mu = +$("c_mu").value, Va = +$("c_va").value;
+    const D = 7.4e-8 * Math.sqrt(phi * Ms) * T / (mu * Math.pow(Va, 0.6)) * 1e-4;
+    $("c_out").textContent = `D = ${D.toExponential(2)} m²/s`;
+  }
+  document.querySelectorAll("input").forEach(e => e.addEventListener("input", upd)); upd();
+</script>
+</body>
+</html>
