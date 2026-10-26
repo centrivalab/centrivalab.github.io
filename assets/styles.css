@@ -28,7 +28,9 @@ body {
 a { color: var(--navy-2); }
 a:hover { color: var(--blue); }
 img { max-width: 100%; display: block; }
-.container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+.container { max-width: 1160px; margin-left: auto; margin-right: auto; padding: 0 24px; }
+select, input, textarea { max-width: 100%; }
+.sim-layout > * { min-width: 0; }
 .site-header {
   color: white;
   padding-top: 18px;
@@ -39,7 +41,7 @@ img { max-width: 100%; display: block; }
 }
 .topbar {
   display: flex; justify-content: space-between; align-items: center; gap: 20px;
-  padding: 22px 0 16px;
+  padding-top: 22px; padding-bottom: 16px;
 }
 .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: white; flex-shrink: 0; }
 .brand-mark { width: 78px; height: 78px; min-width: 78px; object-fit: contain; background: transparent; border-radius: 0; box-shadow: none; }
@@ -48,7 +50,7 @@ img { max-width: 100%; display: block; }
 .nav a { color: rgba(255,255,255,0.92); text-decoration: none; font-size: 15px; margin-left: 0; }
 .nav a:hover { color: white; }
 .hero {
-  padding: 34px 0 78px;
+  padding-top: 34px; padding-bottom: 78px;
   display: grid; grid-template-columns: 1.2fr .8fr; gap: 40px; align-items: center;
 }
 .hero h1 { font-size: 48px; line-height: 1.05; margin: 0 0 14px; }
@@ -73,6 +75,7 @@ img { max-width: 100%; display: block; }
 .hero-panel strong { color: var(--cyan); display: block; margin-bottom: 3px; }
 main { padding: 56px 0 82px; }
 section { margin-bottom: 64px; }
+main > section:last-child { margin-bottom: 0; }
 .section-title { font-size: 34px; color: var(--navy); margin: 0 0 14px; }
 .section-intro { max-width: 920px; color: var(--muted); font-size: 17px; margin: 0 0 20px; }
 .grid-2, .grid-3, .grid-4 { display: grid; gap: 24px; }
@@ -123,7 +126,7 @@ tr:last-child td { border-bottom: none; }
   background: linear-gradient(135deg, #0a2749 0%, #123d68 100%); color: white; padding: 34px; border-radius: 22px; box-shadow: var(--shadow);
 }
 .banner h2, .banner h3 { color: white; margin-top: 0; }
-.page-hero { padding: 24px 0 42px; color: white; }
+.page-hero { padding-top: 24px; padding-bottom: 42px; color: white; }
 .page-hero h1 { font-size: 42px; margin: 0 0 8px; }
 .page-hero p { color: rgba(255,255,255,0.86); font-size: 18px; max-width: 880px; margin: 0; }
 .breadcrumbs { padding-top: 12px; font-size: 14px; color: rgba(255,255,255,0.75); }
@@ -143,6 +146,7 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 760px) {
   .topbar, .hero, .grid-2, .grid-3, .grid-4, .stats, .spec-strip, .footer-grid, .split { grid-template-columns: 1fr; display: grid; }
   .nav { gap: 12px; }
+  .two-col { grid-template-columns: 1fr; }
   .hero h1, .page-hero h1 { font-size: 34px; }
   .section-title { font-size: 28px; }
 }
